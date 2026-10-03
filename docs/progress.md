@@ -6,7 +6,7 @@
 | 0. Bootstrap | ✅ done | `docs/openspec-facts.md`; upstream fixture; D20 (XDG trick), D21 (kit spec parser) |
 | 1. Prompt layer | ✅ done | protocols, `clarify` + `lean`, config fragment, kit profile; dry run in `fixtures/dry-runs/` |
 | 2. Checks | ✅ done | 6 checks + 7 libs; 101 tests; 49 planted defects caught |
-| 3. Hooks | ⏳ | verify Claude Code hook semantics first |
+| 3. Hooks | ✅ done | answers-gate, session-start, artifact-feedback, settings merge; hook semantics verified (facts §9) |
 | 4. Installer | ⏳ | |
 | 5. Verification | ⏳ | pilot starts after this phase |
 | 6. Handoff | ⏳ | |
@@ -70,3 +70,18 @@
   answers or without the exact "Looks correct" (hooks wire it in phase 3).
 - *"Хорошие тесты"* — `check-traceability` proves every scenario has a planned level and a marked test;
   `check-verification` refuses `Unverified`. Assertion strength itself is the test reviewer's job (phase 8).
+
+## Phase 3 — checklist
+
+- [x] Claude Code hook semantics verified empirically on 2.1.288 (facts §9; two docs-summary errors found)
+- [x] `answers-gate` (PreToolUse Write|Edit|MultiEdit|Bash): blocks gated artifacts, explains what is missing
+- [x] `session-start`: per-change status, open questions, CLI version and skills drift warnings
+- [x] `artifact-feedback` (PostToolUse): check errors returned to the agent right after writing
+- [x] `settings-merge`: pilot graphify hooks preserved, idempotent, update replaces old kit hooks, clean removal
+- [x] `tests/hooks.test.mjs`: 22 tests (real processes, Claude Code-shaped input)
+- [x] End-to-end with real Claude Code: proposal cannot be written with blank answers (E1, E2)
+
+## Phase 3 vs goals
+
+- *"ИИ задает все вопросы… / AI не начинает без подтверждённых ответов"* — now enforced by a hook, not only
+  by the prompt: the proposal cannot be written while the Main round is open (E2).

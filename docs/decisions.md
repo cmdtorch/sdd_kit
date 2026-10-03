@@ -97,3 +97,21 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   `[{level: "unit"|"e2e", capability, scenario, test}]`. Phase 5 adds collectors (verify.yaml) that produce it.
 - **Non-kit changes are skipped** by every change-level check (D11); `lint-kit` still lints the whole project.
 - **Fixtures:** `fixtures/projects/checks-good` is the single good project; tests plant one defect per case.
+
+## 2026-10-03 — Phase 3 design decisions
+
+- **Hooks fail open.** An internal error exits 1 (non-blocking) with a message; only a real gate failure
+  exits 2. A kit bug must never lock the developer out; CI is the backstop.
+- **answers-gate also watches Bash** (redirects, tee, cp, mv, sed -i, … into a gated artifact path). Heuristic;
+  a false positive only happens while the round is still open, and the message explains it.
+- **New PostToolUse hook `artifact-feedback`** (not in the original plan): runs the matching check after an
+  artifact is written and feeds errors back as context. Cheap, never blocks, catches grounding/spec mistakes
+  at write time instead of in CI.
+- **Checks are imported, not spawned,** by hooks (one node process per hook call).
+- **`openspec/tooling/kit.json`** holds `kitVersion` and the pinned `openspecVersion` (D12); session-start
+  compares the CLI version with it. The installer (phase 4) writes it.
+- **Settings merge:** kit hooks are identified by `openspec/tooling/hooks/` in the command; merge removes old
+  kit hooks then appends the fragment's groups after the project's own; `removeKitHooks` is the uninstall.
+- **Hook commands** use `node "${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/<hook>.mjs"` (K8).
+- **Not done (noted for later):** a hook that resets a confirmed summary when an answer in that round is edited.
+  Today the protocol tells the agent to reset it; detecting answer edits needs the previous file version.

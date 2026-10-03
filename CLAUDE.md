@@ -255,6 +255,8 @@ All checks: clear human-readable messages, `--json` output, exit codes 0/1, test
    agent. Respect the stop-hook re-entry flag and a block counter, then hand over to the human.
 3. **archive-gate** — PreToolUse on Bash matching `openspec archive`: require `check-verification`.
 4. **session-start** — print active change status, open questions, stale store checkout warning.
+5. **artifact-feedback** (added in phase 3) — PostToolUse on Write/Edit of a kit artifact: run the matching
+   check and return its errors as `additionalContext` (never blocks).
 
 Verify current Claude Code hook semantics (events, stdin JSON fields, exit code 2, JSON
 `decision` output, stop-hook re-entry flag) against the official Claude Code docs before coding.

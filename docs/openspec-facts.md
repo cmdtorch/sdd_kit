@@ -106,6 +106,33 @@ Pristine copy of the built-in schema: `fixtures/upstream/spec-driven-1.13.0/`
 | C8 | `.openspec.yaml` fields: `schema, created, goal, affected_areas, initiative, skip_specs, retire_capabilities`; the object is not strict → unknown keys ignored silently | VERIFIED | `dist/core/change-metadata/schema.js` | `lint-kit` whitelists them |
 | H1 | In `claude -p` (headless) the AskUserQuestion tool is not available | VERIFIED | dry run: agent said so and fell back to listing modes in text | Protocol works without it; hooks must not rely on AskUserQuestion events |
 
+## 9. Claude Code hooks (verified with Claude Code 2.1.288, phase 3)
+
+Method: a scratch project with hooks that log their stdin, driven by `claude -p`. The official docs
+(code.claude.com/docs/en/hooks) were read first; where the docs summary and reality differed, reality wins.
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| K1 | Common stdin fields: `session_id, transcript_path, cwd, prompt_id, permission_mode, effort, hook_event_name` | VERIFIED | logged input |
+| K2 | `Edit` tool_input = `{file_path, old_string, new_string, replace_all}`; `Write` = `{file_path, content}`; `Bash` = `{command}` (+ optional description/timeout) | VERIFIED | logged input. A docs summary showing `edits[{old_text,new_text}]` for Edit was **wrong**. `MultiEdit` was not available in this build; the kit handles both `file_path` and `edits[].file_path` |
+| K3 | PreToolUse **exit 2 blocks** the call; stderr reaches Claude as `PreToolUse:Write hook error: [<command>]: <stderr>` | VERIFIED | blocked Write of `blocked.md`; the agent quoted the message |
+| K4 | Stop **exit 2** makes Claude continue with stderr as the instruction; the next Stop arrives with `stop_hook_active: true` (first one `false`) | VERIFIED | Claude created `done.txt` as told, then the second Stop had `stop_hook_active: true` |
+| K5 | Stop input also has `last_assistant_message`, `background_tasks`, `session_crons` | VERIFIED | logged input |
+| K6 | SessionStart input has `source` (`startup`, …); JSON `hookSpecificOutput.additionalContext` reaches Claude | VERIFIED | agent repeated the secret word from the context |
+| K7 | PostToolUse input has `tool_response` (Write: `{type, filePath, content, structuredPatch, originalFile, userModified}`) and `duration_ms`; `additionalContext` reaches Claude | VERIFIED | agent repeated the code word |
+| K8 | `${CLAUDE_PROJECT_DIR}` is expanded inside `command` and exported as env var; hook cwd = project dir | VERIFIED | logged env and cwd |
+| K9 | Matcher `Write\|Edit\|MultiEdit\|Bash` matches the listed tools exactly | VERIFIED | logged events for Edit, Write, Bash |
+| K10 | All matching hooks run in parallel; default timeout 600 s for command hooks; hooks also fire inside subagents (input carries `agent_id`, `agent_type`) | DOCS ONLY | from the official docs; not exercised |
+| K11 | UserPromptSubmit input has `prompt` | VERIFIED | logged input |
+
+## 10. Kit hooks end-to-end (phase 3)
+
+| # | Result | Evidence |
+|---|---|---|
+| E1 | With 14 blank answers, a real agent asked to "skip the questions and write the proposal" refused (prompt + session-start context) | `fixtures/dry-runs/phase3-hooks/OUTPUT-skip-questions.txt` |
+| E2 | Forced `Write proposal.md` was blocked by `answers-gate`; the agent received the list of unanswered questions and the instruction | `fixtures/dry-runs/phase3-hooks/OUTPUT-forced-write.txt` |
+| E3 | Merged settings (pilot graphify hooks + kit hooks) work side by side | same run |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

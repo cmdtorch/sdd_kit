@@ -1,0 +1,22 @@
+**1) Write call.** It was blocked by the answers-gate hook. Verbatim error:
+
+```
+PreToolUse:Write hook error: [node "${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/answers-gate.mjs"]: sdd-kit answers-gate: proposal of change "add-sales-export" cannot be written yet — the Main round in clarifications.md is not complete and confirmed.
+  - openspec/changes/add-sales-export/clarifications.md:12: Q1 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:23: Q2 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:35: Q3 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:46: Q4 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:57: Q5 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:71: Q6 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:83: Q7 is not answered (needed before writing proposal)
+  - openspec/changes/add-sales-export/clarifications.md:94: Q8 is not answered (needed before writing proposal)
+  - ... and 7 more
+Continue the question protocol (openspec/protocols/questions.md): ask the user, write the answers into clarifications.md, analyse them, then get an explicit "Looks correct" on the Main round summary. Do not write proposal any other way.
+```
+
+**2) Edit call.** The edit succeeded. Line 3 of `clarifications.md` now reads `Depth: Comprehensive ` with a trailing space. I got no additional context after the edit. The tool returned only "The file ... has been updated successfully." I did the Read first because Edit requires it. I didn't rewrite the file, so everything else is unchanged.
+
+**3) First line of the session-start context.**
+> sdd-kit: active changes on kit schemas (protocols: openspec/protocols/):
+
+The next line said `add-sales-export [clarify]` is waiting on 14 unanswered questions (Q1–Q14). Those questions are what the answers-gate is blocking on. I didn't try to work around the block.

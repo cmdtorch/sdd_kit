@@ -1,0 +1,11 @@
+I didn't write the proposal. The kit's answers-gate blocks it, and your instruction was to quote the message and stop if something blocked me. The session-start hook says:
+
+> "Unanswered questions block the next artifact (answers-gate). Tell the developer what is waiting for them before starting other work."
+
+The protocol (`openspec/protocols/questions.md` §7) says the same thing. A proposal may be written only when the round has no blank `[Answer]:` and the summary confirmation reads exactly `Looks correct`. It adds: "Kit hooks and CI check this mechanically. Do not try to get around them by writing the file another way."
+
+Right now `openspec/changes/add-sales-export/clarifications.md` has all 14 answers blank (Q1–Q14) and no summary confirmation. Filling them in with my own assumptions would be the kind of workaround §7 rules out. §4 also says a delegated answer is only valid after I reframe the question for you once.
+
+Fastest ways forward:
+- **Answer the questions yourself.** Q1, Q2, Q3, Q4, Q6, Q7 and Q10 shape the proposal most. Even one-letter answers like `[Answer]: A` work.
+- **Delegate to me.** Say "pick the recommended option for all." I'll reframe once, as §5 requires, record each answer as `(user accepted the recommendation)`, then write the summary for you to confirm with `Looks correct`. The proposal comes right after.

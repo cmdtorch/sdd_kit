@@ -57,6 +57,34 @@ export function isKitSchema(schema) {
   return KIT_SCHEMAS.includes(schema);
 }
 
+/** Artifact ids of the kit schemas by file name inside a change dir (specs are matched separately). */
+const ARTIFACT_FILES = {
+  'clarifications.md': 'clarifications',
+  'proposal.md': 'proposal',
+  'design.md': 'design',
+  'verification-plan.md': 'verification-plan',
+  'tasks.md': 'tasks',
+  'verification.md': 'verification',
+};
+
+/**
+ * Which change and artifact a path belongs to: { change, artifact|null, rel } or null when the path is
+ * not inside an active change (archived changes are ignored).
+ */
+export function locateInChange(root, absPath) {
+  const base = join(root, 'openspec', 'changes') + '/';
+  const p = resolve(absPath);
+  if (!p.startsWith(base)) return null;
+  const parts = p.slice(base.length).split('/');
+  if (parts.length < 2 || parts[0] === 'archive') return null;
+  const [change, ...rest] = parts;
+  const rel = rest.join('/');
+  let artifact = null;
+  if (rest[0] === 'specs' && rel.endsWith('.md')) artifact = 'specs';
+  else if (rest.length === 1) artifact = ARTIFACT_FILES[rest[0]] || null;
+  return { change, artifact, rel };
+}
+
 /** Reads a file of the change, or null when it does not exist. */
 export function readChangeFile(root, name, file) {
   const p = join(changeDir(root, name), file);
