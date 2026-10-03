@@ -121,6 +121,7 @@ export function planInstall(opts) {
 
   // files
   const kitFiles = listFiles(k.openspecSrc, 'openspec');
+  Object.assign(kitFiles, listFiles(join(k.core, 'claude'), '.claude')); // thin agents and commands (D9)
   for (const p of presets) {
     const src = join(kitDir, 'presets', p, 'openspec');
     if (existsSync(src)) Object.assign(kitFiles, listFiles(src, 'openspec'));

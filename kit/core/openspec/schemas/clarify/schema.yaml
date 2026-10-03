@@ -208,6 +208,10 @@ artifacts:
         [assumption], FR1). Traceability lives in verification-plan.md.
       - Scenario names are unique within a capability and stay stable: tests
         reference them by exact name.
+      - After writing the spec files, run the `spec-reviewer` subagent
+        (`openspec/protocols/review-specs.md`) and show its verdict and findings to
+        the user. The user decides: fix the spec, ask a follow-up in the Specs
+        round, or accept. Do not move on to design before the user has seen them.
     requires:
       - proposal
 
@@ -334,6 +338,8 @@ artifacts:
         followed by implementation tasks verified by those tests passing.
       - E2E tests for scenarios planned as `e2e` are tasks in the group that
         delivers that journey, not a separate final group.
+      - The final group starts with the test review task: run the `test-reviewer`
+        subagent and fix blocker/major findings (`openspec/protocols/review-tests.md`).
       - The final group is integration only - no new behaviour: run
         `node openspec/tooling/bin/verify.mjs --change <name>` (full suite,
         quality gate, E2E; writes verification.md) and fix what fails
@@ -361,6 +367,9 @@ apply:
     - If a requirement gap appears, append `## Apply round` to
       clarifications.md and ask (`openspec/protocols/questions.md`); do not
       guess.
+    - Before the final verification, run the `test-reviewer` subagent
+      (`openspec/protocols/review-tests.md`): fix blocker/major findings in the
+      tests (at most two review rounds), then show what remains to the human.
     - At the end run `node openspec/tooling/bin/verify.mjs --change <name>`:
       full suite + quality gate + E2E; it writes verification.md from the real
       results. Apply is done only when it exits 0 and every row is `Met`

@@ -11,7 +11,7 @@
 | 5. Verification | ✅ done | verify.yaml + presets, verify.mjs, test-gate (Stop), archive-gate; real pytest/Playwright checked; **pilot can start** |
 | 6. Handoff | ✅ done | api.mjs (diff/snapshot/check), openapi diff, handoff protocol, check-handoff, archive gate, handoff.mjs import; real UI-only questions |
 | 7. CI | ✅ done (not yet run on GitHub) | ci.mjs checks/verify, generated workflow (--ci), kit repo CI; actionlint clean |
-| 8. Reviewers + /clarify | ⏳ | |
+| 8. Reviewers + /clarify | ✅ done | spec-reviewer, test-reviewer, /sdd:clarify, review-input + heuristics; real reviews found every planted defect |
 | 9. Monorepo adapter | ⏳ | |
 | 10. Split adapter | ⏳ | |
 | 11. Docs & release | ⏳ | |
@@ -162,3 +162,20 @@
 
 - *"AI не начинает код без подтверждённых ответов" / "хорошие тесты"* — what the hooks enforce locally is now
   enforced again on every PR, including work done outside Claude Code or with hooks bypassed.
+
+## Phase 8 — checklist
+
+- [x] Protocols `review-specs.md`, `review-tests.md`; thin subagents and `/sdd:clarify` (installed by the installer)
+- [x] `review-input.mjs` with weak-test heuristics for pytest and Playwright (no false signals on strong tests)
+- [x] Test review required by the archive gate and CI; human decision path for NOT-READY
+- [x] Schemas: spec review after specs (clarify), test review in the final task group and apply rules
+- [x] Kit permissions for read-only scripts in settings merge (+ clean removal)
+- [x] Real Claude Code: both reviewers produced concrete findings, all planted defects caught; `/sdd:clarify` works
+- [x] Tests: 220 total (15 in `tests/review.test.mjs`)
+
+## Phase 8 vs goals
+
+- *"Хорошие тесты а не бесполезные"* — a second pair of eyes with a narrow brief: every THEN asserted, the break
+  each weak test would miss, and the change cannot be archived without that review (or a human's explicit decision).
+- *"ИИ задает все вопросы…"* — the spec reviewer catches what the questions missed (in the run: the client's
+  "see totals" requirement lost between the request and the specs).

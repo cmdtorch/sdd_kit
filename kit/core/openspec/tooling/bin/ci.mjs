@@ -28,6 +28,7 @@ import { checkVerification } from '../checks/check-verification.mjs';
 import { loadVerifyConfig } from '../lib/verify-config.mjs';
 import { runVerification, collectMarkers } from '../lib/verify-run.mjs';
 import { checkApi } from '../lib/api.mjs';
+import { testReviewProblems } from '../lib/reviews.mjs';
 
 const fmt = (f) => `${f.file ? `${f.file}${f.line ? `:${f.line}` : ''}: ` : ''}${f.message}`;
 
@@ -126,6 +127,8 @@ export function ciChecks({ root, base }) {
     trace.findings = trace.findings.filter((f) => !/markers were not checked/.test(f.message));
     res.fromReport(`${p}: check-traceability (plan)`, trace);
     if (existsSync(join(root, 'openspec', 'changes', change, 'api-changes.json'))) res.fromReport(`${p}: check-handoff`, checkHandoff({ root, change }));
+    const done = tasksState(readChangeFile(root, change, 'tasks.md')).complete;
+    if (done) res.add(`${p}: test review`, testReviewProblems(join(root, 'openspec', 'changes', change)));
     if (readChangeFile(root, change, 'verification.md') !== null) res.fromReport(`${p}: check-verification`, checkVerification({ root, change }), { demote: !tasksState(readChangeFile(root, change, 'tasks.md')).complete });
   }
   if (base) {
@@ -138,6 +141,7 @@ export function ciChecks({ root, base }) {
       const t = tasksState(readIn(dir, 'tasks.md'));
       res.add(`archived ${name}: tasks`, t.complete ? [] : [`${t.open} task(s) were not done when the change was archived`]);
       res.fromReport(`archived ${name}: check-verification`, checkVerification({ root, dir }));
+      res.add(`archived ${name}: test review`, testReviewProblems(dir));
       if (existsSync(join(dir, 'api-changes.json'))) res.fromReport(`archived ${name}: check-handoff`, checkHandoff({ root, dir }));
     }
   }

@@ -208,3 +208,20 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   and a real pytest + xdist for the plugin tests.
 - **Bug found and fixed:** the installer's entry-point check threw when `argv[1]` was not a file (import from
   `node -e … args`); regression test added.
+
+## 2026-10-03 — Phase 8 design decisions (reviewers, /sdd:clarify)
+
+- **Thin files, detailed protocols (D9):** `.claude/agents/{spec-reviewer,test-reviewer}.md` and
+  `.claude/commands/sdd/clarify.md` only point to `openspec/protocols/review-specs.md`, `review-tests.md`,
+  `questions.md`. Installed as managed kit files.
+- **Command namespace `/sdd:clarify`** (not `/clarify`) so it never collides with a project's own commands.
+- **spec-reviewer is advisory** (one question: can dev and QA start without asking?); findings go to the human,
+  who fixes, asks a follow-up in the Specs round, or accepts. The clarify specs instruction requires showing them.
+- **test-reviewer is required before archive** when unit/e2e tests are planned: `reviews/test-review.md` with
+  `Verdict: READY`, or `NOT-READY` plus a filled `## Human decision`. Checked by the archive gate and CI (completed
+  and archived changes). Main agent fixes blocker/major findings in the tests, at most two review rounds.
+- **review-input.mjs + heuristics** give the reviewer facts (scenarios, THEN clauses, plan, marked tests with
+  file:line) and hints (no assertion, status-only, truthiness-only, mock-only, fewer assertions than THEN clauses,
+  skipped). Hints never decide; the reviewer confirms or dismisses them.
+- **Kit permissions:** read-only kit scripts (`review-input.mjs`, checks) are added to `permissions.allow`,
+  identified by `openspec/tooling/` and removed on uninstall. Effective in trusted workspaces only (R3).

@@ -7,6 +7,7 @@
 //     and check-verification pass
 //   - the last full `verify.mjs` run is green, includes the manual checks, and the working tree has not
 //     changed since (fingerprint), so a hand-edited verification.md cannot pass
+//   - the test review exists: Verdict READY, or NOT-READY with a recorded human decision
 //   - when verify.yaml has `api`: api-changes.json is current, frontend-handoff.md passes check-handoff and
 //     the API baseline was updated after the last application change (openspec/protocols/handoff.md)
 // Without a change name the command is blocked when kit changes exist (the gate must know what to check).
@@ -22,6 +23,7 @@ import { checkTraceability } from '../checks/check-traceability.mjs';
 import { checkVerification } from '../checks/check-verification.mjs';
 import { checkHandoff } from '../checks/check-handoff.mjs';
 import { loadVerifyConfig } from '../lib/verify-config.mjs';
+import { testReviewProblems } from '../lib/reviews.mjs';
 
 const ARCHIVE = /(?:^|[\s;&|(])(?:npx\s+(?:--yes\s+|-y\s+)?(?:@fission-ai\/)?)?(?:openspec|\S*openspec\.mjs)\s+archive\b([^;&|\n]*)/g;
 
@@ -63,6 +65,7 @@ export function archiveProblems(root, change) {
       if (diff.operations > 0 && (!snap || (code && snap.fingerprint !== code))) problems.push('the API baseline is not updated for this change — run: node openspec/tooling/bin/api.mjs snapshot (and commit it)');
     }
   }
+  problems.push(...testReviewProblems(changeDir(root, change)));
   if (!state) problems.push(`no full verification run on record — run: node openspec/tooling/bin/verify.mjs --change ${change}`);
   else {
     const fp = fingerprint(root, change);

@@ -3,8 +3,10 @@
 // other hooks (e.g. graphify), plugins, permissions and unknown keys stay exactly as they are.
 // Kit hooks are recognised by their command pointing into `openspec/tooling/hooks/`, so a re-run
 // replaces old kit entries instead of duplicating them, and `removeKitHooks` cleanly uninstalls.
+// Kit permissions (read-only kit scripts in `permissions.allow`) are recognised by `openspec/tooling/`.
 
 const KIT_HOOK = /openspec\/tooling\/hooks\//;
+const KIT_PERMISSION = /openspec\/tooling\//;
 
 export function isKitHook(h) {
   return Boolean(h && h.type === 'command' && typeof h.command === 'string' && KIT_HOOK.test(h.command));
@@ -14,7 +16,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 
 /** Returns a copy of `settings` without any kit hook; groups left empty by that are dropped. */
 export function removeKitHooks(settings) {
-  const out = clone(settings || {});
+  const out = removeKitPermissions(clone(settings || {}));
   if (!out.hooks || typeof out.hooks !== 'object') return out;
   for (const [event, groups] of Object.entries(out.hooks)) {
     if (!Array.isArray(groups)) continue;
@@ -35,6 +37,21 @@ export function removeKitHooks(settings) {
   return out;
 }
 
+/** Copy without kit permission entries; an emptied allow list / permissions object is dropped. */
+function removeKitPermissions(settings) {
+  const out = clone(settings);
+  const allow = out.permissions?.allow;
+  if (!Array.isArray(allow)) return out;
+  const rest = allow.filter((e) => !(typeof e === 'string' && KIT_PERMISSION.test(e)));
+  if (rest.length === allow.length) return out;
+  if (rest.length) out.permissions.allow = rest;
+  else {
+    delete out.permissions.allow;
+    if (!Object.keys(out.permissions).length) delete out.permissions;
+  }
+  return out;
+}
+
 /**
  * Adds the fragment's hooks after the project's own hooks (existing kit hooks are replaced).
  * Idempotent: merge(merge(s, f), f) deep-equals merge(s, f).
@@ -51,6 +68,11 @@ export function mergeSettings(settings, fragment) {
   if (Object.keys(add).length) out.hooks = out.hooks || {};
   for (const [event, groups] of Object.entries(add)) {
     out.hooks[event] = [...(out.hooks[event] || []), ...groups];
+  }
+  const allow = fragment.permissions?.allow || [];
+  if (allow.length) {
+    out.permissions = out.permissions || {};
+    out.permissions.allow = [...(out.permissions.allow || []), ...allow.filter((e) => !(out.permissions.allow || []).includes(e))];
   }
   return out;
 }

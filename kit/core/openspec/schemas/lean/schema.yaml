@@ -231,6 +231,8 @@ artifacts:
         followed by implementation tasks verified by those tests passing.
       - E2E tests for scenarios planned as `e2e` are tasks in the group that
         delivers that journey, not a separate final group.
+      - The final group starts with the test review task: run the `test-reviewer`
+        subagent and fix blocker/major findings (`openspec/protocols/review-tests.md`).
       - The final group is integration only - no new behaviour: run
         `node openspec/tooling/bin/verify.mjs --change <name>` (full suite,
         quality gate, E2E; writes verification.md) and fix what fails
@@ -256,6 +258,9 @@ apply:
       end.
     - If a requirement gap appears, stop and ask the user; record the answer in
       the proposal's `## Clarifications` section. Do not guess.
+    - Before the final verification, run the `test-reviewer` subagent
+      (`openspec/protocols/review-tests.md`): fix blocker/major findings in the
+      tests (at most two review rounds), then show what remains to the human.
     - At the end run `node openspec/tooling/bin/verify.mjs --change <name>`:
       full suite + quality gate + E2E; it writes verification.md from the real
       results. Apply is done only when it exits 0 and every row is `Met`

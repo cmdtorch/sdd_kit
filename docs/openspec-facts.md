@@ -168,6 +168,16 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | CI1 | Generated workflows (every preset combination) and the kit's own `test.yml` pass `actionlint` (rhysd/actionlint compiled to wasm, npm `actionlint` 2.0.6) and `@action-validator/cli` schema validation; a planted `${{ github.reff }}` is caught | VERIFIED | manual run in a scratch dir (not a kit dependency) |
 | CI2 | The workflows have **not** run on GitHub yet | NOT VERIFIED | first real run: the pilot's first PR after installing with `--ci` |
 
+## 15. Subagents, commands, reviews (phase 8, Claude Code 2.1.288)
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| R1 | Project subagents: `.claude/agents/<name>.md`, frontmatter `name` + `description` required; `tools` (comma list), `model` (`inherit`) optional; a subagent starts with a fresh context (no conversation history) and settings hooks run inside it | DOCS + VERIFIED | docs (code.claude.com/docs/en/sub-agents); both kit reviewers ran as subagents in `claude -p` |
+| R2 | `.claude/commands/<dir>/<name>.md` → `/<dir>:<name>`; `$ARGUMENTS`; commands are merged into skills but still supported | DOCS + VERIFIED | `/sdd:clarify` ran in `claude -p` |
+| R3 | `permissions.allow` in project `.claude/settings.json` is **ignored in an untrusted workspace** ("this workspace has not been trusted"); `--allowedTools` given to `claude -p` did not let the subagent run a Bash command either | VERIFIED | phase 8 runs. The kit adds allow entries for its read-only scripts (effective in trusted projects) and the reviewer protocol falls back to manual collection |
+| R4 | test-reviewer on planted weak tests: 3 blockers on exactly the planted defects (status-only, `is not None`, e2e not checking the download) + real extra findings (missing school_admin coverage, unasserted "no sale is stored", invalid exclusion, hand-written matrix) | VERIFIED | `fixtures/dry-runs/phase8-reviews/OUTPUT-test-reviewer.txt` |
+| R5 | spec-reviewer on planted spec gaps: blockers for the vague THEN and the missing permission scenarios, plus the client's "see totals" requirement lost from the specs | VERIFIED | `fixtures/dry-runs/phase8-reviews/spec-review.md` |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.
