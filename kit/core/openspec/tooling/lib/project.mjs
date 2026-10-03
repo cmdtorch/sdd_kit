@@ -53,6 +53,24 @@ export function changeSchema(root, name) {
   return 'spec-driven';
 }
 
+/** Schema of a change directory anywhere (also archived ones); null when it has no .openspec.yaml schema. */
+export function schemaOfDir(dir) {
+  const meta = join(dir, '.openspec.yaml');
+  if (!existsSync(meta)) return null;
+  try {
+    const { value } = parseYaml(readFileSync(meta, 'utf8'));
+    return value && typeof value.schema === 'string' ? value.schema : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads a file of a change directory, or null. */
+export function readIn(dir, file) {
+  const p = join(dir, file);
+  return existsSync(p) ? readFileSync(p, 'utf8') : null;
+}
+
 export function isKitSchema(schema) {
   return KIT_SCHEMAS.includes(schema);
 }

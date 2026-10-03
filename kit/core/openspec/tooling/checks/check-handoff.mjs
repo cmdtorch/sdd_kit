@@ -9,7 +9,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { toLines, fenceMask, stripComments } from '../lib/markdown.mjs';
-import { changeDir, changeSchema, isKitSchema, readChangeFile } from '../lib/project.mjs';
+import { changeDir, changeSchema, isKitSchema, schemaOfDir, readIn } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-handoff';
@@ -51,11 +51,12 @@ function hasLabel(text, label) {
   return new RegExp(`^\\s*(?:[-*]\\s*)?(?:\\*\\*${label}(?:[^*]*)?:?\\*\\*|#{4,6}\\s*${label}\\b)`, 'im').test(text);
 }
 
-export function checkHandoff({ root, change }) {
-  if (!change) throw new UsageError('--change is required');
-  const dir = changeDir(root, change);
+/** Options: { root, change, dir? } — `dir` checks a change directory elsewhere (e.g. an archived one). */
+export function checkHandoff({ root, change, dir: dirOverride }) {
+  if (!change && !dirOverride) throw new UsageError('--change is required');
+  const dir = dirOverride || changeDir(root, change);
   if (!existsSync(dir)) throw new UsageError(`change "${change}" not found at ${dir}`);
-  const schema = changeSchema(root, change);
+  const schema = dirOverride ? schemaOfDir(dir) ?? changeSchema(root, change) : changeSchema(root, change);
   if (!isKitSchema(schema)) return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (not a kit schema)`);
   const f = findingsFor(root);
   const diffPath = join(dir, 'api-changes.json');
@@ -70,7 +71,7 @@ export function checkHandoff({ root, change }) {
   const operations = diff.operations || [];
   if (!operations.length) return makeReport(CHECK, f.list, { change, operations: 0 });
   const handoffPath = join(dir, HANDOFF);
-  const content = readChangeFile(root, change, HANDOFF);
+  const content = readIn(dir, HANDOFF);
   if (content === null) {
     f.error(handoffPath, null, `${operations.length} API operation(s) changed but ${HANDOFF} does not exist`, 'write it per openspec/protocols/handoff.md');
     return makeReport(CHECK, f.list, { change, operations: operations.length });

@@ -1,0 +1,2 @@
+      - name: Verify changes (tests carrying scenario markers, quality gate, E2E, API baseline)
+        run: node openspec/tooling/bin/ci.mjs verify

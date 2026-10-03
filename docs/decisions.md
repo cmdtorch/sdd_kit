@@ -186,3 +186,25 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
 - **Frontend side:** `handoff.mjs import --from <backend-repo> --change <name>` creates a `clarify` change with
   the backend handoff and specs as sources `D1`/`D2`; the protocols tell the agent to ask UI/UX only and route API
   gaps to the backend. The backend repo is only read (D7). Store/references-based lookup comes in phase 10.
+
+## 2026-10-03 — Phase 7 design decisions (CI)
+
+- **One entry point, thin workflow (D9):** `openspec/tooling/bin/ci.mjs checks | verify`. Logic is tested with
+  node:test; the YAML only sets up the environment.
+- **Two jobs:** `kit-checks` (no project dependencies: lint-kit, `openspec validate --all --strict` with the pinned
+  CLI, every kit check per change, changes archived in the PR via `git diff <base>...HEAD`, hence
+  `fetch-depth: 0`) and `kit-verify` (project test environment: full suite + gate + E2E once, shared by all
+  completed changes; API baseline check).
+- **Red PR rules:** for a change whose tasks are all done (or that has verification.md): a failing marked test or
+  a planned scenario without a passing marked test fails CI. For a change in progress, missing tests are
+  warnings (only `collect` runs). An API that differs from the committed baseline fails CI. Manual checks
+  pending are warnings in `verify`, errors for changes archived in the PR.
+- **Workflow is generated** from parts (core + preset jobs/steps) by `sdd-kit install --ci` and tracked in the
+  manifest like any kit file: team edits are kept and reported on update. django preset: postgres service + uv;
+  playwright preset: npm ci, browser cache, `--with-deps chromium`, HTML report artifact on failure.
+- **Playwright preset writes JSON to `{out}`** via `PLAYWRIGHT_JSON_OUTPUT_NAME` (T5) so `--reporter=json,html`
+  gives both the machine report and the HTML artifact.
+- **The kit repository has its own CI** (`.github/workflows/test.yml`): node --test with the pinned OpenSpec CLI
+  and a real pytest + xdist for the plugin tests.
+- **Bug found and fixed:** the installer's entry-point check threw when `argv[1]` was not a file (import from
+  `node -e … args`); regression test added.

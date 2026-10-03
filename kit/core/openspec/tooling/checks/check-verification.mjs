@@ -6,7 +6,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parsePlan, parseVerification, VERDICTS, key, isEmptyCell } from '../lib/plan.mjs';
-import { changeDir, changeSchema, isKitSchema, readChangeFile } from '../lib/project.mjs';
+import { changeDir, changeSchema, isKitSchema, schemaOfDir, readIn } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-verification';
@@ -14,18 +14,19 @@ const USAGE = `Usage: check-verification --change <name> [--root <dir>] [--json]
 
 Checks that verification.md has a "Met" verdict with evidence for every row of verification-plan.md.`;
 
-export function checkVerification({ root, change }) {
-  if (!change) throw new UsageError('--change is required');
-  const dir = changeDir(root, change);
+/** Options: { root, change, dir? } — `dir` checks a change directory elsewhere (e.g. an archived one). */
+export function checkVerification({ root, change, dir: dirOverride }) {
+  if (!change && !dirOverride) throw new UsageError('--change is required');
+  const dir = dirOverride || changeDir(root, change);
   if (!existsSync(dir)) throw new UsageError(`change "${change}" not found at ${dir}`);
-  const schema = changeSchema(root, change);
+  const schema = dirOverride ? schemaOfDir(dir) ?? changeSchema(root, change) : changeSchema(root, change);
   if (!isKitSchema(schema)) return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (not a kit schema)`);
 
   const f = findingsFor(root);
   const planPath = join(dir, 'verification-plan.md');
   const verPath = join(dir, 'verification.md');
-  const planContent = readChangeFile(root, change, 'verification-plan.md');
-  const verContent = readChangeFile(root, change, 'verification.md');
+  const planContent = readIn(dir, 'verification-plan.md');
+  const verContent = readIn(dir, 'verification.md');
   if (planContent === null) f.error(planPath, null, 'verification-plan.md does not exist');
   if (verContent === null) {
     f.error(verPath, null, 'verification.md does not exist', 'it is written at the end of apply (openspec/protocols/testing.md §6)');

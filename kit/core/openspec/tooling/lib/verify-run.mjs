@@ -87,10 +87,11 @@ function summarise(results) {
 }
 
 /**
- * Verifies a change. Options: { root, change, mode: 'full'|'scoped', write: boolean, e2e: 'scoped'|'full'|'off'|undefined }.
+ * Verifies a change. Options: { root, change, mode: 'full'|'scoped', write: boolean, e2e: 'scoped'|'full'|'off'|undefined,
+ * cache?: Map } — with a shared `cache`, identical commands (e.g. the full suite) run once for several changes.
  * Returns { ok, complete, rows, commands, markers, manualPending, fingerprint, problems }.
  */
-export function runVerification({ root, change, mode = 'full', write = true, e2e }) {
+export function runVerification({ root, change, mode = 'full', write = true, e2e, cache = null }) {
   const cfg = loadVerifyConfig(root);
   if (!cfg) throw new VerifyError('openspec/tooling/verify.yaml does not exist — configure the project test commands first (sdd-kit install --preset …)');
   const dir = changeDir(root, change);
@@ -110,8 +111,15 @@ export function runVerification({ root, change, mode = 'full', write = true, e2e
   const changeKeys = new Set(plan.coverage.rows.map((r) => key(r.capability, r.scenario)));
   const plannedAt = (level) => plan.coverage.rows.some((r) => r.level === level);
 
+  const cached = (template, files, fn) => {
+    const k = `${template}\u0000${(files || []).join(' ')}`;
+    if (!cache) return fn();
+    if (!cache.has(k)) cache.set(k, fn());
+    return cache.get(k);
+  };
+  const exec = (template, files) => cached(template, files, () => runCommand(root, template, { files: files || [], timeoutSeconds: cfg.timeout_seconds }));
   const collect = (level, l) => {
-    const c = runCommand(root, l.collect, { timeoutSeconds: cfg.timeout_seconds });
+    const c = exec(l.collect, null);
     commands.push({ ...c, name: `${level} collect`, summary: c.exitCode === 0 ? '' : 'collection failed' });
     if (c.exitCode !== 0 || c.output === null) {
       problems.push(`${level} collect failed (exit ${c.exitCode}):\n${tail(c.stdout + c.stderr)}`);
@@ -120,7 +128,7 @@ export function runVerification({ root, change, mode = 'full', write = true, e2e
     return parseResults(c.output, l.format, level, root);
   };
   const run = (level, l, template, files) => {
-    const c = runCommand(root, template, { files: files || [], timeoutSeconds: cfg.timeout_seconds });
+    const c = exec(template, files);
     let rows = [];
     try {
       rows = c.output ? parseResults(c.output, l.format, level, root) : [];
@@ -141,7 +149,7 @@ export function runVerification({ root, change, mode = 'full', write = true, e2e
       run('unit', unit, unit.full, null);
     }
     if (unit.gate && mode !== 'scoped') {
-      const g = runCommand(root, unit.gate, { timeoutSeconds: cfg.timeout_seconds });
+      const g = exec(unit.gate, null);
       commands.push({ ...g, name: 'quality gate', summary: '' });
       if (g.exitCode !== 0) problems.push(`quality gate \`${unit.gate}\` failed (exit ${g.exitCode}):\n${tail(g.stdout + '\n' + g.stderr)}`);
     }
@@ -203,4 +211,26 @@ export function runVerification({ root, change, mode = 'full', write = true, e2e
     }
   }
   return result;
+}
+
+/**
+ * Markers only (no test run): runs each configured level's `collect` command. Used by CI for changes that
+ * are still in progress. Returns { markers, problems }.
+ */
+export function collectMarkers({ root, cache = null }) {
+  const cfg = loadVerifyConfig(root);
+  if (!cfg) throw new VerifyError('openspec/tooling/verify.yaml does not exist');
+  const markers = [];
+  const problems = [];
+  for (const [level, l] of Object.entries(cfg.levels)) {
+    const k = `${l.collect}\u0000`;
+    const c = cache?.get(k) || runCommand(root, l.collect, { timeoutSeconds: cfg.timeout_seconds });
+    if (cache && !cache.has(k)) cache.set(k, c);
+    if (c.exitCode !== 0 || c.output === null) {
+      problems.push(`${level} collect failed (exit ${c.exitCode}):\n${tail(c.stdout + c.stderr)}`);
+      continue;
+    }
+    markers.push(...parseResults(c.output, l.format, level, root));
+  }
+  return { markers, problems };
 }

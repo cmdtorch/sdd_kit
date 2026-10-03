@@ -235,6 +235,14 @@ describe('status and uninstall', () => {
   });
 });
 
+describe('module import', () => {
+  test('importing the installer with a non-file argv[1] does not throw (regression)', () => {
+    const r = spawnSync('node', ['-e', `import(${JSON.stringify(join(REPO, 'installer/sdd-kit.mjs'))}).then(() => console.log('ok'))`, '/does/not/exist.yml'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /ok/);
+  });
+});
+
 describe('text editing helpers', () => {
   const block = kitBlock(FRAGMENT, 'English');
 

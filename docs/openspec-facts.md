@@ -141,6 +141,7 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | T2 | pytest `--strict-markers` accepts the marker once the plugin registers it in `pytest_configure`; without the plugin the project must register it (preset note) | VERIFIED | fixture `pytest.ini` uses `--strict-markers` |
 | T3 | Playwright `--list --reporter=json` includes test `annotations` (with `location.file` absolute); a run adds `status`: `expected` / `unexpected` / `skipped` / `flaky` and `results[]`; `config.rootDir` = testDir; top-level suites are files, nested suites are `describe` blocks | VERIFIED | @playwright/test 1.63.0; `fixtures/results/playwright-*.json` |
 | T4 | A Playwright test that does not use `page` runs without browsers installed | VERIFIED | same run (no `npx playwright install`) |
+| T5 | `PLAYWRIGHT_JSON_OUTPUT_NAME=<file>` writes the JSON report to a file; with `--reporter=json,html` the HTML report still goes to `playwright-report/` and stdout is free text; works with `--list` too | VERIFIED | Playwright 1.63.0 |
 
 ## 12. Kit gates end-to-end (phase 5, real Claude Code)
 
@@ -159,6 +160,13 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | A2 | The kit's operation diff on that pair: 1 added + 5 modified operations, 5 breaking (removed response field `note`, new required request field `currency` on POST/PUT; PATCH stays optional) | VERIFIED | `tests/handoff.test.mjs` |
 | A3 | Content fingerprint via `git write-tree` on a temporary index (copied from the real one) is stable across commits and changes only with content | VERIFIED | regression test "committing after verification does not make it stale" |
 | A4 | Real Claude Code on a frontend change imported with `handoff.mjs`: 13 questions, all about UI/UX; two API gaps raised as `For: Dev` questions (handoff JSON vs spec "Excel file"; missing 400 for an invalid period); questions in Russian per config | VERIFIED | `fixtures/dry-runs/phase6-frontend-import/` |
+
+## 14. CI (phase 7)
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| CI1 | Generated workflows (every preset combination) and the kit's own `test.yml` pass `actionlint` (rhysd/actionlint compiled to wasm, npm `actionlint` 2.0.6) and `@action-validator/cli` schema validation; a planted `${{ github.reff }}` is caught | VERIFIED | manual run in a scratch dir (not a kit dependency) |
+| CI2 | The workflows have **not** run on GitHub yet | NOT VERIFIED | first real run: the pilot's first PR after installing with `--ci` |
 
 ## 8. Not covered in phase 0 (planned later)
 

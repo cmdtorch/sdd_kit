@@ -33,8 +33,10 @@ export function readManifest(root) {
   return JSON.parse(readFileSync(p, 'utf8'));
 }
 
+const contentOf = (src) => (typeof src === 'string' ? readFileSync(src) : Buffer.from(src.content));
+
 /**
- * Plans file operations. `kitFiles` = {rel: sourcePath}. Returns a list of actions:
+ * Plans file operations. `kitFiles` = {rel: sourcePath | {content}} (generated files carry their content). Returns a list of actions:
  *   {rel, op: 'create'|'update'|'unchanged'|'restore'|'conflict-modified'|'conflict-foreign'|'delete'|'keep-modified', ...}
  * `force` turns conflicts into 'overwrite' (with a backup).
  */
@@ -42,8 +44,7 @@ export function planFiles(root, kitFiles, manifest, { force = false } = {}) {
   const known = manifest?.files || {};
   const actions = [];
   for (const [rel, src] of Object.entries(kitFiles)) {
-    const content = readFileSync(src);
-    const newHash = sha256(content);
+    const newHash = sha256(contentOf(src));
     const target = join(root, rel);
     if (!existsSync(target)) {
       actions.push({ rel, src, hash: newHash, op: rel in known ? 'restore' : 'create' });
@@ -70,11 +71,11 @@ export function planFiles(root, kitFiles, manifest, { force = false } = {}) {
 }
 
 /** Manifest content after applying `actions` (conflicts keep their previous hash, if any). */
-export function nextManifest(kitVersion, actions, presets = []) {
+export function nextManifest(kitVersion, actions, presets = [], features = {}) {
   const files = {};
   for (const a of actions) {
     if (['create', 'update', 'unchanged', 'restore', 'overwrite'].includes(a.op)) files[a.rel] = a.hash;
     else if (a.op === 'conflict-modified' && a.keptHash) files[a.rel] = a.keptHash;
   }
-  return { kit: 'sdd-kit', kitVersion, presets: [...presets].sort(), files: Object.fromEntries(Object.entries(files).sort()) };
+  return { kit: 'sdd-kit', kitVersion, presets: [...presets].sort(), ...features, files: Object.fromEntries(Object.entries(files).sort()) };
 }

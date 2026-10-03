@@ -42,6 +42,8 @@ Options:
   --keep-default-schema        do not make "clarify" the default schema for new changes
   --preset <names>             comma-separated stack presets: django, playwright (remembered for updates;
                                they create openspec/tooling/verify.yaml when it does not exist yet)
+  --ci                         also install the GitHub Actions workflow .github/workflows/sdd-kit.yml
+                               (generated for the presets; remembered for updates)
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
   --force                      replace locally edited kit files (a .sdd-kit-backup copy is kept);
                                uninstall: remove the kit even if changes still use its schemas
@@ -105,7 +107,7 @@ async function askLanguage(defaultLang) {
 
 /** Builds the full install plan without writing anything. */
 export function planInstall(opts) {
-  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [] } = opts;
+  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [], ci: ciRequested = false } = opts;
   const k = kitPaths(kitDir);
   const kit = JSON.parse(readFileSync(k.kitJson, 'utf8'));
   const plan = { root, kitVersion: kit.kitVersion, openspecVersion: kit.openspecVersion, steps: [], warnings: [] };
@@ -124,8 +126,11 @@ export function planInstall(opts) {
     if (existsSync(src)) Object.assign(kitFiles, listFiles(src, 'openspec'));
   }
   delete kitFiles[MANIFEST];
+  const ci = Boolean(ciRequested || manifest?.ci);
+  plan.ci = ci;
+  if (ci) kitFiles['.github/workflows/sdd-kit.yml'] = { content: composeWorkflow(kitDir, presets) };
   plan.files = planFiles(root, kitFiles, manifest, { force });
-  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets);
+  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets, ci ? { ci: true } : {});
 
   // verify.yaml: project-owned; created from presets only when missing
   const verifyPath = join(root, 'openspec', 'tooling', 'verify.yaml');
@@ -179,6 +184,22 @@ export function planInstall(opts) {
   return plan;
 }
 
+/** GitHub Actions workflow text for the chosen presets. */
+export function composeWorkflow(kitDir, presets) {
+  const part = (...p) => readFileSync(join(kitDir, ...p), 'utf8');
+  const has = (p) => presets.includes(p);
+  const out = [part('ci', 'github', 'workflow.head.yml').replace('{{PRESETS}}', presets.length ? presets.join(', ') : 'none')];
+  out.push(part('ci', 'github', 'verify.head.yml'));
+  if (has('django')) out.push(part('presets', 'django', 'ci.services.yml'));
+  out.push('    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n');
+  if (has('django')) out.push(part('presets', 'django', 'ci.steps.yml'));
+  if (has('playwright')) out.push(part('presets', 'playwright', 'ci.steps.yml'));
+  if (!presets.length) out.push('      # Set up the project test environment here (dependencies, services) — the commands come from openspec/tooling/verify.yaml.\n');
+  out.push(part('ci', 'github', 'verify.tail.yml'));
+  if (has('playwright')) out.push(part('presets', 'playwright', 'ci.after.yml'));
+  return out.join('');
+}
+
 /** verify.yaml text composed from the chosen presets' level fragments. */
 export function composeVerify(kitDir, presets) {
   const levels = [];
@@ -202,20 +223,24 @@ export function composeVerify(kitDir, presets) {
   ].join('\n');
 }
 
+function put(src, target) {
+  mkdirSync(dirname(target), { recursive: true });
+  if (typeof src === 'string') copyFileSync(src, target);
+  else writeFileSync(target, src.content);
+}
+
 function applyFiles(root, files) {
   const done = [];
   for (const a of files) {
     const target = join(root, a.rel);
     if (['create', 'update', 'restore'].includes(a.op)) {
-      mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(a.src, target);
+      put(a.src, target);
     } else if (a.op === 'overwrite') {
       if (existsSync(target)) copyFileSync(target, target + '.sdd-kit-backup');
-      mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(a.src, target);
+      put(a.src, target);
     } else if (a.op === 'delete') {
       rmSync(target);
-      pruneEmptyDirs(dirname(target), join(root, 'openspec'));
+      pruneEmptyDirs(dirname(target), a.rel.startsWith('openspec/') ? join(root, 'openspec') : root);
     }
     done.push(a);
   }
@@ -252,7 +277,7 @@ export async function install(opts) {
 
   // validate everything before writing (init changes config, so the plan is rebuilt after it)
   const presets = opts.presets || [];
-  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets });
+  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets, ci: opts.ci });
   if (opts.dryRun) {
     result.plan = summarise(plan, willInit, !opts.skipOpenspec);
     return result;
@@ -260,7 +285,7 @@ export async function install(opts) {
   if (willInit) {
     openspecRun(['init', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
     result.actions.push({ step: 'openspec init --tools claude (kit profile)' });
-    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets });
+    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets, ci: opts.ci });
   }
   result.files = applyFiles(root, plan.files).map(({ rel, op }) => ({ rel, op }));
   writeFileEnsured(join(root, MANIFEST), JSON.stringify(plan.manifest, null, 2) + '\n');
@@ -411,7 +436,7 @@ function printHuman(r) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch']);
+  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch', 'ci']);
   const cmd = args._[0];
   if (args.help || !cmd) {
     console.log(USAGE);
@@ -426,6 +451,7 @@ async function main() {
     skipOpenspec: args['skip-openspec'],
     allowVersionMismatch: args['allow-version-mismatch'],
     presets: args.preset ? String(args.preset).split(',').map((s) => s.trim()).filter(Boolean) : [],
+    ci: args.ci,
     force: args.force,
     dryRun: args['dry-run'],
     yes: args.yes,
@@ -450,4 +476,11 @@ async function main() {
 }
 
 // entry point (also through the npm bin symlink created by `npx`)
-if (process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url) main();
+function invokedDirectly() {
+  try {
+    return Boolean(process.argv[1]) && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch {
+    return false; // argv[1] is not a file (e.g. imported from `node -e … args`)
+  }
+}
+if (invokedDirectly()) main();
