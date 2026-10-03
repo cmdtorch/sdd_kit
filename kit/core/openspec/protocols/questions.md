@@ -54,6 +54,19 @@ Depth: Comprehensive
 - `Depth:` is `Minimal`, `Standard` or `Comprehensive`. Default: `Comprehensive`.
   Change it only when the developer asks.
 
+### Language
+
+- Write question text, `Why this is asked:` text, options and summary bullets in the **questions
+  language** set in `openspec/config.yaml` context (`Questions language: <language>`; English if not
+  set). PO/PM questions are forwarded verbatim, so they must be in the language the business speaks.
+- The **structural keywords always stay in English**, because the kit's checks parse them:
+  - the headings `## Sources`, `## Main round` (and the other round names), `### Q<n>.`,
+    `### Summary confirmation — <Round>`, `### Requested changes — <Round> #<k>`;
+  - the line labels `Depth:`, `For: Dev | PO/PM`, `Why this is asked:`;
+  - the option labels `X. Other (please specify)`, `Not yet defined`;
+  - `[Answer]:`, `Looks correct`, `Request changes`, `(follow-up to Q<n>)`, and the source tags.
+- Everything after the clarifications file — proposal, specs, design, plans, tests — is written in English.
+
 ### Sources
 
 - `[desc]` is the developer's description of the change, quoted exactly.

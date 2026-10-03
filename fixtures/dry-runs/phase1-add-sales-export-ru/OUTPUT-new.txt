@@ -1,0 +1,17 @@
+I created the change `add-sales-export` and wrote the Main round (Q1–Q13) to `openspec/changes/add-sales-export/clarifications.md`. Every `[Answer]:` is blank. The client's message is saved as `[D1]` in `sources/D1.md`.
+
+**Workflow:** the `clarify` schema (the project default, not `spec-driven`). Progress is 0/6 artifacts. The order is clarifications → proposal → specs and design → verification-plan → tasks. I stopped at the first artifact, so no `proposal.md` exists yet.
+
+**What I found in the code:**
+- The only related spec is `inventory/student-sales`. It covers recording a sale and says nothing about export or reporting.
+- `Sale` links to a student, not to a class, so Q3 has to settle which class "filter by class" means.
+- The sales list is paginated at 25 per page, so the export has to work around that.
+
+**Questions to forward to the PO/PM:** Q1–Q10, Q12 and Q13. They are written in Russian, with no code terms, so they can be sent as they are. Only Q11, about data volume, is for the dev. Q12 is the scope-boundary question.
+
+**Next step:** I couldn't load the AskUserQuestion tool here, so I can't offer the answer-mode choice as a prompt. Please pick one:
+- **Guide me:** I ask the questions here in batches of 4.
+- **I'll edit the file:** you fill in the answers and say "done".
+- **Chat:** we discuss, and I write the decisions into the file.
+
+I won't write the proposal until the answers are analysed and the summary confirmation reads exactly `Looks correct`.

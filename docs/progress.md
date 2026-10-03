@@ -4,7 +4,7 @@
 |---|---|---|
 | Planning | ✅ done | `docs/planning.md`, goals filled in, CLAUDE.md updated (D4, D13–D19, phases) |
 | 0. Bootstrap | ✅ done | `docs/openspec-facts.md`; upstream fixture; D20 (XDG trick), D21 (kit spec parser) |
-| 1. Prompt layer | ✅ done (1 question open) | protocols, `clarify` + `lean`, config fragment, kit profile; dry run in `fixtures/dry-runs/` |
+| 1. Prompt layer | ✅ done | protocols, `clarify` + `lean`, config fragment, kit profile; dry run in `fixtures/dry-runs/` |
 | 2. Checks | ⏳ | |
 | 3. Hooks | ⏳ | verify Claude Code hook semantics first |
 | 4. Installer | ⏳ | |
@@ -45,7 +45,7 @@
 - [x] `openspec schema validate` passes for both; `tests/schemas.test.mjs` (16 tests) green; planted defect caught
 - [x] Dry run (`claude -p` on `fixtures/projects/school-api`): 14 good questions, sources saved, agent stops;
       `/opsx:continue` with blank answers refuses to write the proposal (prompt-level gate)
-- [ ] Owner: language of clarifications.md (see report)
+- [x] Owner: questions language is a project setting (D22)
 
 ## Phase 1 vs goals
 

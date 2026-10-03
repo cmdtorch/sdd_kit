@@ -7,7 +7,8 @@
 context: |
   # >>> sdd-kit >>>
   sdd-kit is installed. For changes on the `clarify` or `lean` schema:
-  - Artifacts are written in English.
+  - Artifacts are written in English, except the questions in clarifications.md.
+  - Questions language: English
   - Clarifying questions: openspec/protocols/questions.md (default depth: Comprehensive).
   - Source tags and assumptions: openspec/protocols/grounding.md
   - Tests and verification: openspec/protocols/testing.md; project commands: openspec/tooling/verify.yaml

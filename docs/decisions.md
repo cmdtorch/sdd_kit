@@ -69,3 +69,12 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   header would leak into artifacts) → phase 4 installer tracks kit files with a manifest of hashes.
 - **`lean` keeps clarifications inline:** questions asked in a lean change go to a `## Clarifications`
   section of `proposal.md`; requirement trace uses `[desc]` or that section.
+
+## 2026-10-03 — Questions language (D22)
+
+- **Decision:** option C — the questions language is a per-project setting (`Questions language:` line in
+  the kit block of config `context`; default English). Structural keywords stay English.
+- **Reason:** PO/PM questions are forwarded verbatim; English text would have to be translated. Specs, tests
+  and archive keys stay English (D1), so nothing downstream depends on the setting.
+- **Alternatives:** all English (A); clarifications always in the team language (B).
+- **Installer (phase 4):** asks for the questions language and writes it into the context line.

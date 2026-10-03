@@ -63,6 +63,7 @@ that are **not** in the research files.
 | D19 | Non-goals: other AI tools, tracker integrations, dashboards/metrics inside the kit, native Windows, manual-QA workflow changes. Success is judged informally by the owner and the team (fewer QA bugs, faster features, less frontend waiting) — no formal measurement. No deadline — quality over speed. |
 | D20 | **XDG profile trick approved.** The kit's workflow profile is committed at `openspec/tooling/xdg/openspec/config.json`; every `openspec update` runs through a kit wrapper that sets `XDG_CONFIG_HOME` and `OPENSPEC_TELEMETRY=0` for that process only. Session-start warns when installed skills drift from the kit profile. |
 | D21 | **Scenario names come from a kit parser** (`show --json` has no names in 1.13.0). One small fence-aware module mirrors OpenSpec's header rules; tests cross-check it against `show --json` (requirement and scenario counts and texts). All kit scripts use only this module to read specs. |
+| D22 | Exception to D1: the **questions** in `clarifications.md` (question text, options, summary bullets) use a per-project *questions language* (`Questions language: <lang>` in config context, default English), so PO/PM questions can be forwarded verbatim. Structural keywords stay English (parsed by checks); all other artifacts stay English. |
 
 ---
 
