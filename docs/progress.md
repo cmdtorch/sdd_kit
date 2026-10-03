@@ -7,7 +7,7 @@
 | 1. Prompt layer | ✅ done | protocols, `clarify` + `lean`, config fragment, kit profile; dry run in `fixtures/dry-runs/` |
 | 2. Checks | ✅ done | 6 checks + 7 libs; 101 tests; 49 planted defects caught |
 | 3. Hooks | ✅ done | answers-gate, session-start, artifact-feedback, settings merge; hook semantics verified (facts §9) |
-| 4. Installer | ⏳ | |
+| 4. Installer | ✅ done | `sdd-kit install/update/status/uninstall`; npx from a packed tarball: ~8 s |
 | 5. Verification | ⏳ | pilot starts after this phase |
 | 6. Handoff | ⏳ | |
 | 7. CI | ⏳ | |
@@ -85,3 +85,24 @@
 
 - *"ИИ задает все вопросы… / AI не начинает без подтверждённых ответов"* — now enforced by a hook, not only
   by the prompt: the proposal cannot be written while the Main round is open (E2).
+
+## Phase 4 — checklist
+
+- [x] `installer/sdd-kit.mjs` + `installer/lib/{manifest,gitignore,config-edit}.mjs`, `package.json` with `bin`
+- [x] Install into a pilot-shaped project (`fixtures/projects/pilot-like`): kit files, config block, schema
+      default, settings merge (graphify kept), .gitignore per D6 (checked with `git check-ignore`), lint-kit clean
+- [x] Re-run is byte-for-byte idempotent; dry run writes nothing; invalid settings → nothing written
+- [x] Update with a newer kit: unedited files updated, edited kept (conflict persists), `--force` with backup,
+      foreign files never touched, deleted restored, dropped removed
+- [x] Uninstall restores the original project byte for byte (except kept edited files); refuses while kit-schema
+      changes exist
+- [x] Real OpenSpec CLI: new project gets the kit profile skills (no propose); the developer's global config dir
+      stays empty; a pilot with `core` skills is switched to the kit profile, project skills untouched
+- [x] `npm pack` + `npx --package=<tgz> sdd-kit install` in an empty repo: works, ~8 s
+- [x] `tests/installer.test.mjs`: 20 tests
+
+## Phase 4 vs goals
+
+- *"Система ставится на комп разраба очень быстро и без усилий"* — one command, ~8 s, safe to re-run and to
+  remove. Still needed for "<10 min for a new developer": README / install guide (phase 11) and publishing the
+  kit to the company's private GitHub.

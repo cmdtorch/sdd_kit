@@ -86,7 +86,7 @@ export function sessionContext(root) {
     if (existsSync(join(skills, 'openspec-propose'))) drift.push('openspec-propose is installed (creates all artifacts in one pass, skipping question rounds)');
     if (!existsSync(join(skills, 'openspec-continue-change'))) drift.push('openspec-continue-change is missing');
     if (drift.length) {
-      lines.push(`sdd-kit WARNING: OpenSpec skills differ from the kit profile: ${drift.join('; ')}. Probably a plain "openspec update" ran with a personal profile — re-run the kit update (it runs openspec update with the kit profile).`);
+      lines.push(`sdd-kit WARNING: OpenSpec skills differ from the kit profile: ${drift.join('; ')}. Probably a plain "openspec update" ran with a personal profile. Fix: node openspec/tooling/bin/openspec.mjs update`);
     }
   }
   return lines.join('\n');

@@ -1,0 +1,20 @@
+{
+  "name": "sdd-kit",
+  "version": "0.1.0",
+  "description": "Spec-Driven Development kit for OpenSpec + Claude Code: clarifying questions, test gates, traceability",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "sdd-kit": "installer/sdd-kit.mjs"
+  },
+  "files": [
+    "installer/",
+    "kit/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}

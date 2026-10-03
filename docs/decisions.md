@@ -115,3 +115,29 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
 - **Hook commands** use `node "${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/<hook>.mjs"` (K8).
 - **Not done (noted for later):** a hook that resets a confirmed summary when an answer in that round is edited.
   Today the protocol tells the agent to reset it; detecting answer edits needs the previous file version.
+
+## 2026-10-03 — Phase 4 design decisions (installer)
+
+- **Commands:** `sdd-kit install` (= `update`), `status`, `uninstall`; `--dry-run`, `--force`, `--json`,
+  `--questions-language`, `--keep-default-schema`, `--skip-openspec`. Entry point `installer/sdd-kit.mjs`,
+  exposed as the `sdd-kit` bin of a dependency-free `package.json` (D18).
+- **Managed files are tracked by a manifest of sha256 hashes** (`openspec/tooling/kit-manifest.json`) instead of
+  header comments (templates cannot carry a header). Update rules: unedited → replaced; edited → kept and
+  reported (`--force` replaces it and keeps `.sdd-kit-backup`); a project file at a kit path that the kit did
+  not write → never touched; deleted kit file → restored; file dropped from the kit → removed only if unedited.
+- **Plan first, write second.** Invalid `settings.json`, a non-literal `context`, or a broken edit result abort
+  before anything is written. Config edits are text-level (comments and examples are kept) and every result is
+  re-parsed.
+- **.gitignore:** whole-dir ignores of `openspec/` / `.claude/` are commented out (`# sdd-kit disabled: …`) and a
+  marked block adds `.claude/*` with negations for settings.json, agents/, commands/, skills/openspec-*/; local
+  files (settings.local.json, tdd-guard/, worktrees/) stay ignored. Verified with `git check-ignore`. Projects
+  that never ignored `.claude/` only get the "keep ignored" lines.
+- **OpenSpec CLI through the kit profile:** `init` (new projects) and `update` run with `XDG_CONFIG_HOME` set to
+  the kit profile. The project gets `openspec/tooling/bin/openspec.mjs` — the wrapper developers use instead of a
+  plain `openspec update` (D20). The installer refuses a CLI that is not the pinned version (D12) unless
+  `--allow-version-mismatch`.
+- **Default schema:** set to `clarify` only when it was `spec-driven` or missing; a custom default is kept with a
+  warning.
+- **Uninstall** refuses while active changes use `clarify`/`lean` (unless `--force`), removes unedited kit files,
+  restores config / settings / .gitignore exactly (tested byte for byte), and leaves OpenSpec skills alone.
+- **Self-check:** install ends with `lint-kit` from the freshly installed tooling; errors give exit code 1.
