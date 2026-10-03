@@ -37,12 +37,18 @@ export function makeProject(schemaDirs = {}) {
 }
 
 /** Runs the CLI in `cwd` with an isolated config dir and telemetry off; parses JSON output. */
-export function openspecJson(cwd, args) {
-  const out = execFileSync(BIN, [...args, '--json'], {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, XDG_CONFIG_HOME: join(cwd, '.xdg'), OPENSPEC_TELEMETRY: '0', DO_NOT_TRACK: '1' },
-  });
+export function openspecJson(cwd, args, { allowFail = false } = {}) {
+  let out;
+  try {
+    out = execFileSync(BIN, [...args, '--json'], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, XDG_CONFIG_HOME: join(cwd, '.xdg'), OPENSPEC_TELEMETRY: '0', DO_NOT_TRACK: '1' },
+    });
+  } catch (e) {
+    if (!allowFail) throw new Error(`openspec ${args.join(' ')} failed:\n${e.stdout}\n${e.stderr}`);
+    out = e.stdout;
+  }
   return JSON.parse(out.slice(out.search(/[[{]/)));
 }

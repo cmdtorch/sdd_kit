@@ -1,0 +1,9 @@
+schema: clarify
+context: |
+  Backend: Python 3.13, Django 5.2, Django REST Framework.
+  # >>> sdd-kit >>>
+  sdd-kit is installed. For changes on the `clarify` or `lean` schema:
+  - Artifacts are written in English, except the questions in clarifications.md.
+  - Questions language: English
+  - Clarifying questions: openspec/protocols/questions.md (default depth: Comprehensive).
+  # <<< sdd-kit <<<

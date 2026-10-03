@@ -78,3 +78,22 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   and archive keys stay English (D1), so nothing downstream depends on the setting.
 - **Alternatives:** all English (A); clarifications always in the team language (B).
 - **Installer (phase 4):** asks for the questions language and writes it into the context line.
+
+## 2026-10-03 — Phase 2 design decisions
+
+- **Shared libraries** under `openspec/tooling/lib/`: `markdown`, `spec-parser` (D21), `clarifications`,
+  `plan`, `yaml` (zero-dependency subset parser, cross-checked against the CLI), `project`, `report`.
+- **Report format** for every check: `{check, ok, skipped?, findings:[{level, file, line, message, hint}]}`;
+  `ok` is false only on errors; warnings never fail. CLI: text by default, `--json`; exit 0 / 1
+  (usage problems also exit 1, as CLAUDE.md asks for 0/1 only).
+- **check-answers modes:** `--artifact <id>` (hook gate before writing), `--round <name>`, and the default
+  consistency mode for CI: every round whose artifact already exists must be confirmed. A summary answer
+  other than exactly `Looks correct` never passes a gate.
+- **New check `check-specs`** for rules OpenSpec does not enforce before archive (facts V5, V6) plus
+  the kit's spec rules (no tags/IDs, `#### Scenario:` form, unique scenario names = marker keys).
+- **Name matching** (scenario/requirement names in plans, matrices and markers): exact after trimming,
+  removing backticks and collapsing whitespace; case-sensitive (same as OpenSpec's requirement matching).
+- **Markers input format** for `check-traceability --markers`: JSON array
+  `[{level: "unit"|"e2e", capability, scenario, test}]`. Phase 5 adds collectors (verify.yaml) that produce it.
+- **Non-kit changes are skipped** by every change-level check (D11); `lint-kit` still lints the whole project.
+- **Fixtures:** `fixtures/projects/checks-good` is the single good project; tests plant one defect per case.

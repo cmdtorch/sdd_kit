@@ -239,6 +239,9 @@ Exact shape is yours to design; keep it small and documented. Presets: `django`,
   verification-plan with a level and has a test with the matching marker at that level (or an explicit exclusion).
 - `check-verification` — matrix covers all scenarios; no `Not Met` / `Unverified`.
 - `lint-kit` — unknown fields in kit schemas and `config.yaml` (OpenSpec ignores them silently).
+- `check-specs` (added in phase 2) — Purpose ≥50 chars for new capabilities, requirement text ≤500,
+  `#### Scenario:` form, unique scenario names per capability, no tags/IDs in spec text
+  (OpenSpec 1.13.0 does not enforce these before archive).
 
 All checks: clear human-readable messages, `--json` output, exit codes 0/1, tested with `node:test`.
 
