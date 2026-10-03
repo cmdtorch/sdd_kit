@@ -1,0 +1,351 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/node_modules/.bin/playwright",
+      "test",
+      "--reporter=json"
+    ],
+    "configFile": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/playwright.config.ts",
+    "rootDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 8,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "export.spec.ts",
+      "file": "export.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "accountant exports sales",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "scenario",
+                  "description": "inventory/sales-export :: Successful export",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 3,
+                    "column": 5
+                  }
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 13,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T17:35:33.816Z",
+                  "annotations": [
+                    {
+                      "type": "scenario",
+                      "description": "inventory/sales-export :: Successful export",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 3,
+                        "column": 5
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-6dbb0f0186eca6ffbc8c",
+          "file": "export.spec.ts",
+          "line": 3,
+          "column": 5
+        },
+        {
+          "title": "empty period shows header only",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "scenario",
+                  "description": "inventory/sales-export :: Empty period",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 9,
+                    "column": 5
+                  }
+                },
+                {
+                  "type": "issue",
+                  "description": "JIRA-1",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 9,
+                    "column": 5
+                  }
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 13,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   \"header\",\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   \"header\",\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n    at /tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts:15:14",
+                    "location": {
+                      "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                      "column": 14,
+                      "line": 15
+                    },
+                    "snippet": "  13 |   ],\n  14 | }, async () => {\n> 15 |   expect([]).toEqual(['header']);\n     |              ^\n  16 | });\n  17 |\n  18 | test.describe('teacher', () => {"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "column": 14,
+                        "line": 15
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   \"header\",\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\n  13 |   ],\n  14 | }, async () => {\n> 15 |   expect([]).toEqual(['header']);\n     |              ^\n  16 | });\n  17 |\n  18 | test.describe('teacher', () => {\n    at /tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts:15:14"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T17:35:33.898Z",
+                  "annotations": [
+                    {
+                      "type": "scenario",
+                      "description": "inventory/sales-export :: Empty period",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 9,
+                        "column": 5
+                      }
+                    },
+                    {
+                      "type": "issue",
+                      "description": "JIRA-1",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 9,
+                        "column": 5
+                      }
+                    }
+                  ],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/test-results/export-empty-period-shows-header-only/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "column": 14,
+                    "line": 15
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-4b7c4a34b66f992a9194",
+          "file": "export.spec.ts",
+          "line": 9,
+          "column": 5
+        },
+        {
+          "title": "no marker",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T17:35:34.831Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-9111f1f4271f23e180e6",
+          "file": "export.spec.ts",
+          "line": 24,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "teacher",
+          "file": "export.spec.ts",
+          "line": 18,
+          "column": 6,
+          "specs": [
+            {
+              "title": "cannot export",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "scenario",
+                      "description": "inventory/sales-export :: Teacher cannot export",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 19,
+                        "column": 7
+                      }
+                    },
+                    {
+                      "type": "skip",
+                      "description": "not ready",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 20,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 5,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-03T17:35:34.774Z",
+                      "annotations": [
+                        {
+                          "type": "scenario",
+                          "description": "inventory/sales-export :: Teacher cannot export",
+                          "location": {
+                            "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                            "line": 19,
+                            "column": 7
+                          }
+                        },
+                        {
+                          "type": "skip",
+                          "description": "not ready",
+                          "location": {
+                            "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                            "line": 20,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0667f272bb733ff6f62f-1ec981a40fd8aeae2f27",
+              "file": "export.spec.ts",
+              "line": 19,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-03T17:35:32.988Z",
+    "duration": 1893.0319999999997,
+    "expected": 2,
+    "skipped": 1,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

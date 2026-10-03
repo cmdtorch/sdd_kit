@@ -1,0 +1,19 @@
+# sdd-kit verify.yaml (fixture): the fake runner stands in for pytest / Playwright.
+version: 1
+levels:
+  unit:
+    format: sdd-json
+    collect: "node fake-runner.mjs collect unit {out}"
+    scoped: "node fake-runner.mjs run unit {out} {files}"
+    full: "node fake-runner.mjs run unit {out}"
+    gate: "node fake-runner.mjs gate"
+  e2e:
+    format: sdd-json
+    collect: "node fake-runner.mjs collect e2e {out}"
+    scoped: "node fake-runner.mjs run e2e {out} {files}"
+    full: "node fake-runner.mjs run e2e {out}"
+gates:
+  stop: full
+  e2e: scoped
+  stop_block_limit: 3
+timeout_seconds: 60

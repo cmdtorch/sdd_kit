@@ -17,6 +17,7 @@ export function listFiles(srcDir, prefix) {
   const out = {};
   const walk = (d) => {
     for (const name of readdirSync(d).sort()) {
+      if (name === '__pycache__' || name.endsWith('.pyc') || name === '.DS_Store') continue;
       const p = join(d, name);
       if (statSync(p).isDirectory()) walk(p);
       else out[`${prefix}/${relative(srcDir, p).split(sep).join('/')}`] = p;
@@ -69,11 +70,11 @@ export function planFiles(root, kitFiles, manifest, { force = false } = {}) {
 }
 
 /** Manifest content after applying `actions` (conflicts keep their previous hash, if any). */
-export function nextManifest(kitVersion, actions) {
+export function nextManifest(kitVersion, actions, presets = []) {
   const files = {};
   for (const a of actions) {
     if (['create', 'update', 'unchanged', 'restore', 'overwrite'].includes(a.op)) files[a.rel] = a.hash;
     else if (a.op === 'conflict-modified' && a.keptHash) files[a.rel] = a.keptHash;
   }
-  return { kit: 'sdd-kit', kitVersion, files: Object.fromEntries(Object.entries(files).sort()) };
+  return { kit: 'sdd-kit', kitVersion, presets: [...presets].sort(), files: Object.fromEntries(Object.entries(files).sort()) };
 }

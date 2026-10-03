@@ -7,11 +7,13 @@
 //   - config `context` over 50 KB (OpenSpec drops it entirely), rules for unknown artifacts,
 //     malformed operations, a default schema that does not exist
 //   - kit block / questions language missing from config context
+//   - openspec/tooling/verify.yaml: unknown fields, bad formats, missing commands
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseYaml, YamlError } from '../lib/yaml.mjs';
 import { listChanges, KIT_SCHEMAS } from '../lib/project.mjs';
 import { makeReport, findingsFor, runCli, isMain } from '../lib/report.mjs';
+import { validateVerifyConfig, VERIFY_FILE } from '../lib/verify-config.mjs';
 
 const CHECK = 'lint-kit';
 const USAGE = `Usage: lint-kit [--root <dir>] [--json]
@@ -186,6 +188,14 @@ export function lintKit({ root }) {
       }
       if (c.store !== undefined && typeof c.store !== 'string') f.error(cfgFile, pos.store, 'store must be a single store id string');
     }
+  }
+
+  const verifyFile = join(root, VERIFY_FILE);
+  if (existsSync(verifyFile)) {
+    const y = readYaml(f, verifyFile);
+    if (y) for (const p of validateVerifyConfig(y.value)) f.error(verifyFile, y.positions[p.path], p.message);
+  } else {
+    f.warning(verifyFile, null, 'verify.yaml does not exist: the test gate, verify.mjs and the archive gate cannot run tests', 'install a preset (sdd-kit install --preset django,playwright) or write it by hand');
   }
 
   for (const name of listChanges(root)) {

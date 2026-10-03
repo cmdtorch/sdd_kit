@@ -207,9 +207,9 @@ describe('settings merge (D10)', () => {
   test("keeps the project's own hooks (pilot graphify hooks) and adds the kit's after them", () => {
     const merged = mergeSettings(pilot, FRAGMENT);
     assert.deepEqual(merged.hooks.PreToolUse.slice(0, 2), pilot.hooks.PreToolUse);
-    assert.equal(merged.hooks.PreToolUse.length, 3);
-    assert.ok(merged.hooks.PreToolUse[2].hooks.every(isKitHook));
-    assert.ok(merged.hooks.SessionStart && merged.hooks.PostToolUse);
+    assert.equal(merged.hooks.PreToolUse.length, 2 + FRAGMENT.hooks.PreToolUse.length);
+    assert.ok(merged.hooks.PreToolUse.slice(2).every((g) => g.hooks.every(isKitHook)));
+    assert.ok(merged.hooks.SessionStart && merged.hooks.PostToolUse && merged.hooks.Stop);
   });
 
   test('idempotent: merging twice equals merging once', () => {

@@ -208,6 +208,10 @@ Scenario markers:
 
 ### verify.yaml (per project, stack-agnostic contract)
 
+> Implemented in phase 5 — the authoritative shape is documented at the top of
+> `kit/core/openspec/tooling/lib/verify-config.mjs` (levels with `format`, `collect`, `scoped`, `full`, `gate`;
+> `gates.stop|e2e|stop_block_limit`; `{out}` / `{files}` placeholders). The sketch below is the original idea.
+
 Scripts never hardcode a stack; they read `openspec/tooling/verify.yaml`, e.g.:
 
 ```yaml

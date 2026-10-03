@@ -105,28 +105,30 @@ regression test for a bug in specified behaviour.
 
 ## 6. End of apply
 
-1. Run the full suite and the quality gate (`verify.yaml → unit.full`, `unit.gate`).
-2. Run E2E for the change's `e2e` scenarios (`verify.yaml → e2e.run`).
-3. Write `verification.md` in the change directory:
+1. Check off the last task. From then on the kit's test gate runs when you finish a turn.
+2. Run the verification yourself first:
 
-   ```markdown
-   ## Verification matrix
-
-   | Capability | Scenario | Level | Expected | Actual | Evidence | Verdict |
-   |---|---|---|---|---|---|---|
-   | inventory/sale-export | Successful export | unit | CSV with 3 rows | CSV with 3 rows | tests/test_export.py::test_successful_export passed | Met |
-
-   ## Commands run
-
-   - `make test` — 1523 passed
-   - `make check` — ok
-   - `npx playwright test --grep @sale-export` — 2 passed
+   ```
+   node openspec/tooling/bin/verify.mjs --change <change>
    ```
 
-   - **Every** row of `verification-plan.md` appears in the matrix.
-   - Verdict is one of `Met`, `Not Met`, `Unverified`. `Unverified` counts as a failure.
-   - `manual` rows are `Unverified` until a human records the result.
-4. Apply is finished only when every command passed and every row is `Met`.
+   It runs the full suite and the quality gate (`verify.yaml → unit.full`, `unit.gate`) and the change's
+   E2E tests (`e2e.scoped`, or `e2e.full`). Then it **writes `verification.md` from the real results**:
+   - a row is `Met` only when every test carrying that scenario's marker at that level passed;
+   - a failing test makes the row `Not Met`;
+   - no marked test, or only skipped tests, makes the row `Unverified`.
+
+   Do not write automated rows by hand — the next run overwrites them, and the archive gate only trusts
+   a recorded run whose files have not changed since.
+3. `manual` rows: a human performs the check and writes the result into that row of `verification.md`
+   (Actual, Evidence: who / when, Verdict `Met` or `Not Met`). Later runs keep it. Until then the row is
+   `Unverified` and the change cannot be archived.
+4. Apply is finished only when the command exits 0 and no row is `Not Met` or `Unverified`.
+   `Unverified` counts as a failure.
+5. Archive with `openspec archive <change>`. The archive gate checks the last verification is green,
+   complete and still current.
+
+For a quick check during TDD, `--scoped` runs only the tests marked for this change (no quality gate).
 
 ## 7. When something fails
 

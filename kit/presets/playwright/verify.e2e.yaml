@@ -1,0 +1,7 @@
+  e2e:
+    # Playwright: tests carry annotation { type: 'scenario', description: '<capability-path> :: <Scenario name>' }.
+    # The JSON reporter output (stdout) is read directly. Run from the directory with playwright.config.*.
+    format: playwright-json
+    collect: "npx playwright test --list --reporter=json"
+    scoped: "npx playwright test --reporter=json {files}"
+    full: "npx playwright test --reporter=json"

@@ -331,8 +331,9 @@ artifacts:
         followed by implementation tasks verified by those tests passing.
       - E2E tests for scenarios planned as `e2e` are tasks in the group that
         delivers that journey, not a separate final group.
-      - The final group is integration only - no new behaviour: run the full
-        suite and quality gate, run the change's E2E tests, write verification.md
+      - The final group is integration only - no new behaviour: run
+        `node openspec/tooling/bin/verify.mjs --change <name>` (full suite,
+        quality gate, E2E; writes verification.md) and fix what fails
         (see `openspec/protocols/testing.md` section 6).
     requires:
       - specs
@@ -353,8 +354,9 @@ apply:
     - If a requirement gap appears, append `## Apply round` to
       clarifications.md and ask (`openspec/protocols/questions.md`); do not
       guess.
-    - At the end: full suite + quality gate, E2E for `e2e` scenarios, then
-      verification.md with a verdict for every row of verification-plan.md.
-      Apply is done only when all commands pass and every row is `Met`.
+    - At the end run `node openspec/tooling/bin/verify.mjs --change <name>`:
+      full suite + quality gate + E2E; it writes verification.md from the real
+      results. Apply is done only when it exits 0 and every row is `Met`
+      (manual rows need a human result).
     - Never weaken tests or quality targets to get green; after two failed fix
       attempts stop and ask the human.

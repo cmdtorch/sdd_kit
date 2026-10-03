@@ -1,0 +1,205 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/node_modules/.bin/playwright",
+      "test",
+      "--list",
+      "--reporter=json"
+    ],
+    "configFile": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/playwright.config.ts",
+    "rootDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "",
+        "name": "",
+        "testDir": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 8,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "export.spec.ts",
+      "file": "export.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "accountant exports sales",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "scenario",
+                  "description": "inventory/sales-export :: Successful export",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 3,
+                    "column": 5
+                  }
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-6dbb0f0186eca6ffbc8c",
+          "file": "export.spec.ts",
+          "line": 3,
+          "column": 5
+        },
+        {
+          "title": "empty period shows header only",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "scenario",
+                  "description": "inventory/sales-export :: Empty period",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 9,
+                    "column": 5
+                  }
+                },
+                {
+                  "type": "issue",
+                  "description": "JIRA-1",
+                  "location": {
+                    "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                    "line": 9,
+                    "column": 5
+                  }
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-4b7c4a34b66f992a9194",
+          "file": "export.spec.ts",
+          "line": 9,
+          "column": 5
+        },
+        {
+          "title": "no marker",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "0667f272bb733ff6f62f-9111f1f4271f23e180e6",
+          "file": "export.spec.ts",
+          "line": 24,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "teacher",
+          "file": "export.spec.ts",
+          "line": 18,
+          "column": 6,
+          "specs": [
+            {
+              "title": "cannot export",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "scenario",
+                      "description": "inventory/sales-export :: Teacher cannot export",
+                      "location": {
+                        "file": "/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/pw/e2e/export.spec.ts",
+                        "line": 19,
+                        "column": 7
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0667f272bb733ff6f62f-1ec981a40fd8aeae2f27",
+              "file": "export.spec.ts",
+              "line": 19,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-03T17:35:31.377Z",
+    "duration": 52.93399999999997,
+    "expected": 0,
+    "skipped": 4,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

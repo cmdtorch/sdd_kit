@@ -11,6 +11,7 @@ import { runHook, hookRoot, addContext } from '../lib/hook-io.mjs';
 import { listChanges, changeSchema, changeDir, isKitSchema, readChangeFile } from '../lib/project.mjs';
 import { parseClarifications, roundStatus } from '../lib/clarifications.mjs';
 import { isMain } from '../lib/report.mjs';
+import { readState, fingerprint } from '../lib/state.mjs';
 
 export const ARTIFACT_ORDER = {
   clarify: ['clarifications', 'proposal', 'specs', 'design', 'verification-plan', 'tasks'],
@@ -22,6 +23,8 @@ function exists(dir, id) {
   const walk = (d) => existsSync(d) && readdirSync(d, { withFileTypes: true }).some((e) => (e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith('.md')));
   return walk(join(dir, 'specs'));
 }
+
+let openQuestions = false;
 
 /** One status line per kit change. */
 export function changeLine(root, name, schema) {
@@ -36,6 +39,13 @@ export function changeLine(root, name, schema) {
     const open = (tasks.match(/^\s*-\s*\[ \]/gm) || []).length;
     parts.push(open ? `apply: ${done}/${done + open} tasks done` : existsSync(join(dir, 'verification.md')) ? 'all tasks done, verification.md written — ready for archive checks' : 'all tasks done — verification.md missing');
   }
+  const last = readState(root, `verify-${name}`);
+  if (last) {
+    if (!last.ok) parts.push('last verification FAILED (see verification.md)');
+    else if (last.fingerprint && last.fingerprint !== fingerprint(root, name)) parts.push('files changed since the last green verification — re-run it before archiving');
+    else if (!last.complete) parts.push(`verified; manual checks pending: ${(last.manualPending || []).join(', ')}`);
+    else parts.push('verified (green)');
+  }
   if (schema === 'clarify') {
     const content = readChangeFile(root, name, 'clarifications.md');
     if (content) {
@@ -43,6 +53,7 @@ export function changeLine(root, name, schema) {
       for (const r of parsed.rounds) {
         const st = roundStatus(parsed, r.name);
         if (st.confirmed) continue;
+        openQuestions = true;
         if (st.unanswered.length) parts.push(`${r.name} round: ${st.unanswered.length} unanswered (${st.unanswered.map((q) => (q.kind === 'question' ? `Q${q.n}` : 'requested changes')).slice(0, 6).join(', ')}${st.unanswered.length > 6 ? ', …' : ''})`);
         else if (!r.summary) parts.push(`${r.name} round: answers complete, summary confirmation not written yet`);
         else parts.push(`${r.name} round: summary waiting for "Looks correct" (now: ${st.summaryAnswer ? `"${st.summaryAnswer}"` : 'blank'})`);
@@ -71,7 +82,7 @@ export function sessionContext(root) {
   }
   if (kitChanges.length) {
     lines.push('sdd-kit: active changes on kit schemas (protocols: openspec/protocols/):', ...kitChanges);
-    lines.push('Unanswered questions block the next artifact (answers-gate). Tell the developer what is waiting for them before starting other work.');
+    if (openQuestions) lines.push('Unanswered or unconfirmed question rounds block the next artifact (answers-gate). Tell the developer what is waiting for them before starting other work.');
   }
   if (otherChanges) lines.push(`sdd-kit: ${otherChanges} other change(s) use their own schema (e.g. spec-driven) and keep their old workflow.`);
 

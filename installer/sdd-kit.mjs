@@ -40,6 +40,8 @@ Options:
   --target <dir>               project root (default: current directory)
   --questions-language <lang>  language of clarifying questions (default: keep current, else English)
   --keep-default-schema        do not make "clarify" the default schema for new changes
+  --preset <names>             comma-separated stack presets: django, playwright (remembered for updates;
+                               they create openspec/tooling/verify.yaml when it does not exist yet)
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
   --force                      replace locally edited kit files (a .sdd-kit-backup copy is kept);
                                uninstall: remove the kit even if changes still use its schemas
@@ -103,17 +105,36 @@ async function askLanguage(defaultLang) {
 
 /** Builds the full install plan without writing anything. */
 export function planInstall(opts) {
-  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false } = opts;
+  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [] } = opts;
   const k = kitPaths(kitDir);
   const kit = JSON.parse(readFileSync(k.kitJson, 'utf8'));
   const plan = { root, kitVersion: kit.kitVersion, openspecVersion: kit.openspecVersion, steps: [], warnings: [] };
 
+  // presets: remembered in the manifest, extended by --preset
+  const manifest = readManifest(root);
+  const available = existsSync(join(kitDir, 'presets')) ? readdirSync(join(kitDir, 'presets')).sort() : [];
+  for (const p of requested) if (!available.includes(p)) throw new InstallError(`unknown preset "${p}" (available: ${available.join(', ')})`);
+  const presets = [...new Set([...(manifest?.presets || []), ...requested])].sort();
+  plan.presets = presets;
+
   // files
   const kitFiles = listFiles(k.openspecSrc, 'openspec');
+  for (const p of presets) {
+    const src = join(kitDir, 'presets', p, 'openspec');
+    if (existsSync(src)) Object.assign(kitFiles, listFiles(src, 'openspec'));
+  }
   delete kitFiles[MANIFEST];
-  const manifest = readManifest(root);
   plan.files = planFiles(root, kitFiles, manifest, { force });
-  plan.manifest = nextManifest(kit.kitVersion, plan.files);
+  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets);
+
+  // verify.yaml: project-owned; created from presets only when missing
+  const verifyPath = join(root, 'openspec', 'tooling', 'verify.yaml');
+  const verifyOld = readText(verifyPath);
+  if (verifyOld === null && presets.length) plan.verify = { path: verifyPath, old: null, new: composeVerify(kitDir, presets) };
+  else {
+    plan.verify = { path: verifyPath, old: verifyOld, new: verifyOld };
+    if (verifyOld === null) plan.warnings.push('no openspec/tooling/verify.yaml: test gates cannot run tests. Re-run with --preset (django, playwright) or write it by hand');
+  }
 
   // config.yaml
   const cfgPath = join(root, 'openspec', 'config.yaml');
@@ -156,6 +177,28 @@ export function planInstall(opts) {
   const giOld = readText(giPath);
   plan.gitignore = { path: giPath, old: giOld, new: patchGitignore(giOld) };
   return plan;
+}
+
+/** verify.yaml text composed from the chosen presets' level fragments. */
+export function composeVerify(kitDir, presets) {
+  const levels = [];
+  for (const [p, file] of [['django', 'verify.unit.yaml'], ['playwright', 'verify.e2e.yaml']]) {
+    if (presets.includes(p)) levels.push(readFileSync(join(kitDir, 'presets', p, file), 'utf8').trimEnd());
+  }
+  return [
+    '# sdd-kit verify.yaml — how this project runs its tests (openspec/protocols/testing.md).',
+    `# Owned by the project: generated once from the presets (${presets.join(', ')}); edit freely, kit updates never overwrite it.`,
+    '# Placeholders: {out} = JSON file the command writes; {files} = space-separated test ids/paths.',
+    'version: 1',
+    'levels:',
+    ...levels,
+    'gates:',
+    '  stop: full            # Stop hook: full verification when apply claims all tasks done (off = disabled)',
+    '  e2e: scoped           # which E2E tests the gates run: scoped (this change) | full | off',
+    '  stop_block_limit: 3   # consecutive blocked stops before the human decides',
+    'timeout_seconds: 1800   # per command',
+    '',
+  ].join('\n');
 }
 
 function applyFiles(root, files) {
@@ -207,7 +250,8 @@ export async function install(opts) {
   }
 
   // validate everything before writing (init changes config, so the plan is rebuilt after it)
-  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit });
+  const presets = opts.presets || [];
+  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets });
   if (opts.dryRun) {
     result.plan = summarise(plan, willInit, !opts.skipOpenspec);
     return result;
@@ -215,15 +259,18 @@ export async function install(opts) {
   if (willInit) {
     openspecRun(['init', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
     result.actions.push({ step: 'openspec init --tools claude (kit profile)' });
-    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang });
+    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets });
   }
   result.files = applyFiles(root, plan.files).map(({ rel, op }) => ({ rel, op }));
   writeFileEnsured(join(root, MANIFEST), JSON.stringify(plan.manifest, null, 2) + '\n');
-  for (const [name, s] of [['openspec/config.yaml', plan.config], ['.claude/settings.json', plan.settings], ['.gitignore', plan.gitignore]]) {
+  for (const [name, s] of [['openspec/config.yaml', plan.config], ['.claude/settings.json', plan.settings], ['.gitignore', plan.gitignore], ['openspec/tooling/verify.yaml', plan.verify]]) {
+    if (name === 'openspec/tooling/verify.yaml' && s.old === null && s.new === null) continue;
     if (changed(s)) writeFileEnsured(s.path, s.new);
     result.actions.push({ step: name, op: s.old === null ? 'create' : changed(s) ? 'update' : 'unchanged' });
   }
   result.questionsLanguage = plan.config.questionsLanguage;
+  result.presets = plan.presets;
+  if (plan.presets.includes('django')) result.warnings.push('django preset: register the pytest marker (see kit/presets/django/PRESET.md): markers = ["scenario(capability, name): ..."]');
   result.warnings.push(...plan.warnings);
   if (!opts.skipOpenspec) {
     // same as `node openspec/tooling/bin/openspec.mjs update`: the project's committed kit profile
@@ -237,7 +284,7 @@ export async function install(opts) {
 }
 
 function summarise(plan, willInit, runOpenspec) {
-  const s = { files: plan.files.map(({ rel, op }) => ({ rel, op })), config: changed(plan.config) ? 'update' : 'unchanged', settings: changed(plan.settings) ? 'update' : 'unchanged', gitignore: changed(plan.gitignore) ? 'update' : 'unchanged', warnings: plan.warnings };
+  const s = { files: plan.files.map(({ rel, op }) => ({ rel, op })), presets: plan.presets, config: changed(plan.config) ? 'update' : 'unchanged', settings: changed(plan.settings) ? 'update' : 'unchanged', gitignore: changed(plan.gitignore) ? 'update' : 'unchanged', verify: plan.verify.old === null && plan.verify.new !== null ? 'create' : plan.verify.old === null ? 'missing' : 'kept', warnings: plan.warnings };
   if (willInit) s.openspec = 'init --tools claude, then update (kit profile)';
   else if (runOpenspec) s.openspec = 'update (kit profile)';
   return s;
@@ -352,7 +399,7 @@ function printHuman(r) {
     );
   }
   for (const a of r.actions) out.push(`  ${a.step}${a.op ? `: ${a.op}` : ''}`);
-  out.push(`  questions language: ${r.questionsLanguage}`);
+  out.push(`  questions language: ${r.questionsLanguage}; presets: ${r.presets.length ? r.presets.join(', ') : 'none'}`);
   for (const w of r.warnings) out.push(`  warning: ${w}`);
   const lintErrors = r.lint.findings.filter((f) => f.level === 'error');
   out.push(`  self-check (lint-kit): ${lintErrors.length ? 'FAILED' : 'OK'}`);
@@ -377,6 +424,7 @@ async function main() {
     keepDefaultSchema: args['keep-default-schema'],
     skipOpenspec: args['skip-openspec'],
     allowVersionMismatch: args['allow-version-mismatch'],
+    presets: args.preset ? String(args.preset).split(',').map((s) => s.trim()).filter(Boolean) : [],
     force: args.force,
     dryRun: args['dry-run'],
     yes: args.yes,

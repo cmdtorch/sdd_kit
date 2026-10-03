@@ -141,3 +141,27 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
 - **Uninstall** refuses while active changes use `clarify`/`lean` (unless `--force`), removes unedited kit files,
   restores config / settings / .gitignore exactly (tested byte for byte), and leaves OpenSpec skills alone.
 - **Self-check:** install ends with `lint-kit` from the freshly installed tooling; errors give exit code 1.
+
+## 2026-10-03 — Phase 5 design decisions (verification)
+
+- **verification.md is generated from real results** by `openspec/tooling/bin/verify.mjs`: a row is `Met` only
+  when every test carrying its scenario marker at that level passed. Only `manual` rows are written by a human
+  (kept across runs). Reason: an agent-written matrix can claim `Met` without evidence.
+- **Results formats:** `sdd-json` (the kit's pytest plugin, preset `django`) and `playwright-json` (native JSON
+  reporter, annotation `type: 'scenario'`, `description: '<capability> :: <Scenario>'`). A flaky Playwright test
+  counts as failed (never weaken quality).
+- **verify.yaml is project-owned:** created from presets only when missing, never overwritten; presets are
+  remembered in the manifest. The pytest plugin is a managed kit file.
+- **Stop gate arming:** the gate runs only for changes whose last task was checked (armed by artifact-feedback on
+  tasks.md), not on every stop; a green run disarms. Reason: the pilot's full suite takes ~75 s.
+- **Re-entry:** a counter per session (reset when `stop_hook_active` is false, i.e. on a new human message)
+  blocks at most `stop_block_limit` (3) times, then allows the stop and tells the human (`systemMessage`). After a
+  handover the gate stays quiet until files change. Blocking uses exit 2 + stderr (verified, K4).
+- **Freshness:** results are tied to a working-tree fingerprint (HEAD + content of changed/untracked files,
+  excluding the change's verification.md and tasks.md), stored in `<git dir>/sdd-kit/` (never committed).
+  The archive gate refuses when the fingerprint changed since the last green full run, when manual checks are
+  pending, when tasks are open (even with `--yes`), or when any check fails.
+- **Open (owner):** `.claude/CLAUDE.md` and project skills stay ignored per D6 until the owner decides (asked
+  after phase 4).
+- **Later:** monorepo/split layouts may need `cd <dir> && …` in verify.yaml commands and path mapping for
+  Playwright files (phases 9–10).

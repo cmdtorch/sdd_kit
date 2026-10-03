@@ -133,6 +133,24 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | E2 | Forced `Write proposal.md` was blocked by `answers-gate`; the agent received the list of unanswered questions and the instruction | `fixtures/dry-runs/phase3-hooks/OUTPUT-forced-write.txt` |
 | E3 | Merged settings (pilot graphify hooks + kit hooks) work side by side | same run |
 
+## 11. Test tools (phase 5)
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| T1 | pytest: a plugin can report `@pytest.mark.scenario` markers with `--collect-only`, and per-test outcomes in a run; with pytest-xdist the markers travel in `report.user_properties` and only the controller (no `workerinput`) writes the file — output identical with and without `-n 2` | VERIFIED | pytest 9.1.1 + pytest-xdist; `fixtures/results/pytest-*.json`; `tests/verify.test.mjs` (real pytest when `SDD_KIT_PYTHON` is set) |
+| T2 | pytest `--strict-markers` accepts the marker once the plugin registers it in `pytest_configure`; without the plugin the project must register it (preset note) | VERIFIED | fixture `pytest.ini` uses `--strict-markers` |
+| T3 | Playwright `--list --reporter=json` includes test `annotations` (with `location.file` absolute); a run adds `status`: `expected` / `unexpected` / `skipped` / `flaky` and `results[]`; `config.rootDir` = testDir; top-level suites are files, nested suites are `describe` blocks | VERIFIED | @playwright/test 1.63.0; `fixtures/results/playwright-*.json` |
+| T4 | A Playwright test that does not use `page` runs without browsers installed | VERIFIED | same run (no `npx playwright install`) |
+
+## 12. Kit gates end-to-end (phase 5, real Claude Code)
+
+| # | Result | Evidence |
+|---|---|---|
+| G1 | Checking the last task armed the gate; each stop ran verification (fake suite with one failing test) and was blocked with the failure; after 3 blocks the stop was allowed and the human was told (no loop) | `fixtures/dry-runs/phase5-gates/OUTPUT-stop-gate.txt`; the fake runner logged 5 runs |
+| G2 | The agent itself refused to archive a red change without the human's go-ahead | same output |
+| G3 | `openspec archive add-sales-export --yes` was blocked by archive-gate; the change stayed in place | second run |
+| G4 | Found and fixed: after a handover the gate re-ran in later sessions (3 more full runs); now it stays quiet until files change. `session-start` printed a "questions block" line unconditionally (the agent repeated it wrongly); now only when questions are open | regression tests in `tests/verify.test.mjs` |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

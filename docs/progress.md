@@ -8,7 +8,7 @@
 | 2. Checks | ✅ done | 6 checks + 7 libs; 101 tests; 49 planted defects caught |
 | 3. Hooks | ✅ done | answers-gate, session-start, artifact-feedback, settings merge; hook semantics verified (facts §9) |
 | 4. Installer | ✅ done | `sdd-kit install/update/status/uninstall`; npx from a packed tarball: ~8 s |
-| 5. Verification | ⏳ | pilot starts after this phase |
+| 5. Verification | ✅ done | verify.yaml + presets, verify.mjs, test-gate (Stop), archive-gate; real pytest/Playwright checked; **pilot can start** |
 | 6. Handoff | ⏳ | |
 | 7. CI | ⏳ | |
 | 8. Reviewers + /clarify | ⏳ | |
@@ -106,3 +106,23 @@
 - *"Система ставится на комп разраба очень быстро и без усилий"* — one command, ~8 s, safe to re-run and to
   remove. Still needed for "<10 min for a new developer": README / install guide (phase 11) and publishing the
   kit to the company's private GitHub.
+
+## Phase 5 — checklist
+
+- [x] `verify.yaml` contract + validation (also in lint-kit); presets `django` (pytest plugin) and `playwright`
+- [x] pytest plugin verified with real pytest 9.1.1 and xdist; Playwright 1.63 JSON verified (list + run)
+- [x] `verify.mjs`: full / scoped runs, matrix from real results, manual rows preserved, state + fingerprint
+- [x] `test-gate` (Stop): armed by the last checked task; blocks with failures; limit 3; handover; quiet until changes
+- [x] `archive-gate` (PreToolUse Bash): open tasks, failed checks, stale or failed verification, pending manual checks
+- [x] Installer `--preset` (remembered), verify.yaml composed once and then owned by the project
+- [x] Tests: 170 total (26 in `tests/verify.test.mjs`), real pytest test with `SDD_KIT_PYTHON`
+- [x] Real Claude Code: apply cannot finish with a failing test; no infinite stop loop; archive blocked (facts §12)
+
+## Phase 5 vs goals
+
+- *"Разработка на TDD… ИИ себя проверяет"* — the agent cannot end apply with red tests; the result is checked
+  by the machine, not reported by the agent.
+- *"Хорошие тесты"* — a scenario counts only when a test carrying its marker actually passed; skipped or
+  missing tests show up as `Unverified`.
+- Pilot preparation: the `django` preset follows the pilot's Makefile (`make test`, `make lint`, `make typecheck`);
+  the marker must be registered in the pilot's pytest config (preset note).
