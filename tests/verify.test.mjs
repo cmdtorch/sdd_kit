@@ -274,6 +274,15 @@ describe('archive gate', () => {
     assert.match(stale.stderr, /files changed since the last verification/);
   });
 
+  test('committing after verification does not make it stale (content fingerprint)', () => {
+    const root = project();
+    runVerification({ root, change: CHANGE });
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'verified'], { cwd: root });
+    const r = archive(root, `openspec archive ${CHANGE}`);
+    assert.equal(r.code, 0, r.stderr);
+  });
+
   test('a hand-edited verification.md cannot pass', () => {
     const root = project();
     setOutcome(root, 'tests/test_export.py::test_empty_period', 'failed');

@@ -77,6 +77,9 @@ Depth: Comprehensive
     Markdown, or to paste the text.
 - The register is the complete list of permitted sources. Your background knowledge and common
   practice are not sources.
+- A frontend change imported with `handoff.mjs` starts with the backend handoff (`D1`) and the backend
+  specs (`D2`) in `sources/`. They settle the API: ask only UI/UX questions, and turn API gaps into
+  `For: Dev` questions for the backend (`openspec/protocols/handoff.md` §4).
 
 ## 2. Question format
 

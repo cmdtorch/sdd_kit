@@ -16,6 +16,9 @@
 //   stop: full | off               Stop hook: verify when apply claims all tasks done
 //   e2e: scoped | full | off       which E2E tests the gate runs
 //   stop_block_limit: 3            consecutive blocks before the human decides
+// api:                             optional — enables the frontend handoff (D15)
+//   export: <cmd>                  writes the current OpenAPI document (JSON) to {out}
+//   snapshot: openspec/api/openapi.json   committed baseline the diff is computed against
 // timeout_seconds: 1800            per command
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,7 +27,9 @@ import { parseYaml, YamlError } from './yaml.mjs';
 export const VERIFY_FILE = 'openspec/tooling/verify.yaml';
 export const LEVEL_KEYS = ['format', 'collect', 'scoped', 'full', 'gate'];
 export const FORMATS = ['sdd-json', 'playwright-json'];
-export const TOP_KEYS = ['version', 'levels', 'gates', 'timeout_seconds'];
+export const TOP_KEYS = ['version', 'levels', 'gates', 'api', 'timeout_seconds'];
+export const API_KEYS = ['export', 'snapshot'];
+export const DEFAULT_SNAPSHOT = 'openspec/api/openapi.json';
 export const GATE_KEYS = ['stop', 'e2e', 'stop_block_limit'];
 
 export class VerifyConfigError extends Error {}
@@ -61,6 +66,15 @@ export function validateVerifyConfig(cfg) {
     if (g.e2e !== undefined && !['scoped', 'full', 'off'].includes(g.e2e)) p.push({ path: 'gates.e2e', message: 'e2e must be scoped, full or off' });
     if (g.stop_block_limit !== undefined && !(Number.isInteger(g.stop_block_limit) && g.stop_block_limit >= 1)) p.push({ path: 'gates.stop_block_limit', message: 'stop_block_limit must be a positive integer' });
   }
+  if (cfg.api !== undefined) {
+    const a = cfg.api;
+    if (!a || typeof a !== 'object' || Array.isArray(a)) p.push({ path: 'api', message: 'api must be a mapping' });
+    else {
+      for (const k of Object.keys(a)) if (!API_KEYS.includes(k)) p.push({ path: `api.${k}`, message: `unknown field "${k}" (allowed: ${API_KEYS.join(', ')})` });
+      if (typeof a.export !== 'string' || !a.export.includes('{out}')) p.push({ path: 'api.export', message: 'api.export must be a command that writes the OpenAPI JSON to {out}' });
+      if (a.snapshot !== undefined && (typeof a.snapshot !== 'string' || !a.snapshot.endsWith('.json'))) p.push({ path: 'api.snapshot', message: 'api.snapshot must be a .json path' });
+    }
+  }
   if (cfg.timeout_seconds !== undefined && !(Number.isInteger(cfg.timeout_seconds) && cfg.timeout_seconds > 0)) p.push({ path: 'timeout_seconds', message: 'timeout_seconds must be a positive integer' });
   return p;
 }
@@ -79,5 +93,12 @@ export function loadVerifyConfig(root) {
   const problems = validateVerifyConfig(parsed.value);
   if (problems.length) throw new VerifyConfigError(`${VERIFY_FILE}: ${problems.map((x) => x.message).join('; ')}`);
   const cfg = parsed.value;
-  return { ...cfg, levels: cfg.levels || {}, gates: { ...DEFAULTS.gates, ...(cfg.gates || {}) }, timeout_seconds: cfg.timeout_seconds || DEFAULTS.timeout_seconds, positions: parsed.positions };
+  return {
+    ...cfg,
+    levels: cfg.levels || {},
+    gates: { ...DEFAULTS.gates, ...(cfg.gates || {}) },
+    api: cfg.api ? { snapshot: DEFAULT_SNAPSHOT, ...cfg.api } : null,
+    timeout_seconds: cfg.timeout_seconds || DEFAULTS.timeout_seconds,
+    positions: parsed.positions,
+  };
 }

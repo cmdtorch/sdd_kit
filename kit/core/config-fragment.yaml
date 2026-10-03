@@ -13,6 +13,7 @@ context: |
   - Source tags and assumptions: openspec/protocols/grounding.md
   - Tests and verification: openspec/protocols/testing.md; project commands: openspec/tooling/verify.yaml
   - Requirement sources go to openspec/changes/<change>/sources/ as .md, .pdf or .txt.
+  - Backend → frontend: openspec/protocols/handoff.md (api.mjs diff, frontend-handoff.md, handoff.mjs import).
   New features use `clarify`; small, clear changes use `lean`.
   Changes on other schemas (e.g. spec-driven) keep their own workflow.
   # <<< sdd-kit <<<

@@ -7,6 +7,8 @@
 //     and check-verification pass
 //   - the last full `verify.mjs` run is green, includes the manual checks, and the working tree has not
 //     changed since (fingerprint), so a hand-edited verification.md cannot pass
+//   - when verify.yaml has `api`: api-changes.json is current, frontend-handoff.md passes check-handoff and
+//     the API baseline was updated after the last application change (openspec/protocols/handoff.md)
 // Without a change name the command is blocked when kit changes exist (the gate must know what to check).
 import { existsSync } from 'node:fs';
 import { runHook, hookRoot, block } from '../lib/hook-io.mjs';
@@ -18,6 +20,8 @@ import { checkSpecs } from '../checks/check-specs.mjs';
 import { checkGrounding } from '../checks/check-grounding.mjs';
 import { checkTraceability } from '../checks/check-traceability.mjs';
 import { checkVerification } from '../checks/check-verification.mjs';
+import { checkHandoff } from '../checks/check-handoff.mjs';
+import { loadVerifyConfig } from '../lib/verify-config.mjs';
 
 const ARCHIVE = /(?:^|[\s;&|(])(?:npx\s+(?:--yes\s+|-y\s+)?(?:@fission-ai\/)?)?(?:openspec|\S*openspec\.mjs)\s+archive\b([^;&|\n]*)/g;
 
@@ -42,6 +46,23 @@ export function archiveProblems(root, change) {
   const reports = [checkSpecs({ root, change }), checkTraceability({ root, change, markers: state?.markers ?? null }), checkVerification({ root, change })];
   if (schema === 'clarify') reports.unshift(checkAnswers({ root, change }), checkGrounding({ root, change }));
   for (const r of reports) for (const f of r.findings.filter((x) => x.level === 'error')) problems.push(`${r.check}: ${f.file ? `${f.file}${f.line ? `:${f.line}` : ''}: ` : ''}${f.message}`);
+  let cfg = null;
+  try {
+    cfg = loadVerifyConfig(root);
+  } catch (e) {
+    problems.push(e.message);
+  }
+  if (cfg?.api) {
+    const code = fingerprint(root, change, { scope: 'code' });
+    const diff = readState(root, `api-diff-${change}`);
+    if (!existsSync(`${changeDir(root, change)}/api-changes.json`) || !diff) problems.push(`no API diff on record — run: node openspec/tooling/bin/api.mjs diff --change ${change}`);
+    else if (code && diff.fingerprint !== code) problems.push(`the application changed after the API diff (${diff.at}) — run again: node openspec/tooling/bin/api.mjs diff --change ${change}`);
+    else {
+      for (const f of checkHandoff({ root, change }).findings.filter((x) => x.level === 'error')) problems.push(`check-handoff: ${f.file ? `${f.file}${f.line ? `:${f.line}` : ''}: ` : ''}${f.message}`);
+      const snap = readState(root, 'api-snapshot');
+      if (diff.operations > 0 && (!snap || (code && snap.fingerprint !== code))) problems.push('the API baseline is not updated for this change — run: node openspec/tooling/bin/api.mjs snapshot (and commit it)');
+    }
+  }
   if (!state) problems.push(`no full verification run on record — run: node openspec/tooling/bin/verify.mjs --change ${change}`);
   else {
     const fp = fingerprint(root, change);

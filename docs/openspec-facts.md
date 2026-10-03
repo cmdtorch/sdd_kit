@@ -151,6 +151,15 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | G3 | `openspec archive add-sales-export --yes` was blocked by archive-gate; the change stayed in place | second run |
 | G4 | Found and fixed: after a handover the gate re-ran in later sessions (3 more full runs); now it stays quiet until files change. `session-start` printed a "questions block" line unconditionally (the agent repeated it wrongly); now only when questions are open | regression tests in `tests/verify.test.mjs` |
 
+## 13. API and handoff (phase 6)
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| A1 | `manage.py spectacular --format openapi-json --file <out>` exports OpenAPI 3 JSON without a database; `@action` routes appear as separate paths; serializers become `components.schemas` referenced via `$ref`; read-only fields carry `readOnly: true`; pagination wraps lists in `Paginated…` schemas | VERIFIED | drf-spectacular 0.30.0, Django 6.1, DRF 3.18; `fixtures/openapi/drf-*.json` |
+| A2 | The kit's operation diff on that pair: 1 added + 5 modified operations, 5 breaking (removed response field `note`, new required request field `currency` on POST/PUT; PATCH stays optional) | VERIFIED | `tests/handoff.test.mjs` |
+| A3 | Content fingerprint via `git write-tree` on a temporary index (copied from the real one) is stable across commits and changes only with content | VERIFIED | regression test "committing after verification does not make it stale" |
+| A4 | Real Claude Code on a frontend change imported with `handoff.mjs`: 13 questions, all about UI/UX; two API gaps raised as `For: Dev` questions (handoff JSON vs spec "Excel file"; missing 400 for an invalid period); questions in Russian per config | VERIFIED | `fixtures/dry-runs/phase6-frontend-import/` |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

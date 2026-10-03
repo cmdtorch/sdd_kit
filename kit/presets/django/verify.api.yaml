@@ -1,0 +1,4 @@
+api:
+  # drf-spectacular: the OpenAPI document the frontend handoff is diffed from (openspec/protocols/handoff.md)
+  export: "uv run python manage.py spectacular --format openapi-json --file {out}"
+  snapshot: openspec/api/openapi.json

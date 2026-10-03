@@ -192,6 +192,7 @@ export function composeVerify(kitDir, presets) {
     'version: 1',
     'levels:',
     ...levels,
+    ...(presets.includes('django') ? [readFileSync(join(kitDir, 'presets', 'django', 'verify.api.yaml'), 'utf8').trimEnd()] : []),
     'gates:',
     '  stop: full            # Stop hook: full verification when apply claims all tasks done (off = disabled)',
     '  e2e: scoped           # which E2E tests the gates run: scoped (this change) | full | off',

@@ -20,6 +20,9 @@ artifacts:
          `[desc]` (verbatim), and every requirement source as `[D<n>]` stored in
          `sources/` of this change (.md, .pdf or .txt; ask for one of these if you
          get another format; save pasted text as `sources/D<n>.md`). Read them all.
+         If a source is an imported backend handoff (`sources/D1-backend-handoff.md`),
+         the API is settled: ask UI/UX questions only
+         (`openspec/protocols/handoff.md` section 4).
       2. Research what already exists so you do not ask what the project already
          answers: `openspec list --specs`, the related specs in full, and the code
          areas the request touches.
@@ -335,6 +338,10 @@ artifacts:
         `node openspec/tooling/bin/verify.mjs --change <name>` (full suite,
         quality gate, E2E; writes verification.md) and fix what fails
         (see `openspec/protocols/testing.md` section 6).
+      - If the change touches the HTTP API, the final group also has the
+        frontend handoff tasks: `api.mjs diff --change <name>`, write
+        frontend-handoff.md, `api.mjs snapshot`
+        (see `openspec/protocols/handoff.md`).
     requires:
       - specs
       - design
@@ -358,5 +365,8 @@ apply:
       full suite + quality gate + E2E; it writes verification.md from the real
       results. Apply is done only when it exits 0 and every row is `Met`
       (manual rows need a human result).
+    - If the API changed (verify.yaml has `api`): follow
+      `openspec/protocols/handoff.md` - api.mjs diff, frontend-handoff.md,
+      api.mjs snapshot. The archive gate checks it.
     - Never weaken tests or quality targets to get green; after two failed fix
       attempts stop and ask the human.

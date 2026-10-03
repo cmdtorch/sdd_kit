@@ -235,6 +235,10 @@ artifacts:
         `node openspec/tooling/bin/verify.mjs --change <name>` (full suite,
         quality gate, E2E; writes verification.md) and fix what fails
         (see `openspec/protocols/testing.md` section 6).
+      - If the change touches the HTTP API, the final group also has the
+        frontend handoff tasks: `api.mjs diff --change <name>`, write
+        frontend-handoff.md, `api.mjs snapshot`
+        (see `openspec/protocols/handoff.md`).
     requires:
       - specs
       - verification-plan
@@ -256,5 +260,8 @@ apply:
       full suite + quality gate + E2E; it writes verification.md from the real
       results. Apply is done only when it exits 0 and every row is `Met`
       (manual rows need a human result).
+    - If the API changed (verify.yaml has `api`): follow
+      `openspec/protocols/handoff.md` - api.mjs diff, frontend-handoff.md,
+      api.mjs snapshot. The archive gate checks it.
     - Never weaken tests or quality targets to get green; after two failed fix
       attempts stop and ask the human.

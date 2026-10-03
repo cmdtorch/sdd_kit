@@ -165,3 +165,24 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   after phase 4).
 - **Later:** monorepo/split layouts may need `cd <dir> && …` in verify.yaml commands and path mapping for
   Playwright files (phases 9–10).
+
+## 2026-10-03 — Phase 6 design decisions (frontend handoff, D15)
+
+- **Not a schema artifact.** `frontend-handoff.md` is an end-of-apply deliverable like verification.md; as a
+  schema artifact `/opsx:continue` would ask for it before the code exists.
+- **API baseline** = committed `openspec/api/openapi.json` (verify.yaml `api.snapshot`). `api.mjs diff` exports
+  the current document (`api.export`, drf-spectacular in the django preset), diffs it against the baseline and
+  writes `api-changes.json` into the change (archived with it). `api.mjs snapshot` moves the baseline forward;
+  `api.mjs check` is for CI (phase 7).
+- **Zero-dependency operation diff** (`lib/openapi-diff.mjs`): $ref/allOf resolution, flattened field paths,
+  breaking rules for existing clients (removed operation/2xx/response field, new or now-required request
+  input, type or auth change). Read-only fields are not request fields.
+- **check-handoff** requires a `### METHOD /path` section per changed operation with Permissions, Request,
+  Response, Errors, Example (Migration for removed), and every breaking path under `## Breaking changes`.
+- **Archive gate (when `api` is configured):** a current API diff (application fingerprint = files outside
+  `openspec/`), a passing handoff and an updated baseline are required.
+- **Fingerprint fix (applies to phase 5 too):** content tree hash instead of HEAD + changes, so committing between
+  verify and archive no longer makes results stale (found while designing phase 6).
+- **Frontend side:** `handoff.mjs import --from <backend-repo> --change <name>` creates a `clarify` change with
+  the backend handoff and specs as sources `D1`/`D2`; the protocols tell the agent to ask UI/UX only and route API
+  gaps to the backend. The backend repo is only read (D7). Store/references-based lookup comes in phase 10.

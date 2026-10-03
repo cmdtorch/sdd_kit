@@ -9,7 +9,7 @@
 | 3. Hooks | ✅ done | answers-gate, session-start, artifact-feedback, settings merge; hook semantics verified (facts §9) |
 | 4. Installer | ✅ done | `sdd-kit install/update/status/uninstall`; npx from a packed tarball: ~8 s |
 | 5. Verification | ✅ done | verify.yaml + presets, verify.mjs, test-gate (Stop), archive-gate; real pytest/Playwright checked; **pilot can start** |
-| 6. Handoff | ⏳ | |
+| 6. Handoff | ✅ done | api.mjs (diff/snapshot/check), openapi diff, handoff protocol, check-handoff, archive gate, handoff.mjs import; real UI-only questions |
 | 7. CI | ⏳ | |
 | 8. Reviewers + /clarify | ⏳ | |
 | 9. Monorepo adapter | ⏳ | |
@@ -126,3 +126,22 @@
   missing tests show up as `Unverified`.
 - Pilot preparation: the `django` preset follows the pilot's Makefile (`make test`, `make lint`, `make typecheck`);
   the marker must be registered in the pilot's pytest config (preset note).
+
+## Phase 6 — checklist
+
+- [x] `api` section in verify.yaml (+ django preset: drf-spectacular export), `api.mjs diff|snapshot|check`
+- [x] Zero-dependency OpenAPI operation diff, verified on real drf-spectacular output (6 ops, 5 breaking)
+- [x] `protocols/handoff.md` (format + rules + frontend side), `check-handoff` with planted defects
+- [x] Archive gate: current API diff + complete handoff + updated baseline required
+- [x] `handoff.mjs import` (active or archived backend change) → frontend `clarify` change with sources D1/D2
+- [x] Schemas, questions protocol and config context point to the handoff flow
+- [x] Fingerprint made commit-independent (regression test)
+- [x] Real Claude Code: imported frontend change → 13 UI/UX questions, API gaps routed to the backend
+- [x] Tests: 189 total (19 in `tests/handoff.test.mjs`)
+
+## Phase 6 vs goals
+
+- *"Меньше коммуникации между беком и фронтом"* — the frontend change starts from a machine-checked handoff:
+  every changed endpoint described with permissions, request, response, errors and an example; breaking
+  changes listed; the agent asks the frontend team only UI questions and routes real API gaps to the backend
+  in one file instead of chat.
