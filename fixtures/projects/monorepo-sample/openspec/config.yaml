@@ -1,0 +1,46 @@
+schema: clarify
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+
+context: |
+  # >>> sdd-kit >>>
+  sdd-kit is installed. For changes on the `clarify` or `lean` schema:
+  - Artifacts are written in English, except the questions in clarifications.md.
+  - Questions language: English
+  - Clarifying questions: openspec/protocols/questions.md (default depth: Comprehensive).
+  - Source tags and assumptions: openspec/protocols/grounding.md
+  - Tests and verification: openspec/protocols/testing.md; project commands: openspec/tooling/verify.yaml
+  - Requirement sources go to openspec/changes/<change>/sources/ as .md, .pdf or .txt.
+  - Backend → frontend: openspec/protocols/handoff.md (api.mjs diff, frontend-handoff.md, handoff.mjs import).
+  New features use `clarify`; small, clear changes use `lean`.
+  Changes on other schemas (e.g. spec-driven) keep their own workflow.
+  # <<< sdd-kit <<<

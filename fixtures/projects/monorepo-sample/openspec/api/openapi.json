@@ -1,0 +1,123 @@
+{
+  "components": {
+    "schemas": {
+      "Sale": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "quantity": {
+            "format": "int64",
+            "maximum": 9223372036854776000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "student": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "total": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "unit_price": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "quantity",
+          "student",
+          "total",
+          "unit_price"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Sample API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/sales/": {
+      "get": {
+        "operationId": "api_sales_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Sale"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {}
+        ],
+        "tags": [
+          "api"
+        ]
+      },
+      "post": {
+        "operationId": "api_sales_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Sale"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Sale"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Sale"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sale"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {}
+        ],
+        "tags": [
+          "api"
+        ]
+      }
+    }
+  }
+}

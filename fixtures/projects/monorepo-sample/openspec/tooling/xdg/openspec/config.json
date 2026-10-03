@@ -1,0 +1,7 @@
+{
+  "profile": "custom",
+  "delivery": "both",
+  "workflows": ["new", "continue", "verify", "explore", "apply", "update", "sync", "archive"],
+  "telemetry": { "enabled": false, "noticeSeen": true },
+  "completionTipSeen": true
+}

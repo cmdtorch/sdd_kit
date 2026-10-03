@@ -184,20 +184,24 @@ describe('archive gate with the API configured', () => {
     runVerification({ root, change: CHANGE });
     let r = archive(root, `openspec archive ${CHANGE}`);
     assert.equal(r.status, 2);
-    assert.match(r.stderr, /no API diff on record/);
+    assert.match(r.stderr, /no api-changes\.json/);
     diffChange(root, CHANGE);
     r = archive(root, `openspec archive ${CHANGE}`);
     assert.match(r.stderr, /check-handoff: .*does not exist/);
+    assert.match(r.stderr, /the API baseline is not the API this diff describes/);
     writeFileSync(join(root, C, 'frontend-handoff.md'), GOOD_HANDOFF);
-    r = archive(root, `openspec archive ${CHANGE}`);
-    assert.match(r.stderr, /API baseline is not updated/);
     snapshotApi(root);
     runVerification({ root, change: CHANGE });
     r = archive(root, `openspec archive ${CHANGE}`);
     assert.equal(r.status, 0, r.stderr);
-    writeFileSync(join(root, 'serializers.py'), 'changed = True\n');
+    // a fresh clone (no local kit state) can archive too: everything is content-based
+    rmSync(join(root, '.git', 'sdd-kit', 'api-diff-add-sales-export.json'), { force: true });
     r = archive(root, `openspec archive ${CHANGE}`);
-    assert.match(r.stderr, /the application changed after the API diff/);
+    assert.equal(r.status, 0, r.stderr);
+    // the API changes again after the baseline was updated
+    writeFileSync(join(root, 'fake-openapi-current.txt'), 'before.json\n');
+    r = archive(root, `openspec archive ${CHANGE}`);
+    assert.match(r.stderr, /the API changed after the baseline was updated/);
   });
 });
 

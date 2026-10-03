@@ -225,3 +225,23 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   skipped). Hints never decide; the reviewer confirms or dismisses them.
 - **Kit permissions:** read-only kit scripts (`review-input.mjs`, checks) are added to `permissions.allow`,
   identified by `openspec/tooling/` and removed on uninstall. Effective in trusted workspaces only (R3).
+
+## 2026-10-03 — Phase 9 design decisions (monorepo adapter)
+
+- **`cwd` per verify level** (+ `{root}` placeholder): commands run in `backend/` or `e2e/`; the kit keeps test ids
+  and files relative to the repository root everywhere (matrix, markers, reviews) and converts them at the
+  command boundary (`{files}` relative to cwd; pytest ids prefixed with cwd; Playwright paths from absolute
+  locations). The django preset uses `PYTHONPATH={root}/openspec/tooling/pytest`, so it works at any depth.
+- **`--adapter monorepo`** (remembered in the manifest; switching adapters is refused): composes verify.yaml with
+  `cwd: backend` / `cwd: e2e` and `cd backend &&` for the API export, and a CI job that installs backend (uv) and
+  E2E (npm, Playwright) dependencies, starts `docker compose up -d --build --wait`, runs `ci.mjs verify` with
+  `E2E_BASE_URL`, and uploads logs / the Playwright report on failure. No postgres service: the database comes
+  from compose.
+- **E2E config convention:** `E2E_BASE_URL` set → test against that stack (CI); otherwise Playwright's `webServer`
+  starts the backend and frontend locally (ports configurable).
+- **Design flaw found by the end-to-end run and fixed:** the archive gate's API checks relied on local state in
+  `.git/sdd-kit`, so a fresh clone was told to re-run `api.mjs diff`, which after the baseline update would have
+  produced an empty diff. The checks are now content-based: committed `api-changes.json`, baseline hash ==
+  the diff's `currentHash`, fresh export == baseline. (Verification results stay local by design: re-running
+  tests in a new clone is legitimate and loses nothing.)
+- **The kit repository's CI** runs the sample end to end in a separate job.

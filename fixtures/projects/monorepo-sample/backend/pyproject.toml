@@ -1,0 +1,21 @@
+[project]
+name = "sample-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2",
+    "djangorestframework>=3.15",
+    "drf-spectacular>=0.28",
+    "psycopg[binary]>=3.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-django>=4.9"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+addopts = "--strict-markers"
+markers = ["scenario(capability, name): links the test to an OpenSpec spec scenario (sdd-kit)"]
+
+[tool.uv]
+package = false

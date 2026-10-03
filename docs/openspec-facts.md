@@ -178,6 +178,16 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | R4 | test-reviewer on planted weak tests: 3 blockers on exactly the planted defects (status-only, `is not None`, e2e not checking the download) + real extra findings (missing school_admin coverage, unasserted "no sale is stored", invalid exclusion, hand-written matrix) | VERIFIED | `fixtures/dry-runs/phase8-reviews/OUTPUT-test-reviewer.txt` |
 | R5 | spec-reviewer on planted spec gaps: blockers for the vague THEN and the missing permission scenarios, plus the client's "see totals" requirement lost from the specs | VERIFIED | `fixtures/dry-runs/phase8-reviews/spec-review.md` |
 
+## 16. Monorepo adapter (phase 9)
+
+| # | Claim | Status | Evidence |
+|---|---|---|---|
+| M1 | Sample monorepo (`fixtures/projects/monorepo-sample`): kit installed with `--adapter monorepo --preset django,playwright --ci`; `verify.mjs` ran real pytest (via uv, in `backend/`) and real Playwright Chromium (in `e2e/`, against Django + the frontend started by `webServer`) → 4/4 Met with root-relative test paths | VERIFIED | `tests/monorepo.test.mjs` (opt-in `SDD_KIT_E2E=1`) |
+| M2 | Full chain in a fresh clone (no local kit state): kit update → verify → `ci.mjs verify` (+ API baseline) → archive gate → `openspec archive` through the wrapper → `ci.mjs checks --base main` on the archived change: green; `validate --strict` clean | VERIFIED | same test |
+| M3 | `docker compose config --quiet` validates the compose file without access to the Docker daemon | VERIFIED | docker 26.1 / compose 2.26 |
+| M4 | Building and running the compose stack, and the generated workflow on GitHub | NOT VERIFIED | no Docker daemon access here; first run in CI |
+| M5 | A Playwright Chromium can run without root when its missing system libraries are unpacked from `apt-get download` debs and passed via `LD_LIBRARY_PATH` | VERIFIED | environment workaround for this machine only; CI uses `playwright install --with-deps` |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

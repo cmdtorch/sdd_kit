@@ -1,0 +1,22 @@
+      # monorepo adapter: backend/ (uv), e2e/ (Playwright), the stack from docker-compose.yml
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install backend dependencies
+        run: uv sync --frozen
+        working-directory: backend
+      - name: Install E2E dependencies
+        run: npm ci
+        working-directory: e2e
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      - name: Start the stack (docker compose)
+        run: docker compose up -d --build --wait

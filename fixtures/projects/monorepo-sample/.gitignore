@@ -1,0 +1,11 @@
+.venv/
+node_modules/
+*.sqlite3
+__pycache__/
+
+# >>> sdd-kit >>>
+# openspec/ and the shared parts of .claude/ are versioned (sdd-kit D6)
+.claude/settings.local.json
+.claude/tdd-guard/
+.claude/worktrees/
+# <<< sdd-kit <<<

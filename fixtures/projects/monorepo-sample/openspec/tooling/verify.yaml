@@ -1,0 +1,32 @@
+# sdd-kit verify.yaml — how this project runs its tests (openspec/protocols/testing.md).
+# Owned by the project: generated once from the presets (django, playwright); edit freely, kit updates never overwrite it.
+# Placeholders: {out} = JSON file the command writes; {files} = space-separated test ids/paths.
+version: 1
+levels:
+  unit:
+    cwd: backend
+    # pytest + pytest-django (+ xdist). The kit's plugin (openspec/tooling/pytest/sdd_kit_pytest.py) reports
+    # @pytest.mark.scenario markers and results. Commands follow the pilot's Makefile; adjust them to yours.
+    format: sdd-json
+    collect: "PYTHONPATH={root}/openspec/tooling/pytest uv run pytest -p sdd_kit_pytest --collect-only -q --sdd-out={out}"
+    scoped: "PYTHONPATH={root}/openspec/tooling/pytest PYTEST_ADDOPTS='-p sdd_kit_pytest --sdd-out={out}' make test FILE='{files}'"
+    full: "PYTHONPATH={root}/openspec/tooling/pytest PYTEST_ADDOPTS='-p sdd_kit_pytest --sdd-out={out}' make test"
+    gate: "make lint && make typecheck"
+  e2e:
+    cwd: e2e
+    # Playwright: tests carry annotation { type: 'scenario', description: '<capability-path> :: <Scenario name>' }.
+    # The JSON report goes to {out} (PLAYWRIGHT_JSON_OUTPUT_NAME); the HTML report to playwright-report/.
+    # Run from the directory with playwright.config.* (prefix "cd <dir> &&" in a monorepo).
+    format: playwright-json
+    collect: "PLAYWRIGHT_JSON_OUTPUT_NAME={out} npx playwright test --list --reporter=json"
+    scoped: "PLAYWRIGHT_JSON_OUTPUT_NAME={out} PLAYWRIGHT_HTML_OPEN=never npx playwright test --reporter=json,html {files}"
+    full: "PLAYWRIGHT_JSON_OUTPUT_NAME={out} PLAYWRIGHT_HTML_OPEN=never npx playwright test --reporter=json,html"
+api:
+  # drf-spectacular: the OpenAPI document the frontend handoff is diffed from (openspec/protocols/handoff.md)
+  export: "cd backend && uv run python manage.py spectacular --format openapi-json --file {out}"
+  snapshot: openspec/api/openapi.json
+gates:
+  stop: full            # Stop hook: full verification when apply claims all tasks done (off = disabled)
+  e2e: scoped           # which E2E tests the gates run: scoped (this change) | full | off
+  stop_block_limit: 3   # consecutive blocked stops before the human decides
+timeout_seconds: 1800   # per command

@@ -1,7 +1,7 @@
   e2e:
     # Playwright: tests carry annotation { type: 'scenario', description: '<capability-path> :: <Scenario name>' }.
     # The JSON report goes to {out} (PLAYWRIGHT_JSON_OUTPUT_NAME); the HTML report to playwright-report/.
-    # Run from the directory with playwright.config.* (prefix "cd <dir> &&" in a monorepo).
+    # Runs in the directory with playwright.config.* (the monorepo adapter sets `cwd`).
     format: playwright-json
     collect: "PLAYWRIGHT_JSON_OUTPUT_NAME={out} npx playwright test --list --reporter=json"
     scoped: "PLAYWRIGHT_JSON_OUTPUT_NAME={out} PLAYWRIGHT_HTML_OPEN=never npx playwright test --reporter=json,html {files}"

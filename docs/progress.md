@@ -12,7 +12,7 @@
 | 6. Handoff | ✅ done | api.mjs (diff/snapshot/check), openapi diff, handoff protocol, check-handoff, archive gate, handoff.mjs import; real UI-only questions |
 | 7. CI | ✅ done (not yet run on GitHub) | ci.mjs checks/verify, generated workflow (--ci), kit repo CI; actionlint clean |
 | 8. Reviewers + /clarify | ✅ done | spec-reviewer, test-reviewer, /sdd:clarify, review-input + heuristics; real reviews found every planted defect |
-| 9. Monorepo adapter | ⏳ | |
+| 9. Monorepo adapter | ✅ done (compose stack not run here) | `cwd` levels, `--adapter monorepo`, sample monorepo green end to end with real pytest + Playwright |
 | 10. Split adapter | ⏳ | |
 | 11. Docs & release | ⏳ | |
 
@@ -179,3 +179,21 @@
   each weak test would miss, and the change cannot be archived without that review (or a human's explicit decision).
 - *"ИИ задает все вопросы…"* — the spec reviewer catches what the questions missed (in the run: the client's
   "see totals" requirement lost between the request and the specs).
+
+## Phase 9 — checklist
+
+- [x] `cwd` + `{root}` in verify.yaml; root-relative test paths; validation
+- [x] `--adapter monorepo`: verify.yaml, CI job with docker compose + Playwright, remembered, no switching
+- [x] Sample monorepo: Django + DRF backend (uv), static frontend + proxy, Playwright E2E, docker-compose.yml,
+      one complete change (clarifications → handoff → real test review → verification)
+- [x] End to end: real pytest + real Chromium E2E + API baseline → verify, CI, archive gate, archive, CI on the
+      archived change — green, also in a fresh clone
+- [x] Bug fixed: API archive checks are content-based (worked only in the clone that ran the diff)
+- [x] Kit CI job for the sample; workflows lint-clean
+- [x] Tests: 226 total + 1 opt-in end-to-end test
+- [ ] Compose stack and workflows on real GitHub runners (no Docker daemon here)
+
+## Phase 9 vs goals
+
+- *"Ускорение разработки фронта и бека" / "не блокают друг друга"* — in a monorepo one change carries the backend,
+  the handoff, the frontend page and its E2E proof; one CI run verifies the whole journey.

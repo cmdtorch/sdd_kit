@@ -42,6 +42,8 @@ Options:
   --keep-default-schema        do not make "clarify" the default schema for new changes
   --preset <names>             comma-separated stack presets: django, playwright (remembered for updates;
                                they create openspec/tooling/verify.yaml when it does not exist yet)
+  --adapter <name>             topology adapter: monorepo (backend/, frontend/, e2e/, docker-compose.yml);
+                               remembered for updates
   --ci                         also install the GitHub Actions workflow .github/workflows/sdd-kit.yml
                                (generated for the presets; remembered for updates)
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
@@ -107,7 +109,7 @@ async function askLanguage(defaultLang) {
 
 /** Builds the full install plan without writing anything. */
 export function planInstall(opts) {
-  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [], ci: ciRequested = false } = opts;
+  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [], ci: ciRequested = false, adapter: adapterRequested = null } = opts;
   const k = kitPaths(kitDir);
   const kit = JSON.parse(readFileSync(k.kitJson, 'utf8'));
   const plan = { root, kitVersion: kit.kitVersion, openspecVersion: kit.openspecVersion, steps: [], warnings: [] };
@@ -127,16 +129,21 @@ export function planInstall(opts) {
     if (existsSync(src)) Object.assign(kitFiles, listFiles(src, 'openspec'));
   }
   delete kitFiles[MANIFEST];
+  const adapters = existsSync(join(kitDir, 'adapters')) ? readdirSync(join(kitDir, 'adapters')).sort() : [];
+  if (adapterRequested && !adapters.includes(adapterRequested)) throw new InstallError(`unknown adapter "${adapterRequested}" (available: ${adapters.join(', ')})`);
+  if (adapterRequested && manifest?.adapter && manifest.adapter !== adapterRequested) throw new InstallError(`the project uses adapter "${manifest.adapter}"; switching adapters is not supported by update`);
+  const adapter = adapterRequested || manifest?.adapter || null;
+  plan.adapter = adapter;
   const ci = Boolean(ciRequested || manifest?.ci);
   plan.ci = ci;
-  if (ci) kitFiles['.github/workflows/sdd-kit.yml'] = { content: composeWorkflow(kitDir, presets) };
+  if (ci) kitFiles['.github/workflows/sdd-kit.yml'] = { content: composeWorkflow(kitDir, presets, adapter) };
   plan.files = planFiles(root, kitFiles, manifest, { force });
-  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets, ci ? { ci: true } : {});
+  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets, { ...(ci ? { ci: true } : {}), ...(adapter ? { adapter } : {}) });
 
   // verify.yaml: project-owned; created from presets only when missing
   const verifyPath = join(root, 'openspec', 'tooling', 'verify.yaml');
   const verifyOld = readText(verifyPath);
-  if (verifyOld === null && presets.length) plan.verify = { path: verifyPath, old: null, new: composeVerify(kitDir, presets) };
+  if (verifyOld === null && presets.length) plan.verify = { path: verifyPath, old: null, new: composeVerify(kitDir, presets, adapter) };
   else {
     plan.verify = { path: verifyPath, old: verifyOld, new: verifyOld };
     if (verifyOld === null) plan.warnings.push('no openspec/tooling/verify.yaml: test gates cannot run tests. Re-run with --preset (django, playwright) or write it by hand');
@@ -186,11 +193,20 @@ export function planInstall(opts) {
 }
 
 /** GitHub Actions workflow text for the chosen presets. */
-export function composeWorkflow(kitDir, presets) {
+export function composeWorkflow(kitDir, presets, adapter = null) {
   const part = (...p) => readFileSync(join(kitDir, ...p), 'utf8');
   const has = (p) => presets.includes(p);
-  const out = [part('ci', 'github', 'workflow.head.yml').replace('{{PRESETS}}', presets.length ? presets.join(', ') : 'none')];
+  const label = [presets.length ? presets.join(', ') : 'none', adapter ? `adapter: ${adapter}` : null].filter(Boolean).join('; ');
+  const out = [part('ci', 'github', 'workflow.head.yml').replace('{{PRESETS}}', label)];
   out.push(part('ci', 'github', 'verify.head.yml'));
+  if (adapter === 'monorepo') {
+    out.push(part('adapters', 'monorepo', 'ci.env.yml'));
+    out.push('    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n');
+    out.push(part('adapters', 'monorepo', 'ci.steps.yml'));
+    out.push(part('ci', 'github', 'verify.tail.yml'));
+    out.push(part('adapters', 'monorepo', 'ci.after.yml'));
+    return out.join('');
+  }
   if (has('django')) out.push(part('presets', 'django', 'ci.services.yml'));
   out.push('    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n');
   if (has('django')) out.push(part('presets', 'django', 'ci.steps.yml'));
@@ -202,11 +218,17 @@ export function composeWorkflow(kitDir, presets) {
 }
 
 /** verify.yaml text composed from the chosen presets' level fragments. */
-export function composeVerify(kitDir, presets) {
+export function composeVerify(kitDir, presets, adapter = null) {
   const levels = [];
+  // monorepo adapter: each level runs in its own directory (verify.yaml `cwd`)
+  const cwdFor = adapter === 'monorepo' ? { 'verify.unit.yaml': 'backend', 'verify.e2e.yaml': 'e2e' } : {};
   for (const [p, file] of [['django', 'verify.unit.yaml'], ['playwright', 'verify.e2e.yaml']]) {
-    if (presets.includes(p)) levels.push(readFileSync(join(kitDir, 'presets', p, file), 'utf8').trimEnd());
+    if (!presets.includes(p)) continue;
+    let text = readFileSync(join(kitDir, 'presets', p, file), 'utf8').trimEnd();
+    if (cwdFor[file]) text = text.replace(/^( {2}\w+:\n)/, `$1    cwd: ${cwdFor[file]}\n`);
+    levels.push(text);
   }
+  const api = presets.includes('django') ? readFileSync(join(kitDir, 'presets', 'django', 'verify.api.yaml'), 'utf8').trimEnd() : null;
   return [
     '# sdd-kit verify.yaml — how this project runs its tests (openspec/protocols/testing.md).',
     `# Owned by the project: generated once from the presets (${presets.join(', ')}); edit freely, kit updates never overwrite it.`,
@@ -214,7 +236,7 @@ export function composeVerify(kitDir, presets) {
     'version: 1',
     'levels:',
     ...levels,
-    ...(presets.includes('django') ? [readFileSync(join(kitDir, 'presets', 'django', 'verify.api.yaml'), 'utf8').trimEnd()] : []),
+    ...(api ? [adapter === 'monorepo' ? api.replace('export: "', 'export: "cd backend && ') : api] : []),
     'gates:',
     '  stop: full            # Stop hook: full verification when apply claims all tasks done (off = disabled)',
     '  e2e: scoped           # which E2E tests the gates run: scoped (this change) | full | off',
@@ -278,7 +300,7 @@ export async function install(opts) {
 
   // validate everything before writing (init changes config, so the plan is rebuilt after it)
   const presets = opts.presets || [];
-  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets, ci: opts.ci });
+  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets, ci: opts.ci, adapter: opts.adapter });
   if (opts.dryRun) {
     result.plan = summarise(plan, willInit, !opts.skipOpenspec);
     return result;
@@ -286,7 +308,7 @@ export async function install(opts) {
   if (willInit) {
     openspecRun(['init', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
     result.actions.push({ step: 'openspec init --tools claude (kit profile)' });
-    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets, ci: opts.ci });
+    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets, ci: opts.ci, adapter: opts.adapter });
   }
   result.files = applyFiles(root, plan.files).map(({ rel, op }) => ({ rel, op }));
   writeFileEnsured(join(root, MANIFEST), JSON.stringify(plan.manifest, null, 2) + '\n');
@@ -452,6 +474,7 @@ async function main() {
     skipOpenspec: args['skip-openspec'],
     allowVersionMismatch: args['allow-version-mismatch'],
     presets: args.preset ? String(args.preset).split(',').map((s) => s.trim()).filter(Boolean) : [],
+    adapter: args.adapter,
     ci: args.ci,
     force: args.force,
     dryRun: args['dry-run'],
