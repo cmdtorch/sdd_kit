@@ -94,6 +94,15 @@ Pristine copy of the built-in schema: `fixtures/upstream/spec-driven-1.13.0/`
 | L2 | `init` creates `openspec/{config.yaml, specs/.gitkeep, changes/archive/.gitkeep}` | VERIFIED | — |
 | L3 | `init --language <lang>` exists ("Write new OpenSpec artifacts in this language") | VERIFIED (new) | `init --help`. Not needed: D1 = English |
 
+## 7a. Added in phase 1
+
+| # | Claim | Status | Evidence | Kit implication |
+|---|---|---|---|---|
+| L4 | Extra files/dirs inside a change dir (`sources/`, `clarifications.md`, `verification-plan.md`) do not disturb `status`/`validate` | VERIFIED | change with `sources/D1.md`: only the usual spec-delta issues are reported | Requirement sources can live in `changes/<x>/sources/` |
+| W10 | The `new` skill uses the **config default schema** unless the user names one | VERIFIED | `openspec-new-change/SKILL.md` step 2 ("Use the default schema (omit `--schema`) unless the user explicitly requests…"); the dry run with `schema: clarify` in config created a `clarify` change | Installer sets `schema: clarify` in config; in-flight changes keep theirs (S8) |
+| W11 | `init --tools claude` honours the XDG profile like `update` | VERIFIED | `XDG_CONFIG_HOME=<project>/openspec/tooling/xdg openspec init` installed new/continue/verify, no propose | Installer can use `init` or `update` through the wrapper |
+| H1 | In `claude -p` (headless) the AskUserQuestion tool is not available | VERIFIED | dry run: agent said so and fell back to listing modes in text | Protocol works without it; hooks must not rely on AskUserQuestion events |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

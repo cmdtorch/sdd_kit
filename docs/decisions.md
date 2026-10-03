@@ -46,3 +46,26 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
 
 - **Decision:** `git init` the kit repo; first commit holds research, planning docs, phase 0 facts and the upstream fixture.
 - **Reason:** working rule 4 (conventional commits, small reviewable steps).
+
+## 2026-10-03 — Phase 1 design decisions
+
+- **Questions file layout:** rounds are `##` sections (`## Main round`, `## Specs round`, …) and
+  questions are `### Q<n>.` inside them; numbering is unique across the file. *Reason:* later rounds
+  live in the same file (CLAUDE.md), so questions need a level below the round. *Alternative:* `## Q<n>`
+  with round marker lines — harder to parse per round.
+- **Every round ends with a summary confirmation**, even a round with zero questions (it lists the
+  decisions/assumptions about to be used). *Reason:* gives hooks one uniform gate per artifact and a
+  human check of what the agent will assume.
+- **New source tag `[D<n>]`** for registered requirement sources (files in `changes/<x>/sources/`,
+  .md/.pdf/.txt — owner decision 2026-10-03). Valid only for statements explicitly in the source.
+- **Config fragment = `context` only.** `rules`/`operations` are keyed by artifact/operation id and
+  would also reach in-flight `spec-driven` changes (D11). Kit rules live in kit schema instructions.
+- **Installer will set `schema: clarify`** as the config default (fact W10); in-flight changes keep
+  their own schema (S8).
+- **Kit schemas are assembled once** from the upstream text + appended kit rules and then committed;
+  `tests/schemas.test.mjs` guards that the upstream text stays a verbatim prefix (via the CLI, no YAML
+  parser needed).
+- **Managed-file marking:** protocols and `schema.yaml` carry a header comment; templates cannot (the
+  header would leak into artifacts) → phase 4 installer tracks kit files with a manifest of hashes.
+- **`lean` keeps clarifications inline:** questions asked in a lean change go to a `## Clarifications`
+  section of `proposal.md`; requirement trace uses `[desc]` or that section.

@@ -1,0 +1,23 @@
+I didn't write `proposal.md`. The main round in `clarifications.md` has 14 questions (Q1–Q14) and every `[Answer]:` is blank. There is also no summary confirmation yet. The kit rules only let me write the proposal once all answers are filled in and the summary is exactly `Looks correct`.
+
+I don't have the AskUserQuestion tool here, so please pick how you want to answer:
+
+- **Guide me:** I ask the questions here in batches of up to 4 and write each answer into the file straight away. Pick *Other* on any question to discuss it first.
+- **I'll edit the file:** You fill in `openspec/changes/add-sales-export/clarifications.md` yourself and tell me "done". I won't read the file until then.
+- **Chat:** We discuss it freely, and I record the decisions in the file with a `(chat)` marker.
+
+Q1–Q13 are `For: PO/PM`, so you can forward them to the client as they are. They cover:
+
+- who may download the file
+- which sales and which statuses are included
+- which date and which class the filters use
+- columns and totals
+- the monthly email's content, recipients, schedule and who manages the address
+- what "convenient" means
+- what is out of scope
+- how success is measured
+- language
+
+Q14 is `For: Dev`. It asks whether outgoing email already works or needs to be set up as part of this change.
+
+Once all answers are in, I'll check them for gaps and contradictions. Then I'll write the summary for you to confirm, and only after that the proposal.

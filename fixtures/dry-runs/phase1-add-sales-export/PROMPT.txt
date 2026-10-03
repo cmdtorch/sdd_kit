@@ -1,0 +1,7 @@
+/opsx:new add-sales-export
+
+The client sent this request (paste it as a requirement source):
+
+"Бухгалтерии нужна выгрузка продаж в Excel. Чтобы можно было фильтровать по датам и по классам, видеть итоги. И хорошо бы отправлять отчет директору на почту каждый месяц. Сделать удобно."
+
+Create the change and then continue with its first artifact.
