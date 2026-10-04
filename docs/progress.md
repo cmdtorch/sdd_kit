@@ -14,7 +14,7 @@
 | 8. Reviewers + /clarify | ✅ done | spec-reviewer, test-reviewer, /sdd:clarify, review-input + heuristics; real reviews found every planted defect |
 | 9. Monorepo adapter | ✅ done (compose stack not run here) | `cwd` levels, `--adapter monorepo`, sample monorepo green end to end with real pytest + Playwright |
 | 10. Split adapter | ✅ done | Stores/references experiments answered; `--adapter split --role …`; real split pair works end to end |
-| 11. Docs & release | ⏳ | |
+| 11. Docs & release | ✅ done | README, guides (install, workflow, pilot, releasing), doctor.mjs, versioning + CHANGELOG; v0.1.0 tagged locally |
 
 ## Phase 0 — checklist
 
@@ -216,3 +216,31 @@
 - *"Разрабы больше не блокают друг друга"* — in split repos the frontend sees the backend specs inside OpenSpec,
   is told when a backend handoff is ready and when its backend checkout is stale, and starts the UI change with one
   command; the backend repository is never written from the frontend.
+
+## Phase 11 — checklist
+
+- [x] README for teams; guides: install/update/uninstall/onboarding/troubleshooting, daily workflow, pilot migration,
+      releasing
+- [x] `doctor.mjs` (readiness check with fixes)
+- [x] Versioning: semver, `package.json` = `kit.json` = CHANGELOG (tested); release process documented
+- [x] Docs tested against the code (tools, links, installer options)
+- [x] Onboarding measured on a clean environment: mechanical steps ≈ 5 s, team-lead install ≈ 3 s (facts §18)
+- [x] Tests: 237 total
+- [ ] Publish to the company's GitHub and run the first real CI (owner)
+
+## Phase 11 vs goals
+
+- *"Система ставится на комп разраба очень быстро и без усилий"* — the kit is committed with the repository; a new
+  developer installs the pinned OpenSpec CLI, clones, runs `doctor.mjs` and opens Claude Code. The mechanical part
+  took about 5 seconds in the measurement.
+
+## Overall status vs goals (docs/goals.md)
+
+| Goal / success criterion | Where it stands |
+|---|---|
+| AI asks every question that makes the spec complete | question rounds before every artifact, answer analysis, summary confirmation, hard gate (hooks + CI), spec reviewer as a second check — verified with real runs; real quality is measured by the pilot |
+| Developers no longer block each other | backend handoff from the OpenAPI diff, checked; frontend starts from it with UI-only questions; split repos: references, handoff list, stale checkout warning |
+| Fast, effortless install | one command for the lead, nothing per developer beyond the CLI; `doctor.mjs` |
+| Good tests, not junk | scenario markers, matrix from real results, weak-test heuristics, required test review, test gate, CI |
+| TDD so the AI checks itself | tdd-guard + test gate + archive gate |
+| Open | the pilot itself (owner), first GitHub CI run, frontend unit-test preset, `.claude/CLAUDE.md` versioning decision |

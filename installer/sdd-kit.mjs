@@ -51,6 +51,7 @@ Options:
   --ci                         also install the GitHub Actions workflow .github/workflows/sdd-kit.yml
                                (generated for the presets; remembered for updates)
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
+  --allow-version-mismatch     accept an openspec CLI other than the pinned version (not recommended)
   --force                      replace locally edited kit files (a .sdd-kit-backup copy is kept);
                                uninstall: remove the kit even if changes still use its schemas
   --dry-run                    show the plan, write nothing

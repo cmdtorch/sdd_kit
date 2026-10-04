@@ -264,3 +264,16 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
 - **CI:** a frontend PR needs nothing from the backend: imported handoffs and specs live in the change's `sources/`.
 - **Later:** a frontend unit-test preset (Vitest/Jest reporter producing sdd-json) so split frontends get scenario
   markers below E2E; the frontend stack is still open (Q5 of the planning round).
+
+## 2026-10-04 — Phase 11 decisions (docs and release)
+
+- **Docs ship in English** (CLAUDE.md communication rule): `README.md` and `docs/guide/{install,workflow,pilot,releasing}.md`.
+  Tests keep them honest: every tool/protocol they mention exists, relative links resolve, every installer option is
+  documented.
+- **`doctor.mjs`** in every project: one read-only command that checks Node, the pinned OpenSpec CLI, Claude Code, git,
+  kit files, hooks, skills profile, verify.yaml and its tools, the API baseline and backend stores, with a fix for each.
+  This is what makes "a new developer is ready in under 10 minutes" checkable.
+- **Versioning:** semver; the version lives in `package.json` and `kit.json` (`kitVersion`) and must match the
+  `CHANGELOG.md` top section (tested). Changing the pinned OpenSpec version is always MAJOR. Releases are git tags;
+  projects update with `npx github:<org>/sdd-kit#v<version> update`.
+- **0.1.0** is tagged locally; publishing the repository to the company's GitHub is the owner's step.

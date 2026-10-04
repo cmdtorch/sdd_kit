@@ -204,6 +204,14 @@ Experiments in an isolated XDG_CONFIG_HOME / XDG_DATA_HOME. Answers to the "Unkn
 | ST8 | How do hooks in a code repo find store files? | Registry file (`XDG_DATA_HOME`), falling back to `openspec store list --json` | `lib/stores.mjs` |
 | ST9 | CI checkout of the store repo | Not needed for the chosen design: the frontend change copies the backend handoff and specs into `sources/` at import time, so frontend CI checks run without the backend; E2E exists only in monorepos (D23) | design |
 
+## 18. Onboarding time (phase 11)
+
+| # | Measurement (clean npm cache/prefix, isolated XDG dirs, this machine's network) | Result |
+|---|---|---|
+| O1 | New developer: `npm i -g @fission-ai/openspec@1.13.0` + clone of a repo with the kit + `doctor.mjs` → "Ready" | 3.9 s + <0.1 s (local remote) + 0.6 s |
+| O2 | Team lead: `npx --package=<kit tarball> sdd-kit install --preset django --ci` into a new repo (incl. `openspec init`) | 2.6 s |
+| O3 | Not measured: installing Node / Claude Code, the workspace trust dialog, a real network clone | human steps; minutes, not tens of minutes |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.
