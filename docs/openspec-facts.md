@@ -188,6 +188,22 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | M4 | Building and running the compose stack, and the generated workflow on GitHub | NOT VERIFIED | no Docker daemon access here; first run in CI |
 | M5 | A Playwright Chromium can run without root when its missing system libraries are unpacked from `apt-get download` debs and passed via `LD_LIBRARY_PATH` | VERIFIED | environment workaround for this machine only; CI uses `playwright install --with-deps` |
 
+## 17. Stores and references (phase 10, OpenSpec 1.13.0)
+
+Experiments in an isolated XDG_CONFIG_HOME / XDG_DATA_HOME. Answers to the "Unknown" items of CLAUDE.md:
+
+| # | Question | Answer | Evidence |
+|---|---|---|---|
+| ST1 | Where is the store registry? | `$XDG_DATA_HOME/openspec/stores/registry.yaml` (`stores.<id>.backend.local_path`), per machine; the store carries `.openspec-store/store.yaml` (`version`, `id`) | `store setup` / `store register --json` |
+| ST2 | Where does a custom schema resolve for a change in a store (code repo with `store: <id>`)? | **Only in the store** (`<store>/openspec/schemas`). A schema in the code repo is not found ("Schema 'clarify' not found") | `new change --schema clarify` from the code repo |
+| ST3 | Where are `context` / `rules` read from in store-only mode? | **From the store's config.yaml**; the code repo's context and rules are ignored | instruction markers |
+| ST4 | Where do changes live, what may the agent edit? | In the store; `status.actionContext.allowedEditRoots` = the store only — store-only mode is meant for planning, not for code living in the code repo | `status --json` |
+| ST5 | `references: [<id>]` in a repo with its own openspec/ root | Read-only link: `openspec context --json` lists the store as `referenced_store` with a fetch hint; every `instructions --json` carries `references: [{store_id, root, specs:[{id, summary}], fetch}]`; `show/list --store <id>` read its specs and changes | frontend experiment |
+| ST6 | Is a referenced store write-protected? | **No**: `new change --store <id>` would create a change in it (failed only on an unknown schema). The kit hook blocks `openspec new/archive … --store <referenced id>` | experiment + `tests/split.test.mjs` |
+| ST7 | Does OpenSpec sync or check freshness of stores? | No: `store doctor` reports structure only, never fetch state | `store doctor --json` |
+| ST8 | How do hooks in a code repo find store files? | Registry file (`XDG_DATA_HOME`), falling back to `openspec store list --json` | `lib/stores.mjs` |
+| ST9 | CI checkout of the store repo | Not needed for the chosen design: the frontend change copies the backend handoff and specs into `sources/` at import time, so frontend CI checks run without the backend; E2E exists only in monorepos (D23) | design |
+
 ## 8. Not covered in phase 0 (planned later)
 
 - Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.

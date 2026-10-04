@@ -23,7 +23,7 @@ import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { listFiles, readManifest, planFiles, nextManifest, sha256, MANIFEST } from './lib/manifest.mjs';
 import { patchGitignore, unpatchGitignore } from './lib/gitignore.mjs';
-import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, ConfigEditError } from './lib/config-edit.mjs';
+import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, upsertReference, removeReference, ConfigEditError } from './lib/config-edit.mjs';
 import { mergeSettings, removeKitHooks, formatSettings } from '../kit/core/openspec/tooling/lib/settings-merge.mjs';
 import { parseArgs } from '../kit/core/openspec/tooling/lib/report.mjs';
 
@@ -42,8 +42,12 @@ Options:
   --keep-default-schema        do not make "clarify" the default schema for new changes
   --preset <names>             comma-separated stack presets: django, playwright (remembered for updates;
                                they create openspec/tooling/verify.yaml when it does not exist yet)
-  --adapter <name>             topology adapter: monorepo (backend/, frontend/, e2e/, docker-compose.yml);
-                               remembered for updates
+  --adapter <name>             topology adapter, remembered for updates:
+                                 monorepo (backend/, frontend/, e2e/, docker-compose.yml)
+                                 split    (separate repositories; needs --role backend|frontend)
+  --role <backend|frontend>    split adapter: which side this repository is
+  --store-id <id>              split adapter: store id of the backend repository (default: backend)
+  --backend-path <dir>         split adapter, frontend: register this backend checkout on the machine
   --ci                         also install the GitHub Actions workflow .github/workflows/sdd-kit.yml
                                (generated for the presets; remembered for updates)
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
@@ -109,7 +113,7 @@ async function askLanguage(defaultLang) {
 
 /** Builds the full install plan without writing anything. */
 export function planInstall(opts) {
-  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [], ci: ciRequested = false, adapter: adapterRequested = null } = opts;
+  const { root, kitDir, force = false, keepDefaultSchema = false, questionsLanguage = null, willInitOpenspec = false, presets: requested = [], ci: ciRequested = false, adapter: adapterRequested = null, role: roleRequested = null, storeId: storeIdRequested = null } = opts;
   const k = kitPaths(kitDir);
   const kit = JSON.parse(readFileSync(k.kitJson, 'utf8'));
   const plan = { root, kitVersion: kit.kitVersion, openspecVersion: kit.openspecVersion, steps: [], warnings: [] };
@@ -134,11 +138,24 @@ export function planInstall(opts) {
   if (adapterRequested && manifest?.adapter && manifest.adapter !== adapterRequested) throw new InstallError(`the project uses adapter "${manifest.adapter}"; switching adapters is not supported by update`);
   const adapter = adapterRequested || manifest?.adapter || null;
   plan.adapter = adapter;
+  const role = roleRequested || manifest?.role || null;
+  const storeId = storeIdRequested || manifest?.storeId || 'backend';
+  if (adapter === 'split') {
+    if (!['backend', 'frontend'].includes(role)) throw new InstallError('the split adapter needs --role backend or --role frontend');
+    if (manifest?.role && roleRequested && manifest.role !== roleRequested) throw new InstallError(`this repository was installed with --role ${manifest.role}`);
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(storeId)) throw new InstallError(`--store-id "${storeId}" must be kebab-case`);
+    if (role === 'frontend' && presets.includes('playwright')) throw new InstallError('E2E browser tests are only supported in a monorepo (D23): drop the playwright preset for a split frontend');
+    plan.role = role;
+    plan.storeId = storeId;
+  } else if (roleRequested) throw new InstallError('--role is only used with --adapter split');
   const ci = Boolean(ciRequested || manifest?.ci);
   plan.ci = ci;
   if (ci) kitFiles['.github/workflows/sdd-kit.yml'] = { content: composeWorkflow(kitDir, presets, adapter) };
   plan.files = planFiles(root, kitFiles, manifest, { force });
-  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets, { ...(ci ? { ci: true } : {}), ...(adapter ? { adapter } : {}) });
+  plan.manifest = nextManifest(kit.kitVersion, plan.files, presets, { ...(ci ? { ci: true } : {}), ...(adapter ? { adapter } : {}), ...(adapter === 'split' ? { role, storeId } : {}) });
+  // split backend: store identity (project-owned, created once)
+  const storeYaml = join(root, '.openspec-store', 'store.yaml');
+  plan.storeFile = adapter === 'split' && role === 'backend' && !existsSync(storeYaml) ? { path: storeYaml, content: `version: 1\nid: ${storeId}\n` } : null;
 
   // verify.yaml: project-owned; created from presets only when missing
   const verifyPath = join(root, 'openspec', 'tooling', 'verify.yaml');
@@ -157,6 +174,7 @@ export function planInstall(opts) {
   const lang = questionsLanguage || (cfgOld && currentQuestionsLanguage(cfgOld)) || 'English';
   try {
     cfgNew = upsertKitBlock(cfgNew, kitBlock(k.configFragment, lang));
+    if (adapter === 'split' && role === 'frontend') cfgNew = upsertReference(cfgNew, storeId);
     const schema = currentSchema(cfgNew);
     if (!keepDefaultSchema && (schema === null || schema === 'spec-driven')) cfgNew = setSchema(cfgNew, 'clarify');
     else if (!keepDefaultSchema && !KIT_SCHEMAS.includes(schema)) plan.warnings.push(`default schema "${schema}" is kept (it is not spec-driven); new changes will not use "clarify" unless asked`);
@@ -300,7 +318,8 @@ export async function install(opts) {
 
   // validate everything before writing (init changes config, so the plan is rebuilt after it)
   const presets = opts.presets || [];
-  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets, ci: opts.ci, adapter: opts.adapter });
+  const adapterOpts = { adapter: opts.adapter, role: opts.role, storeId: opts.storeId };
+  let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit, presets, ci: opts.ci, ...adapterOpts });
   if (opts.dryRun) {
     result.plan = summarise(plan, willInit, !opts.skipOpenspec);
     return result;
@@ -308,9 +327,13 @@ export async function install(opts) {
   if (willInit) {
     openspecRun(['init', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
     result.actions.push({ step: 'openspec init --tools claude (kit profile)' });
-    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets, ci: opts.ci, adapter: opts.adapter });
+    plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, presets, ci: opts.ci, ...adapterOpts });
   }
   result.files = applyFiles(root, plan.files).map(({ rel, op }) => ({ rel, op }));
+  if (plan.storeFile) {
+    writeFileEnsured(plan.storeFile.path, plan.storeFile.content);
+    result.actions.push({ step: '.openspec-store/store.yaml', op: 'create' });
+  }
   writeFileEnsured(join(root, MANIFEST), JSON.stringify(plan.manifest, null, 2) + '\n');
   for (const [name, s] of [['openspec/config.yaml', plan.config], ['.claude/settings.json', plan.settings], ['.gitignore', plan.gitignore], ['openspec/tooling/verify.yaml', plan.verify]]) {
     if (name === 'openspec/tooling/verify.yaml' && s.old === null && s.new === null) continue;
@@ -325,6 +348,16 @@ export async function install(opts) {
     // same as `node openspec/tooling/bin/openspec.mjs update`: the project's committed kit profile
     openspecRun(['update'], { xdg: join(root, 'openspec', 'tooling', 'xdg'), bin, cwd: root });
     result.actions.push({ step: 'openspec update (kit profile)' });
+    if (plan.adapter === 'split') {
+      const target = plan.role === 'backend' ? root : opts.backendPath ? resolve(opts.backendPath) : null;
+      if (target) {
+        openspecRun(['store', 'register', target, '--id', plan.storeId, '--yes', '--json'], { xdg: join(root, 'openspec', 'tooling', 'xdg'), bin, cwd: root });
+        result.actions.push({ step: `openspec store register ${target} --id ${plan.storeId}` });
+      }
+    }
+  }
+  if (plan.adapter === 'split' && plan.role === 'frontend' && !opts.backendPath) {
+    result.warnings.push(`each developer registers the backend checkout once: node openspec/tooling/bin/openspec.mjs store register <path-to-backend> --id ${plan.storeId} --yes`);
   }
   // self-check with the freshly installed tooling
   const { lintKit } = await import(pathToFileURL(join(root, 'openspec', 'tooling', 'checks', 'lint-kit.mjs')).href);
@@ -386,6 +419,7 @@ export function uninstall(opts) {
   const cfg = readText(cfgPath);
   if (cfg !== null) {
     let out = removeKitBlock(cfg);
+    if (manifest.adapter === 'split' && manifest.role === 'frontend') out = removeReference(out, manifest.storeId || 'backend');
     if (KIT_SCHEMAS.includes(currentSchema(out))) out = setSchema(out, 'spec-driven');
     edits.push(['openspec/config.yaml', cfgPath, cfg, out]);
   }
@@ -475,6 +509,9 @@ async function main() {
     allowVersionMismatch: args['allow-version-mismatch'],
     presets: args.preset ? String(args.preset).split(',').map((s) => s.trim()).filter(Boolean) : [],
     adapter: args.adapter,
+    role: args.role,
+    storeId: args['store-id'],
+    backendPath: args['backend-path'],
     ci: args.ci,
     force: args.force,
     dryRun: args['dry-run'],

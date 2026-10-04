@@ -103,3 +103,56 @@ export function setSchema(text, schema) {
   if (v.schema !== schema) throw new ConfigEditError('could not set "schema" in config.yaml; nothing was changed');
   return out;
 }
+
+/** Adds a store id to the top-level `references:` list (block or flow form); creates the key when missing. */
+export function upsertReference(text, id) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const k = lines.findIndex((l) => /^references:/.test(l));
+  let out;
+  if (k === -1) {
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+    out = [...lines, '', 'references:', `  - ${id}`, ''].join('\n');
+  } else {
+    const rest = lines[k].replace(/^references:\s*/, '').replace(/\s+#.*$/, '');
+    if (rest.startsWith('[')) {
+      const items = rest.replace(/^\[|\]$/g, '').split(',').map((s) => s.trim()).filter(Boolean);
+      if (items.includes(id)) return text;
+      lines[k] = `references: [${[...items, id].join(', ')}]`;
+    } else if (rest) {
+      throw new ConfigEditError(`config.yaml "references" has an unexpected form ("${lines[k].trim()}"); add "${id}" by hand`);
+    } else {
+      let last = k;
+      for (let i = k + 1; i < lines.length && /^\s+-\s/.test(lines[i]); i++) {
+        if (lines[i].replace(/^\s+-\s+/, '').replace(/['"]/g, '').trim() === id) return text;
+        last = i;
+      }
+      lines.splice(last + 1, 0, `  - ${id}`);
+    }
+    out = lines.join('\n');
+  }
+  verify(out);
+  return out;
+}
+
+/** Removes a store id from `references:` (drops the key when the list becomes empty). */
+export function removeReference(text, id) {
+  const lines = text.split('\n');
+  const k = lines.findIndex((l) => /^references:/.test(l));
+  if (k === -1) return text;
+  const rest = lines[k].replace(/^references:\s*/, '');
+  if (rest.startsWith('[')) {
+    const items = rest.replace(/^\[|\]$/g, '').split(',').map((s) => s.trim()).filter((s) => s && s !== id);
+    lines[k] = `references: [${items.join(', ')}]`;
+    if (!items.length) lines.splice(k, 1);
+  } else {
+    const idx = lines.findIndex((l, i) => i > k && /^\s+-\s/.test(l) && l.replace(/^\s+-\s+/, '').replace(/['"]/g, '').trim() === id);
+    if (idx !== -1) lines.splice(idx, 1);
+    if (!(lines[k + 1] && /^\s+-\s/.test(lines[k + 1]))) {
+      lines.splice(k, 1);
+      if (lines[k - 1] === '' && (lines[k] === '' || lines[k] === undefined)) lines.splice(k - 1, 1);
+    }
+  }
+  const out = lines.join('\n');
+  verify(out);
+  return out;
+}

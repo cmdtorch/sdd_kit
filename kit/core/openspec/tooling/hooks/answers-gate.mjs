@@ -11,6 +11,7 @@ import { locateInChange, changeSchema, changeDir } from '../lib/project.mjs';
 import { ROUND_FOR_ARTIFACT } from '../lib/clarifications.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
 import { isMain } from '../lib/report.mjs';
+import { referencedStores } from '../lib/stores.mjs';
 
 const MAX_LISTED = 8;
 const GATED_PATH = /(?:^|[\s'"=(])((?:\.\/)?(?:[^\s'"]*\/)?openspec\/changes\/[^\s'"/]+\/(?:proposal\.md|design\.md|verification-plan\.md|specs\/[^\s'"]+\.md))/g;
@@ -36,12 +37,25 @@ function explain(change, artifact, report) {
   return lines.join('\n');
 }
 
+const STORE_WRITE = /\bopenspec(?:\.mjs)?\s+(new\s+change|archive|instructions\s+\S+\s+--change\s+\S+\s+--write)\b[^;&|\n]*--store[\s=]+['"]?([\w.-]+)/;
+
+/** A write into a referenced (read-only) store from this repository (D24), or null. */
+export function referencedStoreWrite(root, command) {
+  const m = command.match(STORE_WRITE);
+  if (!m) return null;
+  return referencedStores(root).includes(m[2]) ? m[2] : null;
+}
+
 export function gate(input) {
   const root = hookRoot(input);
   if (!root) return null;
   let targets = [];
   if (input.tool_name === 'Bash') {
     const cmd = String(input.tool_input?.command || '');
+    const ref = referencedStoreWrite(root, cmd);
+    if (ref) {
+      return `sdd-kit: "${ref}" is a referenced store — read-only from this repository (decision D24). Changes to the backend are made in the backend repository; start UI work from its handoff: node openspec/tooling/bin/handoff.mjs import --from-store ${ref} --change <name>`;
+    }
     targets = bashTargets(cmd).map((p) => (p.startsWith('/') ? p : `${input.cwd || root}/${p.replace(/^\.\//, '')}`));
   } else {
     targets = touchedFiles(input);

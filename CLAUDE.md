@@ -64,6 +64,8 @@ that are **not** in the research files.
 | D20 | **XDG profile trick approved.** The kit's workflow profile is committed at `openspec/tooling/xdg/openspec/config.json`; every `openspec update` runs through a kit wrapper that sets `XDG_CONFIG_HOME` and `OPENSPEC_TELEMETRY=0` for that process only. Session-start warns when installed skills drift from the kit profile. |
 | D21 | **Scenario names come from a kit parser** (`show --json` has no names in 1.13.0). One small fence-aware module mirrors OpenSpec's header rules; tests cross-check it against `show --json` (requirement and scenario counts and texts). All kit scripts use only this module to read specs. |
 | D22 | Exception to D1: the **questions** in `clarifications.md` (question text, options, summary bullets) use a per-project *questions language* (`Questions language: <lang>` in config context, default English), so PO/PM questions can be forwarded verbatim. Structural keywords stay English (parsed by checks); all other artifacts stay English. |
+| D23 | **Browser E2E only in monorepos.** Split frontend repositories have no E2E level in CI (the playwright preset is refused with `--adapter split --role frontend`); no backend is needed by a frontend PR. |
+| D24 | **Split repositories use OpenSpec references:** the backend repository is registered as a store (`.openspec-store/store.yaml`, `openspec store register` per machine); the frontend lists it under `references:` and reads it only (the kit blocks `--store` writes into it). Store-only mode (`store:`) is not used: it moves schemas, context and editable roots into the store (facts ST2–ST4). |
 
 ---
 
@@ -335,7 +337,7 @@ graphify hooks, 8 in-flight changes on `spec-driven`, `openspec/` and `.claude/`
 ## Open questions (ask the user when you reach them)
 
 - ~~Frontend stack of the pilot~~ — resolved: stacks vary, kit is stack-agnostic (D8).
-- How E2E gets a backend for a frontend PR in split repos (docker image from ECR by tag?).
+- ~~How E2E gets a backend for a frontend PR in split repos~~ — resolved: E2E only in monorepos (D23).
 - ~~Whether the XDG profile trick is acceptable~~ — resolved: yes (D20).
 - ~~Store vs `references:`~~ — resolved: backend repo is the source, frontend reads (D7).
 - Which requirement file formats to accept in `[doc]` sources (`.docx` is unreadable without deps — ask for md/pdf/text?) — phase 1.

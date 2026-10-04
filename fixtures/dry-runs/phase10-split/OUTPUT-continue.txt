@@ -1,0 +1,24 @@
+Ignoring 8 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/tmp/claude-1000/-home-coder-project-openspec-c/970cc55f-a427-4b53-8ac8-5ea125737428/scratchpad/sp/frontend"].hasTrustDialogAccepted: true in /home/coder/.claude.json.
+I've written the Main round for `add-sales-export-ui` (12 questions, depth Comprehensive) to `openspec/changes/add-sales-export-ui/clarifications.md`. Every `[Answer]:` is blank. I haven't written the proposal or the summary confirmation. The proposal stays blocked until the summary answer is exactly `Looks correct`.
+
+The change is on the `clarify` schema (0/6 artifacts done). `proposal` unlocks once the round is confirmed.
+
+I can't offer the answer modes as a picker because the AskUserQuestion tool isn't available in this session. Please pick one:
+
+- **Guide me:** I ask the questions here in batches of up to 4. Pick *Other* on any question to discuss it first.
+- **I'll edit the file:** you fill in the `[Answer]:` lines and say "done".
+- **Chat:** we discuss freely and I record the decisions in the file.
+
+**For PO/PM (can be forwarded as written):** Q1, Q2, Q3, Q6, Q7, Q8, Q9, Q12
+**For Dev (API gaps to raise with the backend):**
+- **Q4:** the endpoint returns a paginated JSON list, but the backend spec says "Excel file".
+- **Q5:** no error is documented for an invalid period.
+- **Q10:** no list of allowed currencies or default.
+- **Q11:** the spec mentions a service, but the request body doesn't include one.
+
+Two things need your attention:
+
+- **No description:** you gave only the change name, so `[desc]` in the Sources section is a placeholder. Please give me the description to put there verbatim.
+- **Backend may be stale:** the session hook says the backend checkout was never fetched. I didn't run `git pull` in it because the command needs your approval. The questions rely on the backend handoff and delta specs already copied into `sources/`, plus the backend `inventory/student-sales` spec. Run the pull if you want me to re-check against the latest backend.
+
+The frontend itself is a one-line stub, `src/SalesPage.tsx`, so nothing existing answered any of these questions.

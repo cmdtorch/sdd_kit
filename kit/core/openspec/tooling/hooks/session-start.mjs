@@ -12,6 +12,7 @@ import { listChanges, changeSchema, changeDir, isKitSchema, readChangeFile } fro
 import { parseClarifications, roundStatus } from '../lib/clarifications.mjs';
 import { isMain } from '../lib/report.mjs';
 import { readState, fingerprint } from '../lib/state.mjs';
+import { referencedStoreLines } from '../lib/stores.mjs';
 
 export const ARTIFACT_ORDER = {
   clarify: ['clarifications', 'proposal', 'specs', 'design', 'verification-plan', 'tasks'],
@@ -84,6 +85,7 @@ export function sessionContext(root) {
     lines.push('sdd-kit: active changes on kit schemas (protocols: openspec/protocols/):', ...kitChanges);
     if (openQuestions) lines.push('Unanswered or unconfirmed question rounds block the next artifact (answers-gate). Tell the developer what is waiting for them before starting other work.');
   }
+  lines.push(...referencedStoreLines(root));
   if (otherChanges) lines.push(`sdd-kit: ${otherChanges} other change(s) use their own schema (e.g. spec-driven) and keep their old workflow.`);
 
   if (kit?.openspecVersion) {

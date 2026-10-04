@@ -13,7 +13,7 @@
 | 7. CI | ✅ done (not yet run on GitHub) | ci.mjs checks/verify, generated workflow (--ci), kit repo CI; actionlint clean |
 | 8. Reviewers + /clarify | ✅ done | spec-reviewer, test-reviewer, /sdd:clarify, review-input + heuristics; real reviews found every planted defect |
 | 9. Monorepo adapter | ✅ done (compose stack not run here) | `cwd` levels, `--adapter monorepo`, sample monorepo green end to end with real pytest + Playwright |
-| 10. Split adapter | ⏳ | |
+| 10. Split adapter | ✅ done | Stores/references experiments answered; `--adapter split --role …`; real split pair works end to end |
 | 11. Docs & release | ⏳ | |
 
 ## Phase 0 — checklist
@@ -197,3 +197,22 @@
 
 - *"Ускорение разработки фронта и бека" / "не блокают друг друга"* — in a monorepo one change carries the backend,
   the handoff, the frontend page and its E2E proof; one CI run verifies the whole journey.
+
+## Phase 10 — checklist
+
+- [x] Stores / references experiments: every "Unknown" of CLAUDE.md answered (facts §17)
+- [x] Decisions D23 (E2E only in monorepos) and D24 (backend as a referenced store) — owner answers
+- [x] Installer `--adapter split --role backend|frontend`, references editing (+ uninstall), registration
+- [x] Session start: stale backend checkout warning, handoffs waiting for a UI change
+- [x] `handoff.mjs list` and `import --from-store`
+- [x] Hook blocks writes into a referenced store
+- [x] Tests: 230 total (`tests/split.test.mjs`: real CLI, isolated store registry, upstream remote, teammate push)
+- [x] Real Claude Code on a split frontend: UI-only questions, API gaps routed to the backend, backend spec read
+      through references, stale-checkout warning respected
+- [ ] Frontend unit-test preset with scenario markers (later; frontend stack still open)
+
+## Phase 10 vs goals
+
+- *"Разрабы больше не блокают друг друга"* — in split repos the frontend sees the backend specs inside OpenSpec,
+  is told when a backend handoff is ready and when its backend checkout is stale, and starts the UI change with one
+  command; the backend repository is never written from the frontend.

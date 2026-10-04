@@ -245,3 +245,22 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   the diff's `currentHash`, fresh export == baseline. (Verification results stay local by design: re-running
   tests in a new clone is legitimate and loses nothing.)
 - **The kit repository's CI** runs the sample end to end in a separate job.
+
+## 2026-10-04 — Phase 10 decisions (split repositories)
+
+- **Owner decisions:** E2E only for monorepos (D23); backend registered as an OpenSpec store and referenced by the
+  frontend (D24).
+- **Store-only mode rejected** after experiments (facts ST2–ST4): with `store:` the code repository's schemas,
+  context and rules are ignored and the agent's editable root is the store — wrong for repositories that hold code.
+  `references:` keeps each repository its own root and gives the frontend the backend specs in every instruction.
+- **`--adapter split --role backend|frontend [--store-id] [--backend-path]`:** backend gets `.openspec-store/store.yaml`
+  (project-owned) and a machine registration; frontend gets `references: [<id>]` (removed on uninstall) and, with
+  `--backend-path`, the registration. The playwright preset is refused on a split frontend (D23).
+- **Freshness is the kit's job** (OpenSpec never syncs, ST7): session start warns when the backend checkout is behind
+  its upstream (as of the last fetch) or was not fetched for 24 h; repos without upstream are not nagged. It also lists
+  backend handoffs not yet imported into a UI change.
+- **`handoff.mjs list` / `import --from-store <id>`** resolve the backend through the store registry.
+- **Writes into a referenced store are blocked** by the answers-gate hook (ST6).
+- **CI:** a frontend PR needs nothing from the backend: imported handoffs and specs live in the change's `sources/`.
+- **Later:** a frontend unit-test preset (Vitest/Jest reporter producing sdd-json) so split frontends get scenario
+  markers below E2E; the frontend stack is still open (Q5 of the planning round).
