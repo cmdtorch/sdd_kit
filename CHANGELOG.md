@@ -4,6 +4,12 @@ All notable changes to sdd-kit. Versions follow [Semantic Versioning](https://se
 MAJOR — a change a project must act on (format of an artifact, a gate that blocks more, a removed command);
 MINOR — new capability, backwards compatible; PATCH — fixes.
 
+## Unreleased
+
+- Installer wizard: a first `install` in a terminal without options detects the layout (single repository,
+  monorepo, split backend or frontend) and the stack, asks a few questions with those defaults, shows the plan and
+  asks for confirmation. Prints the equivalent command line and the next steps. `--wizard` forces it.
+
 ## 0.1.0 — 2026-10-04
 
 First version, ready for the pilot.

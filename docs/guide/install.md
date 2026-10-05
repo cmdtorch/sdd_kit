@@ -14,6 +14,19 @@ Linux, macOS and WSL are supported. Native Windows is not (decision D18).
 
 ## Installing into a repository (once, by the team lead)
 
+The easiest way is the wizard. Run the installer without options in the project root:
+
+```bash
+npx github:<org>/sdd-kit install
+```
+
+It detects the layout and the stack, asks a few questions (press Enter to accept the detected value), prints the
+equivalent command line, shows the plan and installs only after you confirm. At the end it lists the next steps.
+The wizard runs for a first install in a terminal when no layout options are given; `--wizard` forces it (also with
+piped input), `--yes` or any layout option skips it.
+
+The same with options (for scripts and other repositories):
+
 ```bash
 npx github:<org>/sdd-kit install [options] --dry-run   # show the plan, write nothing
 npx github:<org>/sdd-kit install [options]
@@ -35,7 +48,8 @@ Options:
 | `--skip-openspec` | do not run the OpenSpec CLI (no `init`/`update` of the skills) |
 | `--allow-version-mismatch` | accept an OpenSpec CLI other than the pinned one (not recommended) |
 | `--force` | replace kit files you edited locally (a `.sdd-kit-backup` copy is kept) |
-| `--yes` | never ask questions |
+| `--wizard` | ask the install questions even when options are given or input is piped |
+| `--yes` | never ask questions (no wizard) |
 | `--json` | machine-readable output |
 | `--dry-run` | show the plan, write nothing |
 

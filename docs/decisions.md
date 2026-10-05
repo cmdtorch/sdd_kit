@@ -277,3 +277,16 @@ stack-agnostic frontend); D13–D19 added; new phase 6 "Handoff"; the store phas
   `CHANGELOG.md` top section (tested). Changing the pinned OpenSpec version is always MAJOR. Releases are git tags;
   projects update with `npx github:<org>/sdd-kit#v<version> update`.
 - **0.1.0** is tagged locally; publishing the repository to the company's GitHub is the owner's step.
+
+## 2026-10-05 — Install wizard
+
+- **A first `install` in a terminal without options starts a wizard** (owner's request: too many flags). It detects
+  the layout (`backend/` + `frontend/` → monorepo; `package.json` without Python → split frontend, sibling `../backend`
+  offered; otherwise single repository) and Django (`manage.py` or `django` in `pyproject.toml`/`requirements.txt`),
+  asks layout, stack, E2E (monorepo), backend path (split frontend), questions language and CI, prints the equivalent
+  command line, shows the dry-run plan and installs only after confirmation. It ends with the next steps.
+- It never runs for updates (a manifest exists), with `--yes`/`--json`, any layout option or piped input, so scripts
+  and CI keep the flag behaviour. `--wizard` forces it (also how the tests drive it).
+- The wizard does not edit project files outside the kit (e.g. the pytest marker in `pyproject.toml`): it lists them
+  as next steps (working rule 7). Alternative considered: a separate `sdd-kit init` command — rejected, one entry
+  point is simpler to document.

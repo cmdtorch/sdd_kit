@@ -26,11 +26,13 @@ import { patchGitignore, unpatchGitignore } from './lib/gitignore.mjs';
 import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, upsertReference, removeReference, ConfigEditError } from './lib/config-edit.mjs';
 import { mergeSettings, removeKitHooks, formatSettings } from '../kit/core/openspec/tooling/lib/settings-merge.mjs';
 import { parseArgs } from '../kit/core/openspec/tooling/lib/report.mjs';
+import { createAsker, detectProject, runWizard, equivalentCommand } from './lib/wizard.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const USAGE = `sdd-kit — Spec-Driven Development kit for OpenSpec + Claude Code
 
 Usage:
+  sdd-kit install               first install in a terminal without options: a short wizard asks the questions
   sdd-kit install   [options]   install or update the kit in a project (safe to re-run)
   sdd-kit update    [options]   same as install
   sdd-kit status    [options]   show what is installed and what was edited locally
@@ -55,7 +57,8 @@ Options:
   --force                      replace locally edited kit files (a .sdd-kit-backup copy is kept);
                                uninstall: remove the kit even if changes still use its schemas
   --dry-run                    show the plan, write nothing
-  --yes                        never ask questions
+  --wizard                     ask the install questions even when options are given or input is piped
+  --yes                        never ask questions (no wizard)
   --json                       machine-readable output`;
 
 class InstallError extends Error {}
@@ -489,12 +492,13 @@ function printHuman(r) {
   out.push(`  self-check (lint-kit): ${lintErrors.length ? 'FAILED' : 'OK'}`);
   for (const f of r.lint.findings) out.push(`    ${f.level}: ${f.file ?? ''}${f.line ? `:${f.line}` : ''} ${f.message}`);
   if (r.files.some((f) => f.op.startsWith('conflict'))) out.push('Some kit files were not updated because they differ from what the kit wrote. Review them, or re-run with --force (backups are kept).');
-  out.push('Next: commit openspec/, .claude/settings.json, .claude/skills/openspec-*, .claude/commands/ and .gitignore.');
+  if (r.nextSteps) out.push('\nNext steps:', ...r.nextSteps.map((x, i) => `  ${i + 1}. ${x}`));
+  else out.push('Next: commit openspec/, .claude/settings.json, .claude/skills/openspec-*, .claude/commands/ and .gitignore.');
   console.log(out.join('\n'));
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch', 'ci']);
+  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch', 'ci', 'wizard']);
   const cmd = args._[0];
   if (args.help || !cmd) {
     console.log(USAGE);
@@ -521,7 +525,10 @@ async function main() {
   };
   let result;
   try {
-    if (cmd === 'install' || cmd === 'update') result = await install(opts);
+    if (cmd === 'install' && wantsWizard(args, opts)) {
+      result = await wizardInstall(opts);
+      if (!result) return;
+    } else if (cmd === 'install' || cmd === 'update') result = await install(opts);
     else if (cmd === 'status') result = status(opts);
     else if (cmd === 'uninstall') result = uninstall(opts);
     else throw new InstallError(`unknown command "${cmd}"\n\n${USAGE}`);
@@ -535,6 +542,52 @@ async function main() {
   if (args.json) console.log(JSON.stringify({ ok: true, ...result }, null, 2));
   else printHuman(result);
   if (result.lint && !result.lint.ok) process.exitCode = 1;
+}
+
+/** The wizard runs for a first install in a terminal when no layout options are given, or with --wizard. */
+function wantsWizard(args, opts) {
+  if (args.wizard) {
+    if (args.json || args.yes) throw new InstallError('--wizard cannot be combined with --json or --yes');
+    return true;
+  }
+  if (args.yes || args.json || !process.stdin.isTTY || !process.stdout.isTTY) return false;
+  const given = ['preset', 'adapter', 'role', 'backend-path', 'store-id', 'questions-language', 'ci'].some((k) => args[k] !== undefined);
+  return !given && !existsSync(join(resolve(opts.target || process.cwd()), MANIFEST));
+}
+
+/** Wizard answers → preview of the plan → confirmation → install. Returns null when the user stops. */
+async function wizardInstall(opts) {
+  const root = resolve(opts.target || process.cwd());
+  const ask = createAsker(process.stdin, process.stdout);
+  try {
+    const current = currentQuestionsLanguage(readText(join(root, 'openspec', 'config.yaml')) || '');
+    const answers = await runWizard({ ask, detected: detectProject(root), currentLanguage: current });
+    const chosen = { ...opts, ...answers, backendPath: answers.backendPath ? resolve(root, answers.backendPath) : null };
+    ask.say(`\nSame as: ${equivalentCommand(answers)}\n`);
+    const preview = await install({ ...chosen, dryRun: true });
+    printHuman(preview);
+    if (opts.dryRun) return null;
+    if (!(await ask.confirm('\nInstall now?', true))) {
+      ask.say('Nothing was written.');
+      return null;
+    }
+    ask.say('');
+    const result = await install({ ...chosen, yes: true });
+    result.nextSteps = nextSteps({ ...result, ci: answers.ci });
+    return result;
+  } finally {
+    ask.close();
+  }
+}
+
+function nextSteps(r) {
+  const steps = [];
+  if (r.presets.includes('django')) steps.push('register the pytest marker under [tool.pytest.ini_options] in pyproject.toml:\n       markers = ["scenario(capability, name): links the test to an OpenSpec spec scenario (sdd-kit)"]');
+  steps.push(existsSync(join(r.root, 'openspec', 'tooling', 'verify.yaml')) ? 'check that the commands in openspec/tooling/verify.yaml are the ones your team runs' : 'write openspec/tooling/verify.yaml (how this project runs its tests)');
+  if (r.presets.includes('django')) steps.push('take the API baseline: node openspec/tooling/bin/api.mjs snapshot');
+  if (r.ci) steps.push('review .github/workflows/sdd-kit.yml (services, environment variables)');
+  steps.push('node openspec/tooling/bin/doctor.mjs', 'commit: git add -A && git commit -m "chore: install sdd-kit"');
+  return steps;
 }
 
 // entry point (also through the npm bin symlink created by `npx`)

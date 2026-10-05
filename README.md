@@ -39,12 +39,11 @@ flowchart LR
 
 ```bash
 npm i -g @fission-ai/openspec@1.13.0
-npx github:<org>/sdd-kit install --preset django --questions-language Russian --ci --dry-run   # see the plan
-npx github:<org>/sdd-kit install --preset django --questions-language Russian --ci
+npx github:<org>/sdd-kit install      # wizard: detects the layout, asks a few questions, shows the plan, confirms
 git add -A && git commit -m "chore: install sdd-kit"
 ```
 
-Choose presets and adapters for your layout (details in [docs/guide/install.md](docs/guide/install.md)):
+Or skip the wizard with options for your layout (details in [docs/guide/install.md](docs/guide/install.md)):
 
 | Layout | Command |
 |---|---|
