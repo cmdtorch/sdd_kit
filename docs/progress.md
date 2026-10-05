@@ -244,3 +244,19 @@
 | Good tests, not junk | scenario markers, matrix from real results, weak-test heuristics, required test review, test gate, CI |
 | TDD so the AI checks itself | tdd-guard + test gate + archive gate |
 | Open | the pilot itself (owner), first GitHub CI run, frontend unit-test preset, `.claude/CLAUDE.md` versioning decision |
+
+## After 0.1.0 (2026-10-05)
+
+- [x] Kit published by the owner to GitHub: `github:cmdtorch/sdd_kit` (install verified from GitHub on a scratch
+      Django project; anonymous read works — the owner may want to make the repository private)
+- [x] Install wizard (`installer/lib/wizard.mjs`, `tests/wizard.test.mjs`; decisions.md 2026-10-05). Tests: 253 total
+- [ ] Owner: `git push origin main` and `git push origin v0.1.0` (the tag and the wizard commit are not on GitHub yet;
+      this machine has no write access)
+- [ ] Release 0.2.0 with the wizard (version in `package.json` + `kit.json`, CHANGELOG `Unreleased` → `0.2.0`, tag) —
+      owner to confirm
+- [ ] Proposed, waiting for the owner's answer: a `fastapi` stack preset (same pytest plugin and uv steps as
+      `django`; API export via `app.openapi()`; wizard detects `fastapi` in pyproject). Needed for the owner's next
+      project: a monorepo with FastAPI backend and Vue frontend (`--adapter monorepo --preset fastapi,playwright`).
+      Workaround today: `--preset django,playwright` and edit `verify.yaml` (api.export, gate).
+- [ ] Optional: a Russian quick-start guide for teams (the owner asked for a step-by-step "install from zero" guide;
+      it was given in chat only)
