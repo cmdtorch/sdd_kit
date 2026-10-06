@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 .venv/
 
+# Upstream reference clones (OpenSpec, AI-DLC) — local only, never committed
+sources/
+
 # BEGIN AI-DLC:gitignore
 # Logs
 logs
