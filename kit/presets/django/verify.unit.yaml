@@ -1,8 +1,0 @@
-  unit:
-    # pytest + pytest-django (+ xdist). The kit's plugin (openspec/tooling/pytest/sdd_kit_pytest.py) reports
-    # @pytest.mark.scenario markers and results. Commands follow the pilot's Makefile; adjust them to yours.
-    format: sdd-json
-    collect: "PYTHONPATH={root}/openspec/tooling/pytest uv run pytest -p sdd_kit_pytest --collect-only -q --sdd-out={out}"
-    scoped: "PYTHONPATH={root}/openspec/tooling/pytest PYTEST_ADDOPTS='-p sdd_kit_pytest --sdd-out={out}' make test FILE='{files}'"
-    full: "PYTHONPATH={root}/openspec/tooling/pytest PYTEST_ADDOPTS='-p sdd_kit_pytest --sdd-out={out}' make test"
-    gate: "make lint && make typecheck"

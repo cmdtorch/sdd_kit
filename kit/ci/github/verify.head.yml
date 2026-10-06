@@ -1,5 +1,0 @@
-
-  kit-verify:
-    name: sdd-kit verification
-    runs-on: ubuntu-latest
-    timeout-minutes: 45

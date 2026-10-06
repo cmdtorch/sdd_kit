@@ -1,4 +1,0 @@
-schema: spec-driven
-context: |
-  Backend: Python 3.13, Django 5.2, Django REST Framework. Tests: pytest, factory-boy, APIClient.
-  Domains are Django apps under apps/.

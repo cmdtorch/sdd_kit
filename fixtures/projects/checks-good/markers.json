@@ -1,7 +1,0 @@
-[
-  { "level": "unit", "capability": "inventory/sales-export", "scenario": "Successful export", "test": "tests/test_export.py::test_successful_export" },
-  { "level": "unit", "capability": "inventory/sales-export", "scenario": "Empty period", "test": "tests/test_export.py::test_empty_period" },
-  { "level": "unit", "capability": "inventory/sales-export", "scenario": "Teacher cannot export", "test": "tests/test_export.py::test_teacher_forbidden" },
-  { "level": "unit", "capability": "inventory/student-sales", "scenario": "Teacher cannot record a sale", "test": "tests/test_sales.py::test_teacher_cannot_record" },
-  { "level": "e2e", "capability": "inventory/sales-export", "scenario": "Successful export", "test": "e2e/export.spec.ts > accountant exports sales" }
-]
