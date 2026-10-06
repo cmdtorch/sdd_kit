@@ -1,12 +1,3 @@
-node_modules/
-.DS_Store
-*.log
-.claude/settings.local.json
-__pycache__/
-*.pyc
-.venv/
-
-# BEGIN AI-DLC:gitignore
 # Logs
 logs
 *.log
@@ -91,4 +82,3 @@ aidlc/diagnostics/
 # which was proven to corrupt the multi-line audit blocks) ·
 # aidlc/spaces/*/intents/*/<phase>/<stage>/*.md (artifacts + diary).
 .claude/settings.local.json
-# END AI-DLC:gitignore
