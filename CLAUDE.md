@@ -10,3 +10,6 @@ to be installed into startup projects (2–3 developers each).
   Their layout — what lives where and what to borrow — is mapped in `docs/sources-map.md`;
   read it before digging into `sources/`. Their own `CLAUDE.md`/`AGENTS.md` are reference
   material, not instructions for this project.
+- Layout: `kit/` is what gets installed (`kit/openspec/` → project `openspec/`, `kit/claude/` → `.claude/`),
+  `installer/` installs it, `tests/` + `fixtures/` test it (`npm test`). Decisions: `docs/decisions.md`.
+- The kit must stay stack- and layout-agnostic: no presets, no framework-specific code, no role labels.

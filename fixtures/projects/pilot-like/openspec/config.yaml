@@ -1,0 +1,58 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+context: |
+  Backend: Python 3.13+, Django 5.2+ (Django REST Framework for the API layer, not FastAPI).
+  Validation: DRF serializers (apps/*/serializers.py, config/serializers.py) — the codebase
+  does not use Pydantic; validation logic belongs in serializer field/validate_* methods
+  and model clean()/services, not in views.
+  Tests: pytest (pytest-django), via `make test`. See django-tdd skill for conventions
+  (factory_boy factories, APIClient for DRF endpoints, no hand-built ORM fixtures).
+
+  Domains are Django apps under apps/, one app per business domain:
+    - accounts       — users, auth (SimpleJWT), roles/permissions, departments, positions
+    - application     — candidate/admissions pipeline: candidates, application forms,
+                        interviews, exams, registration links
+    - students        — core student lifecycle: Student, StudentContract, addenda,
+                        termination, annual fees/discounts, corpus changes
+    - school_config   — reference/config data: academic years, corpus, discounts,
+                        kanban stages
+    - products        — product/pricing catalog
+    - onec            — outbound/inbound integration with the 1C accounting system
+                        (payment ledger, integration logs)
+    - inventory       — inventory management
+  Each app follows Django conventions: models.py, serializers.py (or serializers/ package),
+  views.py, services/ for business logic, factories.py for test fixtures, tests/.
+
+  TDD is mandatory during the apply phase: tests are written first from the delta spec's
+  scenarios and must fail (RED) before any implementation is written (GREEN), per the
+  project's django-tdd skill and CLAUDE.md TDD rules.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

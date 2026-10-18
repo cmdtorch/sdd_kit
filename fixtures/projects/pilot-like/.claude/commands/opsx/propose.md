@@ -1,0 +1,1 @@
+OpenSpec propose command (fixture).
