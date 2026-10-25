@@ -52,7 +52,7 @@ TypeScript CLI (`openspec`) + набор skills для AI-агентов. Мод
 Фреймворк AWS «AI-Driven Development Life Cycle»: фазы ideation → inception →
 construction → operation, ~33 стадии, агенты-персоны, сенсоры, scopes, аудит и state.
 TypeScript-движок (bun) + markdown-описания стадий; ставится в 7 харнессов. В этом проекте
-не установлен (снят в `8d233fb`, вернуть: `git checkout aidlc-install-2.10.0 -- .claude aidlc .gitignore`).
+не установлен (снят в `8d233fb`, вернуть: `git checkout 4f84b1d -- .claude aidlc .gitignore`).
 
 ### Где что лежит
 
