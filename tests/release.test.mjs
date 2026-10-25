@@ -56,7 +56,7 @@ describe('doctor', () => {
       const items = doctor(root);
       const by = (c) => items.find((i) => i.check === c);
       assert.equal(by('openspec').level, 'error');
-      assert.match(by('openspec').fix, /npm i -g @fission-ai\/openspec@1\.13\.0/);
+      assert.match(by('openspec').fix, /npm i -g @fission-ai\/openspec@1\.15\.0/);
       assert.equal(by('hooks').level, 'ok');
     } finally {
       if (saved === undefined) delete process.env.OPENSPEC_BIN;
@@ -64,7 +64,7 @@ describe('doctor', () => {
     }
     const cli = spawnSync('node', [join(root, 'openspec/tooling/bin/doctor.mjs')], { cwd: root, encoding: 'utf8', env: { ...process.env, OPENSPEC_BIN: bin } });
     assert.equal(cli.status, 1);
-    assert.match(cli.stdout, /✗ openspec: openspec 1\.12\.0 is installed, the kit needs 1\.13\.0/);
+    assert.match(cli.stdout, /✗ openspec: openspec 1\.12\.0 is installed, the kit needs 1\.15\.0/);
   });
 
   test('a repository without the kit', () => {

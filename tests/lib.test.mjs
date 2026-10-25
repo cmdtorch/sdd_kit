@@ -5,7 +5,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseYaml, YamlError } from '../kit/openspec/tooling/lib/yaml.mjs';
-import { toLines, fenceMask, stripComments, firstTable, splitRow } from '../kit/openspec/tooling/lib/markdown.mjs';
+import { toLines, fenceMask, stripComments, firstTable, splitRow, taskCounts } from '../kit/openspec/tooling/lib/markdown.mjs';
 import { parseDeltaSpec, parseMainSpec } from '../kit/openspec/tooling/lib/spec-parser.mjs';
 import { parseClarifications, roundStatus, answerLetters, isBlankAnswer } from '../kit/openspec/tooling/lib/clarifications.mjs';
 import { cliSkipReason, makeProject, openspecJson } from './helpers/openspec.mjs';
@@ -101,6 +101,11 @@ describe('markdown', () => {
     assert.deepEqual(stripComments(lines, mask), ['a', '```', '## not heading', '```', 'b ', ' e', '']);
   });
 
+  test('task counts follow OpenSpec 1.15.0: only x/X is done, other markers are open, bullets and links are not tasks', () => {
+    const tasks = ['# Tasks', '- [x] 1.1 a', '- [X] 1.2 b', '- [ x] 1.3 c', '- [ ] 1.4 d', '- [] 1.5 e', '- [~] 1.6 f', '* [-] 1.7 g', '  + [ ] 1.8 h', '1. [ ] 1.9 i', '## Workflow follow-up', '- Archive it.', '- [A](https://example.com)', '- [WIP] not a box'].join('\n');
+    assert.deepEqual(taskCounts(tasks), { done: 3, open: 6 });
+  });
+
   test('tables', () => {
     const t = firstTable(['text', '| a | b |', '|---|:-:|', '| 1 | x \\| y |', '', '| no |'], 0, 6);
     assert.deepEqual(t.header, ['a', 'b']);
@@ -152,6 +157,15 @@ describe('spec parser', () => {
     '- TO: `### Requirement: B`',
   ].join('\n');
 
+  test('ATX closing sequences are not part of names; a `# Spec Delta` title is ignored', () => {
+    const d = parseDeltaSpec(['# Spec Delta', '', '## ADDED Requirements', '', '### Requirement: Closed ##', 'The system SHALL x.', '', '#### Scenario: Also closed ####', '- **THEN** y', '', '## REMOVED Requirements', '', '### Requirement: Gone #'].join('\n'));
+    assert.equal(d.added[0].name, 'Closed');
+    assert.equal(d.added[0].scenarios[0].name, 'Also closed');
+    assert.equal(d.added[0].scenarios[0].wellFormed, true);
+    assert.deepEqual(d.removed.map((x) => x.name), ['Gone']);
+    assert.deepEqual(d.skipped, []);
+  });
+
   test('delta: requirements, scenarios, fences, skipped headers', () => {
     const d = parseDeltaSpec(delta);
     assert.equal(d.purpose.text, 'Lets accountants take sales data out of the system as a spreadsheet.');
@@ -179,14 +193,16 @@ describe('spec parser', () => {
 });
 
 describe('spec parser against the OpenSpec CLI', { skip: cliSkipReason() }, () => {
-  test('requirement texts and scenario bodies match `openspec show --json`', () => {
+  test('requirement names, texts, scenario names and bodies match `openspec show --json`', () => {
     const project = makeProject();
     const dir = join(project, 'openspec', 'changes', 'c1', 'specs', 'demo', 'cap');
     openspecJson(project, ['new', 'change', 'c1']);
     const content = [
+      '# Spec Delta',
+      '',
       '## ADDED Requirements',
       '',
-      '### Requirement: One',
+      '### Requirement: One ##',
       'The system SHALL do one.',
       'Second line of text.',
       '',
@@ -198,7 +214,7 @@ describe('spec parser against the OpenSpec CLI', { skip: cliSkipReason() }, () =
       '#### Scenario: fenced',
       '```',
       '',
-      '#### Scenario: Second',
+      '#### Scenario: Second ####',
       '- **WHEN** c',
       '- **THEN** d',
       '',
@@ -218,12 +234,22 @@ describe('spec parser against the OpenSpec CLI', { skip: cliSkipReason() }, () =
     const cliReqs = shown.deltas.flatMap((d) => d.requirements);
     assert.equal(ours.added.length, cliReqs.length);
     ours.added.forEach((r, k) => {
+      assert.equal(r.name, cliReqs[k].name);
       assert.equal(r.text, cliReqs[k].text);
-      assert.deepEqual(
-        r.scenarios.filter((s) => s.body).map((s) => s.body),
-        cliReqs[k].scenarios.map((s) => s.rawText.trim()),
-      );
+      const withBody = r.scenarios.filter((s) => s.body);
+      assert.deepEqual(withBody.map((s) => s.name), cliReqs[k].scenarios.map((s) => s.name));
+      assert.deepEqual(withBody.map((s) => s.body), cliReqs[k].scenarios.map((s) => s.rawText.trim()));
     });
+  });
+
+  test('task counts match `openspec instructions apply --json` progress', () => {
+    const project = makeProject();
+    openspecJson(project, ['new', 'change', 'c2']);
+    const tasks = ['# Tasks', '', '## 1. A', '', '- [x] 1.1 a', '- [ x] 1.2 b', '- [ ] 1.3 c', '- [~] 1.4 d', '- [] 1.5 e', '+ [X] 1.6 f', '', '## Workflow follow-up', '', '- Archive it.', '- [Docs](./docs.md)'].join('\n');
+    writeFileSync(join(project, 'openspec', 'changes', 'c2', 'tasks.md'), tasks);
+    const { progress } = openspecJson(project, ['instructions', 'apply', '--change', 'c2']);
+    const ours = taskCounts(tasks);
+    assert.deepEqual({ total: ours.done + ours.open, complete: ours.done }, { total: progress.total, complete: progress.complete });
   });
 });
 

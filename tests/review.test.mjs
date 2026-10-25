@@ -102,6 +102,15 @@ describe('test review status (archive requirement)', () => {
     assert.match(r.stderr, /no test carries the marker for "Empty period"/);
   });
 
+  test('the archive gate counts every task OpenSpec 1.15.0 reads as unfinished, not plain bullets', () => {
+    const { root, dir: d } = dir();
+    const tasks = read(root, `${C}/tasks.md`).replace('- [x] 2.2', '- [~] 2.2').replace('- [x] 1.1', '- [] 1.1');
+    writeFileSync(join(d, 'tasks.md'), `${tasks}\n## Workflow follow-up\n\n- Archive the change after review.\n`);
+    const r = gate(root);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /2 task\(s\) in tasks\.md are not done/);
+  });
+
   test('the archive gate asks for a change name when kit changes exist', () => {
     const r = gate(project(), 'openspec archive --yes');
     assert.equal(r.status, 2);

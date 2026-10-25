@@ -115,6 +115,7 @@ const DEFECTS = [
   ['change uses a schema that does not exist', 'lint', (r) => plant(r, `${C}/.openspec.yaml`, 'schema: clarify', 'schema: clarifyy'), /uses schema "clarifyy", which does not exist/],
   ['unknown operation', 'lint', (r) => plant(r, 'openspec/config.yaml', 'schema: clarify\n', 'schema: clarify\noperations:\n  verify:\n    guidance:\n      - x\n'), /unknown operation "verify"/],
   ['dependency cycle', 'lint', (r) => plant(r, 'openspec/schemas/lean/schema.yaml', '    requires: []\n', '    requires:\n      - tasks\n'), /dependency cycle/],
+  ['unknown .openspec.yaml key (X- is not an extension prefix)', 'lint', (r) => plant(r, `${C}/.openspec.yaml`, 'schema: clarify\n', 'schema: clarify\nX-Tracker: AB-1\n'), /unknown field "X-Tracker" in \.openspec\.yaml/],
   ['broken YAML', 'lint', (r) => plant(r, 'openspec/config.yaml', 'schema: clarify\n', 'schema: clarify\nschema: lean\n'), /cannot parse YAML: duplicate key "schema"/],
 ];
 
@@ -156,6 +157,33 @@ describe('non-failing signals', () => {
     const r = run.lint(root);
     assert.equal(r.ok, true);
     assert.ok(warnings(r).some((w) => /no sdd-kit block/.test(w.message)));
+  });
+
+  test('MODIFIED requirement over 500 characters is a warning, not an error', () => {
+    const root = project();
+    plant(root, `${C}/specs/inventory/student-sales/spec.md`, 'quantity and unit price.\n', `quantity and unit price. ${'It also does more things. '.repeat(20)}\n`);
+    const r = run.specs(root);
+    assert.equal(r.ok, true);
+    assert.ok(warnings(r).some((w) => /text is \d+ characters \(maximum 500\)/.test(w.message)));
+  });
+
+  test('x- extension keys in .openspec.yaml are not reported (OpenSpec 1.15.0, facts C9)', () => {
+    const root = project();
+    plant(root, `${C}/.openspec.yaml`, 'schema: clarify\n', 'schema: clarify\nx-goal: G-12\nx-jiraKey: AB-1\n');
+    assert.deepEqual(run.lint(root).findings, []);
+  });
+
+  test('top-level headings of the 1.15.0 templates (# Proposal, # Spec Delta, ...) pass every check', () => {
+    const root = project();
+    const titles = { 'proposal.md': 'Proposal', 'design.md': 'Design', 'tasks.md': 'Tasks', 'verification-plan.md': 'Verification Plan', 'specs/inventory/sales-export/spec.md': 'Spec Delta', 'specs/inventory/student-sales/spec.md': 'Spec Delta' };
+    for (const [file, title] of Object.entries(titles)) {
+      const p = join(root, C, file);
+      writeFileSync(p, `# ${title}\n\n${readFileSync(p, 'utf8')}`);
+    }
+    for (const [name, fn] of Object.entries(run)) {
+      const r = fn(root);
+      assert.deepEqual(r.findings, [], name);
+    }
   });
 
   test('changes on non-kit schemas are skipped (D11)', () => {

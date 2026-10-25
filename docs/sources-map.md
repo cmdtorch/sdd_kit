@@ -5,7 +5,7 @@
 
 | Папка | Upstream | Версия на момент снимка |
 |---|---|---|
-| `sources/openspec/` | https://github.com/Fission-AI/OpenSpec | `@fission-ai/openspec` 1.14.1 (коммит `9111a76`, 2026-10-06) |
+| `sources/openspec/` | https://github.com/Fission-AI/OpenSpec | `@fission-ai/openspec` 1.15.0 (коммит `6d04a1b`, 2026-10-24) |
 | `sources/aidlc-workflows/` | https://github.com/awslabs/aidlc-workflows | AI-DLC 2.10.0 (коммит `8c6cc56`, 2026-10-06) |
 
 > Внутри обоих репо есть свои `CLAUDE.md` / `AGENTS.md` — это инструкции **для их

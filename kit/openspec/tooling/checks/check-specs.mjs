@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
-// check-specs — delta-spec rules OpenSpec 1.13.0 does not enforce before archive
+// check-specs — delta-spec rules OpenSpec 1.15.0 does not enforce before archive
 // (docs/openspec-facts.md V5, V6) plus the kit's own rules:
 //   - a new capability has `## Purpose` of 50+ characters
-//   - requirement text is at most 500 characters
+//   - ADDED requirement text is at most 500 characters (`validate --strict` fails on it too); a MODIFIED
+//     one over the limit only warns: the specs instruction says to keep an existing requirement whole
 //   - scenarios use `#### Scenario: <name>`; names are unique within a capability (they are test keys)
 //   - every scenario has a THEN
 //   - no source tags or change-local IDs in spec text ([Q3], [D1], [desc], [assumption], FR1, NFR2)
@@ -63,7 +64,9 @@ export function checkSpecs({ root, change }) {
     }
     for (const r of [...delta.added, ...delta.modified]) {
       if (r.text.length > MAX_REQUIREMENT_TEXT) {
-        f.error(file, r.line, `requirement "${r.name}" text is ${r.text.length} characters (maximum ${MAX_REQUIREMENT_TEXT})`, 'split it into several requirements');
+        const message = `requirement "${r.name}" text is ${r.text.length} characters (maximum ${MAX_REQUIREMENT_TEXT})`;
+        if (delta.added.includes(r)) f.error(file, r.line, message, 'state one behaviour per requirement: move examples and edge cases into scenarios, or split it');
+        else f.warning(file, r.line, message, 'keep an existing requirement whole under MODIFIED; split it only in a change made for that purpose');
       }
       if (!r.scenarios.length) f.error(file, r.line, `requirement "${r.name}" has no scenario`);
       for (const s of r.scenarios) {

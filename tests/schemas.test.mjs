@@ -10,7 +10,7 @@ import { cliSkipReason, makeProject, openspecJson } from './helpers/openspec.mjs
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const KIT_OPENSPEC = join(REPO, 'kit', 'openspec');
 const SCHEMAS = join(KIT_OPENSPEC, 'schemas');
-const UPSTREAM = join(REPO, 'fixtures', 'upstream', 'spec-driven-1.13.0');
+const UPSTREAM = join(REPO, 'fixtures', 'upstream', 'spec-driven-1.15.0');
 
 const EXPECTED_GRAPH = {
   clarify: {

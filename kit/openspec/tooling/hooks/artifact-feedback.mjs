@@ -10,6 +10,7 @@
 import { runHook, hookRoot, touchedFiles, addContext } from '../lib/hook-io.mjs';
 import { locateInChange, changeSchema, isKitSchema, readChangeFile } from '../lib/project.mjs';
 import { isMain } from '../lib/report.mjs';
+import { taskCounts } from '../lib/markdown.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
 import { checkGrounding } from '../checks/check-grounding.mjs';
 import { checkSpecs } from '../checks/check-specs.mjs';
@@ -35,9 +36,7 @@ function checksFor(artifact, schema, root, change, rel) {
 
 /** Reminder of the end-of-apply steps once every task of a change is checked; null otherwise. */
 export function tasksDoneNote(root, change) {
-  const tasks = readChangeFile(root, change, 'tasks.md') || '';
-  const done = (tasks.match(/^\s*-\s*\[[xX]\]/gm) || []).length;
-  const open = (tasks.match(/^\s*-\s*\[ \]/gm) || []).length;
+  const { done, open } = taskCounts(readChangeFile(root, change, 'tasks.md') || '');
   if (!done || open) return null;
   return `sdd-kit: all tasks of "${change}" are checked. Before you report it done: run the project's full test suite and quality checks and fix what fails, make sure the test review is done, then run the archive checks: node openspec/tooling/checks/check-traceability.mjs --change ${change} --markers (openspec/protocols/testing.md §6).`;
 }

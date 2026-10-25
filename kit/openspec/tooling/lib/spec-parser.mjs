@@ -1,12 +1,14 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
-// The kit's only reader of spec markdown (decision D21). OpenSpec 1.13.0 `show --json` drops
+// The kit's only reader of spec markdown (decision D21). OpenSpec 1.13.0 `show --json` dropped
 // requirement and scenario names, so the kit reads them itself. The header rules mirror
-// OpenSpec 1.13.0 (dist/core/parsers/requirement-blocks.js, requirement-text.js):
+// OpenSpec 1.15.0 (dist/core/parsers/requirement-blocks.js, requirement-text.js):
 //   - delta sections: `## ADDED|MODIFIED|REMOVED|RENAMED Requirements` (case-insensitive, may repeat)
-//   - main spec: `## Requirements`
-//   - requirement: `### Requirement: <name>` (case-insensitive keyword), name trimmed
-//   - scenario: ANY `####` header inside a requirement block counts (OpenSpec parity);
-//     the kit expects `#### Scenario: <name>` and reports other forms
+//   - main spec: `## Requirements`; a `# ` title above the sections (`# Spec Delta`) is ignored
+//   - requirement: `### Requirement: <name>` (case-insensitive keyword), name trimmed, without an
+//     ATX closing sequence (`### Requirement: A ##` is "A"); the same for scenario names
+//   - scenario: ANY `####` header inside a requirement block counts (OpenSpec parity; OpenSpec also
+//     drops one with an empty body, the kit keeps it); the kit expects `#### Scenario: <name>` and
+//     reports other forms
 //   - everything inside fenced code is ignored
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -22,6 +24,9 @@ const METADATA_LINE = /^\*\*[^*]+\*\*:/;
 export function normName(s) {
   return String(s).replace(/`/g, '').trim().replace(/\s+/g, ' ');
 }
+
+/** Header text without an ATX closing sequence (CommonMark: a `#` run after a space or tab). */
+const unclosed = (s) => s.replace(/[ \t]+#+[ \t]*$/, '');
 
 /** Requirement body text, as OpenSpec extracts it (lines before the first header, fence-aware). */
 function requirementText(title, bodyLines, bodyMask) {
@@ -41,7 +46,7 @@ function requirementText(title, bodyLines, bodyMask) {
 
 /** Parses one requirement block: lines[start] is the `### Requirement:` header. */
 function parseRequirementBlock(lines, mask, start, end) {
-  const name = normName(lines[start].match(REQUIREMENT_HEADER)[1]);
+  const name = normName(unclosed(lines[start].match(REQUIREMENT_HEADER)[1]));
   const bodyLines = lines.slice(start + 1, end);
   const bodyMask = mask.slice(start + 1, end);
   const scenarios = [];
@@ -52,7 +57,7 @@ function parseRequirementBlock(lines, mask, start, end) {
     // body: until the next header of level <= 4 (OpenSpec MarkdownParser.getContent)
     let j = i + 1;
     while (j < bodyLines.length && !(!bodyMask[j] && /^#{1,4}\s/.test(bodyLines[j]))) j++;
-    const header = m[1];
+    const header = unclosed(m[1]);
     const sm = header.match(SCENARIO_NAME);
     scenarios.push({
       name: normName(sm ? sm[1] : header),
@@ -131,7 +136,7 @@ export function parseDeltaSpec(content) {
     for (let i = s.start; i < s.end; i++) {
       if (mask[i]) continue;
       const m = lines[i].match(REQUIREMENT_HEADER) || lines[i].match(/^\s*[-*+]\s*`?###\s*Requirement:\s*(.+?)`?\s*$/);
-      if (m) removed.push({ name: normName(m[1]), line: i + 1 });
+      if (m) removed.push({ name: normName(unclosed(m[1])), line: i + 1 });
     }
   }
   const renamed = [];
@@ -141,9 +146,9 @@ export function parseDeltaSpec(content) {
       if (mask[i]) continue;
       const f = lines[i].match(/^\s*(?:[-*+]\s*)?FROM:\s*`?(?:###\s*Requirement:\s*)?(.+?)`?\s*$/i);
       const t = lines[i].match(/^\s*(?:[-*+]\s*)?TO:\s*`?(?:###\s*Requirement:\s*)?(.+?)`?\s*$/i);
-      if (f) from = normName(f[1]);
+      if (f) from = normName(unclosed(f[1]));
       else if (t && from) {
-        renamed.push({ from, to: normName(t[1]), line: i + 1 });
+        renamed.push({ from, to: normName(unclosed(t[1])), line: i + 1 });
         from = null;
       }
     }

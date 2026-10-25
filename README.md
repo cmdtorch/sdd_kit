@@ -18,7 +18,7 @@ That means bugs for manual QA and rework. sdd-kit puts a structured, checked pro
    confirmed, no archive before tasks, markers and the test review are done.
 
 The kit knows nothing about your stack: it never runs your tests and has no presets. The agent uses the
-project's own commands. Zero dependencies: plain Node.js ≥ 20. OpenSpec CLI pinned to **1.13.0**.
+project's own commands. Zero dependencies: plain Node.js ≥ 20. OpenSpec CLI pinned to **1.15.0**.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ flowchart LR
 **Team lead, once per repository:**
 
 ```bash
-npm i -g @fission-ai/openspec@1.13.0
+npm i -g @fission-ai/openspec@1.15.0
 npx github:<org>/sdd-kit install       # asks for the questions language, nothing else
 git add -A && git commit -m "chore: install sdd-kit"
 ```
@@ -44,7 +44,7 @@ Make sure `CLAUDE.md` or the README says how to run the tests and quality checks
 
 **Every developer** (the kit is already committed):
 
-1. Install Node 20+, Claude Code and `npm i -g @fission-ai/openspec@1.13.0`.
+1. Install Node 20+, Claude Code and `npm i -g @fission-ai/openspec@1.15.0`.
 2. Clone the repository and run `node openspec/tooling/bin/doctor.mjs`.
 3. Open Claude Code in the repository and accept the workspace trust dialog.
 

@@ -18,6 +18,7 @@ import { checkSpecs } from '../checks/check-specs.mjs';
 import { checkGrounding } from '../checks/check-grounding.mjs';
 import { checkTraceability } from '../checks/check-traceability.mjs';
 import { collectMarkers } from '../lib/markers.mjs';
+import { taskCounts } from '../lib/markdown.mjs';
 import { testReviewProblems } from '../lib/reviews.mjs';
 
 const ARCHIVE = /(?:^|[\s;&|(])(?:npx\s+(?:--yes\s+|-y\s+)?(?:@fission-ai\/)?)?(?:openspec|\S*openspec\.mjs)\s+archive\b([^;&|\n]*)/g;
@@ -35,8 +36,7 @@ export function archiveTargets(command) {
 /** Problems that block archiving a change (empty = allowed). */
 export function archiveProblems(root, change) {
   const problems = [];
-  const tasks = readChangeFile(root, change, 'tasks.md') || '';
-  const open = (tasks.match(/^\s*-\s*\[ \]/gm) || []).length;
+  const { open } = taskCounts(readChangeFile(root, change, 'tasks.md') || '');
   if (open) problems.push(`${open} task(s) in tasks.md are not done`);
   const schema = changeSchema(root, change);
   const reports = [checkSpecs({ root, change }), checkTraceability({ root, change, markers: collectMarkers(root) })];

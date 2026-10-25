@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-export const PINNED_VERSION = '1.13.0';
+export const PINNED_VERSION = '1.15.0';
 const BIN = process.env.OPENSPEC_BIN || 'openspec';
 
 /** Returns the CLI version, or null when the binary is missing. */

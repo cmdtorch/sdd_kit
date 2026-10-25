@@ -1,5 +1,5 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
-// Small markdown helpers shared by the kit checks. Fence handling mirrors OpenSpec 1.13.0
+// Small markdown helpers shared by the kit checks. Fence handling mirrors OpenSpec 1.15.0
 // (dist/core/parsers/code-fence.js) so that both read the same structure.
 
 /** Normalises line endings, strips a BOM, splits into lines. */
@@ -138,6 +138,23 @@ export function firstTable(lines, start, end) {
     }
   }
   return null;
+}
+
+// A task line as OpenSpec 1.15.0 reads it (dist/utils/task-progress.js): any list marker, a box holding at
+// most one marker. Only `x`/`X` is done; `[ ]`, `[]`, `[~]`, `[-]` and any other marker are open.
+const TASK_LINE = /^\s*(?:[-*+]|\d{1,9}[.)])\s*\[(?:\s*([^\]\s]?)\s*\](?![([])|\s+\])/;
+
+/** Done and open task checkboxes in a tasks file (fences included, like OpenSpec). */
+export function taskCounts(content) {
+  let done = 0;
+  let open = 0;
+  for (const line of toLines(content)) {
+    const m = line.match(TASK_LINE);
+    if (!m) continue;
+    if ((m[1] ?? '').toLowerCase() === 'x') done++;
+    else open++;
+  }
+  return { done, open };
 }
 
 /** Case/space-insensitive key for matching names written by people (table cells vs headers). */

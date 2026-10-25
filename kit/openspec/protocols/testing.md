@@ -25,6 +25,8 @@ the parts work together (permissions, persistence, serialisation, wiring), not f
 ## 2. `verification-plan.md`
 
 ```markdown
+# Verification Plan
+
 ## Scenario coverage
 
 | Capability | Requirement | Scenario | Level | Critical | Test data / setup |

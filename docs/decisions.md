@@ -26,3 +26,12 @@ became a "marker names unknown scenario" warning.
 | # | Decision |
 |---|---|
 | R9 | A marker counts only at the start of its line (indentation and a comment opener of at most five characters before it). Paths in `openspec/markers-ignore` are not scanned. The file belongs to the project: the installer never ships, updates or removes it. |
+
+## 2026-10-25 — OpenSpec 1.15.0
+
+Why: 1.15.0 changed the `spec-driven` instructions and templates the kit schemas fork, and how `openspec`
+counts tasks; staying on 1.13.0 would keep teams on guidance upstream has since corrected.
+
+| # | Decision |
+|---|---|
+| R10 | **OpenSpec pinned to 1.15.0.** The kit schemas take the 1.15.0 upstream text verbatim as a prefix (pristine copy in `fixtures/upstream/spec-driven-1.15.0/`); kit rules are unchanged. The kit follows upstream where they overlap: tasks are counted with OpenSpec's checkbox rules (only `x` is done), a MODIFIED requirement over 500 characters only warns (upstream: keep an existing requirement whole), `x-` keys of `.openspec.yaml` are allowed, the kit-only `verification-plan.md` template gets a `# Verification Plan` title like the upstream ones. Facts re-verified in `docs/openspec-facts.md`. |

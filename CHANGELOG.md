@@ -10,6 +10,20 @@ MINOR — new capability, backwards compatible; PATCH — fixes.
   e.g. documentation or sample code that shows them.
 - A marker counts only when it starts its line (after indentation and a comment opener), as `testing.md` §3
   already required. Markers mentioned in prose or inside string literals are no longer picked up.
+- OpenSpec CLI pinned to **1.15.0** (was 1.13.0). Every developer runs `npm i -g @fission-ai/openspec@1.15.0`;
+  doctor and session start warn until they do. The `clarify` and `lean` schemas are re-based on the 1.15.0
+  `spec-driven` text (kit rules unchanged); what the agent is now told:
+  - proposal: name each new capability for a durable behaviour (`user-auth`), not for the work (`add-login-endpoint`);
+  - specs: write the spec files one at a time; keep each requirement description to 500 characters
+    (`validate --strict` fails on longer ADDED requirements); never trim an existing requirement under MODIFIED;
+  - tasks: only an `x` box is done (`[~]`, `[-]`, `[]` are open); each task group lands its own tests and
+    docs; steps that need the archived change go to a `## Workflow follow-up` section of plain bullets;
+  - templates start with a title: `# Proposal`, `# Spec Delta`, `# Design`, `# Tasks`, and the kit's
+    `# Verification Plan`.
+- The archive gate, session start and the "all tasks checked" reminder count tasks as OpenSpec 1.15.0 does:
+  a `- [~]` or `- []` task is not done, `+` and `1.` list items count, plain bullets do not.
+- check-specs: a MODIFIED requirement over 500 characters is a warning, no longer an error (ADDED stays an error).
+- lint-kit: `x-` keys in a change's `.openspec.yaml` (e.g. `x-jiraKey`) are allowed, as in OpenSpec 1.15.0.
 
 ## 0.2.0 — 2026-10-18
 

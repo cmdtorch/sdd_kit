@@ -5,7 +5,7 @@
 | Tool | Why | Install |
 |---|---|---|
 | Node.js ≥ 20 | the kit's tooling and the OpenSpec CLI | your usual way (nvm, package manager) |
-| OpenSpec CLI **1.13.0** (pinned) | specs and changes | `npm i -g @fission-ai/openspec@1.13.0` |
+| OpenSpec CLI **1.15.0** (pinned) | specs and changes | `npm i -g @fission-ai/openspec@1.15.0` |
 | Claude Code | the agent; the kit's hooks run inside it | https://code.claude.com |
 | git | the kit finds test markers through git | — |
 
@@ -60,7 +60,7 @@ Nothing is written if a step cannot be done safely (e.g. invalid `settings.json`
 
 The kit is committed with the repository; nothing is installed per developer except the prerequisites.
 
-1. `npm i -g @fission-ai/openspec@1.13.0` (and Node 20+, Claude Code).
+1. `npm i -g @fission-ai/openspec@1.15.0` (and Node 20+, Claude Code).
 2. Clone the repository.
 3. `node openspec/tooling/bin/doctor.mjs` — checks Node, the OpenSpec version, Claude Code, hooks, skills and edited
    kit files, and says how to fix each problem.

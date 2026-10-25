@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
-// lint-kit — catches what OpenSpec 1.13.0 silently ignores (docs/openspec-facts.md S4, S6, C2, C7):
+// lint-kit — catches what OpenSpec 1.15.0 silently ignores (docs/openspec-facts.md S4, S6, C2, C7):
 //   - unknown or misspelled fields in openspec/schemas/*/schema.yaml, openspec/config.yaml and
-//     changes/*/.openspec.yaml
+//     changes/*/.openspec.yaml (`x-*` extension keys of .openspec.yaml are allowed, facts C9)
 //   - schema `name` different from its directory, missing templates, broken `requires`, cycles
 //   - config `context` over 50 KB (OpenSpec drops it entirely), rules for unknown artifacts,
 //     malformed operations, a default schema that does not exist
@@ -24,6 +24,8 @@ export const ARTIFACT_KEYS = ['id', 'generates', 'description', 'template', 'ins
 export const APPLY_KEYS = ['requires', 'tracks', 'instruction'];
 export const CONFIG_KEYS = ['schema', 'context', 'rules', 'operations', 'store', 'references', 'githubCopilot'];
 export const CHANGE_KEYS = ['schema', 'created', 'goal', 'affected_areas', 'initiative', 'skip_specs', 'retire_capabilities'];
+// OpenSpec's extension keys (dist/utils/change-metadata.js EXTENSION_KEY_PATTERN): lowercase `x-` + a name
+const EXTENSION_KEY = /^x-\S+$/;
 const BUILTIN_SCHEMAS = { 'spec-driven': ['proposal', 'specs', 'design', 'tasks'] };
 const MAX_CONTEXT = 50 * 1024;
 
@@ -193,7 +195,8 @@ export function lintKit({ root }) {
     if (!existsSync(file)) continue;
     const y = readYaml(f, file);
     if (!y || !y.value || typeof y.value !== 'object') continue;
-    unknownKeys(f, file, y.value, CHANGE_KEYS, `.openspec.yaml of "${name}"`, y.positions, '');
+    const meta = Object.fromEntries(Object.entries(y.value).filter(([k]) => !EXTENSION_KEY.test(k)));
+    unknownKeys(f, file, meta, CHANGE_KEYS, `.openspec.yaml of "${name}"`, y.positions, '');
     if (typeof y.value.schema === 'string' && !(y.value.schema in schemas)) {
       f.error(file, y.positions.schema, `change "${name}" uses schema "${y.value.schema}", which does not exist`);
     }

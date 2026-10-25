@@ -157,7 +157,7 @@ describe('session-start', () => {
     chmodSync(bin, 0o755);
     return bin;
   };
-  const start = (root, version = '1.13.0') => hook('session-start.mjs', root, { hook_event_name: 'SessionStart', source: 'startup' }, { OPENSPEC_BIN: fakeOpenspec(version) });
+  const start = (root, version = '1.15.0') => hook('session-start.mjs', root, { hook_event_name: 'SessionStart', source: 'startup' }, { OPENSPEC_BIN: fakeOpenspec(version) });
 
   test('reports where each kit change stands', () => {
     const root = project();
@@ -185,10 +185,10 @@ describe('session-start', () => {
 
   test('warns about a CLI version mismatch and about skills drift', () => {
     const root = project();
-    writeFileSync(join(root, 'openspec/tooling/kit.json'), JSON.stringify({ kit: 'sdd-kit', openspecVersion: '1.13.0' }));
+    writeFileSync(join(root, 'openspec/tooling/kit.json'), JSON.stringify({ kit: 'sdd-kit', openspecVersion: '1.15.0' }));
     mkdirSync(join(root, '.claude/skills/openspec-propose'), { recursive: true });
     const ctx = JSON.parse(start(root, '1.12.0').stdout).hookSpecificOutput.additionalContext;
-    assert.match(ctx, /openspec CLI is 1\.12\.0, the kit is pinned to 1\.13\.0/);
+    assert.match(ctx, /openspec CLI is 1\.12\.0, the kit is pinned to 1\.15\.0/);
     assert.match(ctx, /openspec-propose is installed/);
     assert.match(ctx, /openspec-continue-change is missing/);
   });
