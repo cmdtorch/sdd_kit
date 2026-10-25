@@ -260,14 +260,15 @@ describe('command line', () => {
 
 describe('scenario markers (any language)', () => {
   test('line comments, block comments and trailing closers', () => {
+    // `@S` stands for the marker keyword, so this repository's own marker scan does not count these lines
     const text = [
-      '# @scenario inventory/sales-export :: Successful export',
-      '// @scenario inventory/sales-export :: Empty period',
-      '/* @scenario inventory/sales-export :: Teacher cannot export */',
-      '<!-- @scenario web/sales-page :: Shows the empty state -->',
-      '-- @scenario db/sales :: Totals are rounded   ',
-      'no marker here; @scenario without separator',
-    ].join('\n');
+      '# @S inventory/sales-export :: Successful export',
+      '// @S inventory/sales-export :: Empty period',
+      '/* @S inventory/sales-export :: Teacher cannot export */',
+      '<!-- @S web/sales-page :: Shows the empty state -->',
+      '-- @S db/sales :: Totals are rounded   ',
+      'no marker here; @S without separator',
+    ].join('\n').replaceAll('@S', '@scenario');
     assert.deepEqual(parseMarkers(text), [
       { capability: 'inventory/sales-export', scenario: 'Successful export', line: 1 },
       { capability: 'inventory/sales-export', scenario: 'Empty period', line: 2 },

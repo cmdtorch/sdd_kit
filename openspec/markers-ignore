@@ -1,0 +1,5 @@
+# Paths where the kit does not look for @scenario markers (openspec/protocols/testing.md §3).
+# These hold examples and sample projects, not this repository's tests.
+docs/
+fixtures/
+kit/
