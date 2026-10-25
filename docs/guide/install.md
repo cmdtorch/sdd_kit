@@ -18,9 +18,12 @@ suite, lint and type checks).
 ## Installing into a repository (once, by the team lead)
 
 ```bash
-npx github:<org>/sdd-kit install --dry-run   # show the plan, write nothing
-npx github:<org>/sdd-kit install
+npx github:cmdtorch/sdd_kit#v0.3.0 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.3.0 install
 ```
+
+Always name a release tag (`#v0.3.0`): without one, npx installs whatever is on `main`. Releases and their notes:
+https://github.com/cmdtorch/sdd_kit/releases.
 
 In a terminal the installer asks one question: the language of the clarifying questions.
 
@@ -37,6 +40,8 @@ Options:
 | `--dry-run` | show the plan, write nothing |
 | `--yes` | never ask questions |
 | `--json` | machine-readable output |
+| `--version` | print the kit version and the pinned OpenSpec version |
+| `--help` | show the usage |
 
 What the installer does:
 
@@ -70,8 +75,8 @@ The kit is committed with the repository; nothing is installed per developer exc
 ## Updating the kit
 
 ```bash
-npx github:<org>/sdd-kit#v<version> update     # same as install
-npx github:<org>/sdd-kit status                # version, edited files, hooks, questions language
+npx github:cmdtorch/sdd_kit#v<version> update     # same as install
+npx github:cmdtorch/sdd_kit#v<version> status      # version, edited files, hooks, questions language
 ```
 
 - Kit files you did not edit are replaced; files the new version no longer ships are removed.
@@ -86,8 +91,8 @@ global config has no profile, it even rewrites your machine-wide settings. Use
 ## Uninstalling
 
 ```bash
-npx github:<org>/sdd-kit uninstall --dry-run
-npx github:<org>/sdd-kit uninstall
+npx github:cmdtorch/sdd_kit#v<version> uninstall --dry-run
+npx github:cmdtorch/sdd_kit#v<version> uninstall
 ```
 
 - Removes the kit files you did not edit.

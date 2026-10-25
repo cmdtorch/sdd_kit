@@ -3,8 +3,20 @@
 All notable changes to sdd-kit. Versions follow [Semantic Versioning](https://semver.org/):
 MAJOR — a change a project must act on (format of an artifact, a gate that blocks more, a removed command);
 MINOR — new capability, backwards compatible; PATCH — fixes.
+Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
-## Unreleased
+## 0.3.0 — 2026-10-25
+
+**Breaking:** the archive gate blocks more (a `- [~]` or `- []` task is now open), and the pinned OpenSpec CLI is
+1.15.0.
+
+Upgrading from 0.2.0:
+
+1. Every developer: `npm i -g @fission-ai/openspec@1.15.0`.
+2. Team lead: `npx github:cmdtorch/sdd_kit#v0.3.0 update`, review the diff, commit.
+3. If your docs or sample code show `@scenario` markers, list those paths in `openspec/markers-ignore`.
+
+Changes:
 
 - `openspec/markers-ignore` (the project's file): paths where the kit does not look for scenario markers,
   e.g. documentation or sample code that shows them.
@@ -24,6 +36,12 @@ MINOR — new capability, backwards compatible; PATCH — fixes.
   a `- [~]` or `- []` task is not done, `+` and `1.` list items count, plain bullets do not.
 - check-specs: a MODIFIED requirement over 500 characters is a warning, no longer an error (ADDED stays an error).
 - lint-kit: `x-` keys in a change's `.openspec.yaml` (e.g. `x-jiraKey`) are allowed, as in OpenSpec 1.15.0.
+- Installer: `--version` prints the kit version and the pinned OpenSpec version.
+- doctor: the restore and update commands it suggests name the installed kit version (`#v<version>`), so they
+  never pull a newer kit by accident.
+- Released under the MIT license. The repository now has `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request
+  templates, CI on Linux and macOS with Node 20 and 22, and a release workflow that publishes the notes below
+  each version as a GitHub release.
 
 ## 0.2.0 — 2026-10-18
 

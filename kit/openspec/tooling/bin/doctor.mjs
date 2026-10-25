@@ -24,7 +24,7 @@ export function doctor(root) {
   const kitFile = join(root, 'openspec', 'tooling', 'kit.json');
   const kit = existsSync(kitFile) ? JSON.parse(readFileSync(kitFile, 'utf8')) : null;
   if (!kit) {
-    add('error', 'kit', 'sdd-kit is not installed in this repository', 'npx github:<org>/sdd-kit install (see the kit README)');
+    add('error', 'kit', 'sdd-kit is not installed in this repository', 'npx github:cmdtorch/sdd_kit install (see the kit README)');
     return items;
   }
   add('ok', 'kit', `sdd-kit ${kit.kitVersion}`);
@@ -43,14 +43,14 @@ export function doctor(root) {
   if (existsSync(manifestFile)) {
     const m = JSON.parse(readFileSync(manifestFile, 'utf8'));
     const bad = Object.entries(m.files).filter(([rel, hash]) => !existsSync(join(root, rel)) || createHash('sha256').update(readFileSync(join(root, rel))).digest('hex') !== hash);
-    if (bad.length) add('warning', 'kit files', `${bad.length} kit file(s) edited or missing: ${bad.slice(0, 5).map(([r]) => r).join(', ')}${bad.length > 5 ? ', …' : ''}`, 'kit updates will not touch them; restore with: npx github:<org>/sdd-kit update --force (backups are kept)');
+    if (bad.length) add('warning', 'kit files', `${bad.length} kit file(s) edited or missing: ${bad.slice(0, 5).map(([r]) => r).join(', ')}${bad.length > 5 ? ', …' : ''}`, `kit updates will not touch them; restore with: npx github:cmdtorch/sdd_kit#v${kit.kitVersion} update --force (backups are kept)`);
     else add('ok', 'kit files', `${Object.keys(m.files).length} kit files unchanged`);
   }
 
   const settings = join(root, '.claude', 'settings.json');
   const st = existsSync(settings) ? readFileSync(settings, 'utf8') : '';
   const hooks = ['session-start', 'answers-gate', 'archive-gate', 'artifact-feedback'].filter((h) => !st.includes(`openspec/tooling/hooks/${h}.mjs`));
-  if (hooks.length) add('error', 'hooks', `kit hooks missing in .claude/settings.json: ${hooks.join(', ')}`, 'npx github:<org>/sdd-kit update');
+  if (hooks.length) add('error', 'hooks', `kit hooks missing in .claude/settings.json: ${hooks.join(', ')}`, `npx github:cmdtorch/sdd_kit#v${kit.kitVersion} update`);
   else add('ok', 'hooks', 'kit hooks registered in .claude/settings.json');
 
   const skills = join(root, '.claude', 'skills');

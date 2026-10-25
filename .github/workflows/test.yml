@@ -5,20 +5,26 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
   test:
-    name: node --test
-    runs-on: ubuntu-latest
+    name: node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
       - name: Install the pinned OpenSpec CLI
         run: npm i -g "@fission-ai/openspec@$(node -p "require('./kit/openspec/tooling/kit.json').openspecVersion")"
       - name: Tests

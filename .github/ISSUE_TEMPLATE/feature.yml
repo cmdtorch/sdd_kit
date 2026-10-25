@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest a change to the workflow, the questions, the checks or the installer.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: What happened in a real project that the kit did not handle well?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like the kit to do?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: It works for any stack and repository layout (no framework-specific behaviour).
+          required: true

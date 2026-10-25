@@ -1,5 +1,9 @@
 # sdd-kit
 
+[![test](https://github.com/cmdtorch/sdd_kit/actions/workflows/test.yml/badge.svg)](https://github.com/cmdtorch/sdd_kit/actions/workflows/test.yml)
+[![release](https://img.shields.io/github/v/release/cmdtorch/sdd_kit)](https://github.com/cmdtorch/sdd_kit/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Spec-Driven Development for small teams on **OpenSpec + Claude Code**, for any stack.
 
 Teams that hand vague client requirements straight to an AI agent get code that does what the agent guessed.
@@ -18,7 +22,7 @@ That means bugs for manual QA and rework. sdd-kit puts a structured, checked pro
    confirmed, no archive before tasks, markers and the test review are done.
 
 The kit knows nothing about your stack: it never runs your tests and has no presets. The agent uses the
-project's own commands. Zero dependencies: plain Node.js ≥ 20. OpenSpec CLI pinned to **1.15.0**.
+project's own commands.
 
 ```mermaid
 flowchart LR
@@ -29,17 +33,30 @@ flowchart LR
   S -. spec review .-> S
 ```
 
+## Requirements
+
+| | |
+|---|---|
+| Node.js | ≥ 20 |
+| OpenSpec CLI | **1.15.0** exactly (`npm i -g @fission-ai/openspec@1.15.0`) |
+| Claude Code | any current version |
+| git | the kit finds test markers through git |
+| OS | Linux, macOS, WSL (native Windows is not supported) |
+
+No other dependencies: the kit is plain Node.js.
+
 ## Quick start
 
 **Team lead, once per repository:**
 
 ```bash
 npm i -g @fission-ai/openspec@1.15.0
-npx github:<org>/sdd-kit install       # asks for the questions language, nothing else
-git add -A && git commit -m "chore: install sdd-kit"
+npx github:cmdtorch/sdd_kit#v0.3.0 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.3.0 install             # asks for the questions language, nothing else
+git add -A && git commit -m "chore: install sdd-kit 0.3.0"
 ```
 
-Make sure `CLAUDE.md` or the README says how to run the tests and quality checks. Details:
+Make sure `CLAUDE.md` or the README of your project says how to run the tests and quality checks. Details:
 [docs/guide/install.md](docs/guide/install.md).
 
 **Every developer** (the kit is already committed):
@@ -69,20 +86,36 @@ Useful commands in a project:
 | `node openspec/tooling/bin/review-input.mjs --change <c>` | scenarios, THEN clauses and marked tests (what the test reviewer reads) |
 | `node openspec/tooling/bin/openspec.mjs update` | `openspec update` with the kit's workflow profile (never run it plainly) |
 
+## What it adds to your repository
+
+| Path | What |
+|---|---|
+| `openspec/protocols/` | the rules the agent follows: questions, grounding, testing, reviews |
+| `openspec/schemas/clarify/`, `openspec/schemas/lean/` | the kit workflows, forked from OpenSpec's `spec-driven` |
+| `openspec/tooling/` | checks, hooks and tools (Node.js scripts, no dependencies) |
+| `openspec/config.yaml` | a marked kit block in `context`; `clarify` becomes the default schema |
+| `.claude/settings.json` | the kit hooks and read-only permissions, merged with yours |
+| `.claude/agents/`, `.claude/commands/sdd/` | the spec and test reviewers, `/sdd:clarify` |
+
+The installer keeps a hash manifest: updates never overwrite files you edited, and `uninstall` restores
+`config.yaml`, `settings.json` and `.gitignore`.
+
+## Limitations
+
+- **Claude Code only.** Other agents (Cursor, Codex, …) are not supported.
+- **OpenSpec is pinned.** Each kit version supports exactly one OpenSpec version; doctor and session start
+  warn on a mismatch.
+- **No browser E2E** and no backend → frontend contract step yet ([decisions](docs/decisions.md) R3, R7).
+- The kit never runs your tests. It relies on the agent using the commands your project documents.
+
 ## Documentation
 
 - [Install, update, uninstall, onboarding](docs/guide/install.md)
 - [Daily workflow](docs/guide/workflow.md)
 - [Decisions](docs/decisions.md), [verified OpenSpec and Claude Code facts](docs/openspec-facts.md),
   [changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md), [security](SECURITY.md)
 
-## Repository layout
+## License
 
-```
-installer/        sdd-kit installer (install / update / status / uninstall)
-kit/openspec/     copied into the project's openspec/: protocols, schemas, tooling (checks, hooks, bin, lib)
-kit/claude/       copied into the project's .claude/: subagents and the /sdd:clarify command
-kit/*.json|yaml   fragments merged into .claude/settings.json and openspec/config.yaml
-fixtures/         sample projects used by the tests
-tests/            node:test suites (npm test; some use the real OpenSpec CLI)
-```
+[MIT](LICENSE)

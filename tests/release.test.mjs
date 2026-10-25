@@ -18,6 +18,23 @@ describe('versioning', () => {
     assert.equal(JSON.parse(read('kit/openspec/tooling/kit.json')).kitVersion, v);
     assert.match(read('CHANGELOG.md'), new RegExp(`^## ${v.replace(/\./g, '\\.')} — `, 'm'));
   });
+  test('install commands in the docs name the current release tag', () => {
+    const v = JSON.parse(read('package.json')).version;
+    for (const d of ['README.md', 'docs/guide/install.md']) {
+      const tags = [...read(d).matchAll(/github:cmdtorch\/sdd_kit(#v[^\s`]+)?/g)].map((m) => m[1]);
+      assert.ok(tags.length, `${d} has no install command`);
+      for (const tag of tags) assert.ok(tag === `#v${v}` || tag === '#v<version>', `${d}: install command without the release tag (${tag ?? 'none'})`);
+    }
+  });
+  test('license, package metadata and --version agree', () => {
+    const pkg = JSON.parse(read('package.json'));
+    assert.equal(pkg.license, 'MIT');
+    assert.match(read('LICENSE'), /^MIT License/);
+    for (const f of ['LICENSE', 'CHANGELOG.md']) assert.ok(pkg.files.includes(f), `package.json files lacks ${f}`);
+    const r = spawnSync('node', [join(REPO, 'installer/sdd-kit.mjs'), '--version'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout.trim(), `sdd-kit ${pkg.version} (OpenSpec ${JSON.parse(read('kit/openspec/tooling/kit.json')).openspecVersion})`);
+  });
 });
 
 describe('documentation matches the code', () => {

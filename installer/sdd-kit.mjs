@@ -47,7 +47,9 @@ Options:
                                uninstall: remove the kit even if changes still use its schemas
   --dry-run                    show the plan, write nothing
   --yes                        never ask questions
-  --json                       machine-readable output`;
+  --json                       machine-readable output
+  --version                    print the kit version and the pinned OpenSpec version
+  --help                       show this help`;
 
 class InstallError extends Error {}
 
@@ -375,8 +377,13 @@ function printHuman(r) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch']);
+  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'version', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch']);
   const cmd = args._[0];
+  if (args.version) {
+    const kit = JSON.parse(readFileSync(kitPaths(join(HERE, '..', 'kit')).kitJson, 'utf8'));
+    console.log(args.json ? JSON.stringify(kit) : `sdd-kit ${kit.kitVersion} (OpenSpec ${kit.openspecVersion})`);
+    return;
+  }
   if (args.help || !cmd) {
     console.log(USAGE);
     process.exitCode = cmd || args.help ? 0 : 1;

@@ -1,7 +1,25 @@
 {
   "name": "sdd-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Spec-Driven Development kit for OpenSpec + Claude Code: clarifying questions before code, spec-to-test traceability, test review",
+  "keywords": [
+    "openspec",
+    "claude-code",
+    "spec-driven-development",
+    "sdd",
+    "tdd",
+    "ai-agents"
+  ],
+  "license": "MIT",
+  "author": "Emil Humbatov",
+  "homepage": "https://github.com/cmdtorch/sdd_kit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cmdtorch/sdd_kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cmdtorch/sdd_kit/issues"
+  },
   "type": "module",
   "private": true,
   "bin": {
@@ -9,7 +27,9 @@
   },
   "files": [
     "installer/",
-    "kit/"
+    "kit/",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=20"
