@@ -4,7 +4,19 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseYaml } from './yaml.mjs';
 
-export const KIT_SCHEMAS = ['clarify', 'lean'];
+/** Schemas with the question rounds of `clarify` (and its gates, grounding and checks). */
+export const CLARIFY_FAMILY = ['clarify', 'clarify-ai-qa', 'clarify-qa'];
+/** Schemas with the test-cases stage between the specs and the design. */
+export const TEST_CASE_SCHEMAS = ['clarify-ai-qa', 'clarify-qa'];
+export const KIT_SCHEMAS = [...CLARIFY_FAMILY, 'lean'];
+
+export function isClarifyFamily(schema) {
+  return CLARIFY_FAMILY.includes(schema);
+}
+
+export function hasTestCases(schema) {
+  return TEST_CASE_SCHEMAS.includes(schema);
+}
 
 /** Nearest directory (from `start` upwards) that contains `openspec/`; null if none. */
 export function findRoot(start = process.cwd()) {

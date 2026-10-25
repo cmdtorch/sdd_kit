@@ -27,6 +27,7 @@ import { patchGitignore, unpatchGitignore } from './lib/gitignore.mjs';
 import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, ConfigEditError } from './lib/config-edit.mjs';
 import { mergeSettings, removeKitHooks, formatSettings } from '../kit/openspec/tooling/lib/settings-merge.mjs';
 import { parseArgs } from '../kit/openspec/tooling/lib/report.mjs';
+import { KIT_SCHEMAS } from '../kit/openspec/tooling/lib/project.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const USAGE = `sdd-kit — Spec-Driven Development kit for OpenSpec + Claude Code
@@ -53,7 +54,6 @@ Options:
 
 class InstallError extends Error {}
 
-const KIT_SCHEMAS = ['clarify', 'lean'];
 
 function kitPaths(kitDir) {
   return {
@@ -282,7 +282,7 @@ export function uninstall(opts) {
   if (!manifest) throw new InstallError(`sdd-kit is not installed in ${root} (no ${MANIFEST})`);
   const changesDir = join(root, 'openspec', 'changes');
   const users = existsSync(changesDir)
-    ? readdirSync(changesDir).filter((n) => n !== 'archive' && existsSync(join(changesDir, n, '.openspec.yaml')) && /^schema:\s*(clarify|lean)\s*$/m.test(readFileSync(join(changesDir, n, '.openspec.yaml'), 'utf8')))
+    ? readdirSync(changesDir).filter((n) => n !== 'archive' && existsSync(join(changesDir, n, '.openspec.yaml')) && KIT_SCHEMAS.includes(readFileSync(join(changesDir, n, '.openspec.yaml'), 'utf8').match(/^schema:\s*(\S+)\s*$/m)?.[1]))
     : [];
   if (users.length && !opts.force) {
     throw new InstallError(`active changes still use kit schemas: ${users.join(', ')}. Archive them first, or pass --force (their schema will be missing).`);

@@ -62,3 +62,7 @@ node installer/sdd-kit.mjs install --target /path/to/scratch-repo
    The release workflow runs the tests and publishes a GitHub release with the changelog section as notes.
 
 Versions follow [Semantic Versioning](https://semver.org/) as described at the top of the changelog.
+
+A pre-release for a pilot (`<version>-beta.<n>`, e.g. `0.4.0-beta.1`) is cut from a branch, not `main`:
+the same steps, but push the branch and the tag (`git push origin <branch> v<version>`). A tag with a hyphen is
+published as a GitHub pre-release and never becomes "Latest".

@@ -31,6 +31,26 @@
             "timeout": 60
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/schema-starter.mjs\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/test-cases-run-limit.mjs\"",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -52,6 +72,7 @@
       "Bash(node openspec/tooling/checks/check-answers.mjs *)",
       "Bash(node openspec/tooling/checks/check-grounding.mjs *)",
       "Bash(node openspec/tooling/checks/check-specs.mjs *)",
+      "Bash(node openspec/tooling/checks/check-test-cases.mjs *)",
       "Bash(node openspec/tooling/checks/check-traceability.mjs *)",
       "Bash(node openspec/tooling/checks/lint-kit.mjs *)"
     ]

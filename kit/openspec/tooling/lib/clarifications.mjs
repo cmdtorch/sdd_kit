@@ -2,7 +2,7 @@
 // Parser for `clarifications.md` (format: openspec/protocols/questions.md).
 import { toLines, fenceMask, stripComments } from './markdown.mjs';
 
-/** Round each artifact depends on (clarify schema). */
+/** Round each artifact depends on (clarify-family schemas). */
 export const ROUND_FOR_ARTIFACT = {
   proposal: 'Main',
   specs: 'Specs',

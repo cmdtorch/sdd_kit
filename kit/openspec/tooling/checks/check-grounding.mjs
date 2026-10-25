@@ -7,13 +7,13 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { toLines, fenceMask, stripComments } from '../lib/markdown.mjs';
 import { parseClarifications, roundStatus, isBlankAnswer } from '../lib/clarifications.mjs';
-import { changeDir, changeSchema, readChangeFile } from '../lib/project.mjs';
+import { changeDir, changeSchema, readChangeFile, isClarifyFamily, CLARIFY_FAMILY } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-grounding';
 const USAGE = `Usage: check-grounding --change <name> [--file proposal.md|design.md] [--root <dir>] [--json]
 
-Checks source tags in proposal.md and design.md of a clarify-schema change.`;
+Checks source tags in proposal.md and design.md of a clarify-family change (clarify, clarify-ai-qa, clarify-qa).`;
 
 export const FILES = ['proposal.md', 'design.md'];
 const TAG = /\[(Q\d+|D\d+|desc|assumption)\]/g;
@@ -78,7 +78,7 @@ export function checkGrounding({ root, change, file }) {
   const dir = changeDir(root, change);
   if (!existsSync(dir)) throw new UsageError(`change "${change}" not found at ${dir}`);
   const schema = changeSchema(root, change);
-  if (schema !== 'clarify') return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (grounding applies to "clarify")`);
+  if (!isClarifyFamily(schema)) return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (grounding applies to ${CLARIFY_FAMILY.map((s) => `"${s}"`).join(', ')})`);
   if (file && !FILES.includes(file)) throw new UsageError(`--file must be one of ${FILES.join(', ')}`);
 
   const f = findingsFor(root);

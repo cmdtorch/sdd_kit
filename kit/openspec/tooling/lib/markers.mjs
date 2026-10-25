@@ -5,6 +5,8 @@
 //   // @scenario inventory/sales-export :: Successful export
 // The marker starts its line: only indentation and a comment opener may come before it, so prose and
 // string literals that mention a marker are not counted.
+// On the test-case schemas a test also names the test cases it proves, with the same placement rules:
+//   # @case inventory/sales-export :: Export of an empty period
 // The kit only reads files; it never runs tests. Files come from git (tracked + untracked, .gitignore
 // respected); outside git the tree is walked with the usual dependency/build directories skipped.
 // Paths listed in openspec/markers-ignore (the project's file, one pattern per line) are not scanned.
@@ -15,6 +17,7 @@ import { normName } from './spec-parser.mjs';
 
 // indentation, then at most a short comment opener (#, //, /*, *, <!--, --, ;, %, {#, <%--, {{!--)
 const MARKER = /^\s*[^\w\s]{0,5}\s*@scenario\s+(\S+)\s+::\s+(.+)$/;
+const CASE_REF = /^\s*[^\w\s]{0,5}\s*@case\s+(\S+)\s+::\s+(.+)$/;
 // comment closers and string quotes that may follow the scenario name on the same line
 const TRAILER = /\s*(\*\/|-->|--%>|%>|#\}|"""|'''|["'`]\s*[,)]*)\s*$/;
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', 'target', '.venv', 'venv', '__pycache__', '.next', '.nuxt', 'coverage']);
@@ -87,22 +90,31 @@ function walk(root, dir) {
   return out;
 }
 
-/** Markers in one file's content: [{capability, scenario, line}]. */
-export function parseMarkers(content) {
+/** References matching `re` in one file's content: [{capability, name, line}]. */
+function parseRefs(content, re) {
   const found = [];
-  const lines = content.split(/\r?\n/);
-  lines.forEach((l, idx) => {
-    const m = l.match(MARKER);
+  content.split(/\r?\n/).forEach((l, idx) => {
+    const m = l.match(re);
     if (!m) return;
-    const scenario = normName(m[2].replace(TRAILER, ''));
-    if (scenario) found.push({ capability: m[1], scenario, line: idx + 1 });
+    const name = normName(m[2].replace(TRAILER, ''));
+    if (name) found.push({ capability: m[1], name, line: idx + 1 });
   });
   return found;
 }
 
-/** Every marker in the project: [{capability, scenario, file, line}]. */
-export function collectMarkers(root) {
-  const markers = [];
+/** Markers in one file's content: [{capability, scenario, line}]. */
+export function parseMarkers(content) {
+  return parseRefs(content, MARKER).map(({ capability, name, line }) => ({ capability, scenario: name, line }));
+}
+
+/** Case references in one file's content: [{capability, name, line}]. */
+export function parseCaseRefs(content) {
+  return parseRefs(content, CASE_REF);
+}
+
+/** Every reference of one keyword in the project: [{...parsed, file}]. */
+function collect(root, keyword, parse) {
+  const out = [];
   for (const file of listProjectFiles(root)) {
     const p = join(root, file);
     let content;
@@ -112,8 +124,18 @@ export function collectMarkers(root) {
     } catch {
       continue;
     }
-    if (!content.includes('@scenario') || content.includes('\0')) continue;
-    for (const m of parseMarkers(content)) markers.push({ ...m, file });
+    if (!content.includes(keyword) || content.includes('\0')) continue;
+    for (const m of parse(content)) out.push({ ...m, file });
   }
-  return markers;
+  return out;
+}
+
+/** Every marker in the project: [{capability, scenario, file, line}]. */
+export function collectMarkers(root) {
+  return collect(root, '@scenario', parseMarkers);
+}
+
+/** Every case reference in the project: [{capability, name, file, line}]. */
+export function collectCaseRefs(root) {
+  return collect(root, '@case', parseCaseRefs);
 }

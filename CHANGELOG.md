@@ -7,6 +7,34 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+## 0.4.0-beta.1 — 2026-10-25
+
+**Pre-release for a pilot.** The test-cases stage is experimental: it has passed the kit's test suite but not yet
+a pilot on a real project. Formats and gates may change before 0.4.0.
+
+**Breaking:** in Claude Code, `openspec new change` without `--schema` is now blocked until the developer picks a
+schema from the starter menu (a terminal is not affected).
+
+Upgrading from 0.3.0:
+
+1. Team lead: `npx github:cmdtorch/sdd_kit#v0.4.0-beta.1 update`, review the diff (two new hooks in
+   `.claude/settings.json`), commit.
+2. Active `clarify` changes keep working as before; nothing to migrate.
+
+Changes:
+
+- Test-cases stage (optional): two new schemas, `clarify-ai-qa` and `clarify-qa`, are `clarify` plus a
+  `test-cases` artifact. Gherkin test cases are written after the specs and before the design, one or more per
+  spec scenario, each labelled `automated`, `e2e` and/or `manual`. Protocol: `openspec/protocols/test-cases.md`.
+- AI QA reviewer: the `test-cases-reviewer` subagent (`openspec/protocols/review-test-cases.md`) reviews the test
+  cases; a hook limits it to three runs per loop, then the developer decides. On `clarify-qa` a human QA reviews
+  next, with remarks (`open` / `closed` / `reopened`) in `test-cases.md` until none is open.
+- `check-test-cases.mjs`: structure, scenario coverage, labels, Given/When/Then and remark statuses; with
+  `--stage`, completion of the stage. The design and the archive are blocked until it passes.
+- `@case <capability-path> :: <case name>` markers and a "Test case coverage" table in the verification plan;
+  `check-traceability --markers` requires a marked test for every `automated` case.
+- Schema starter: a hook makes the agent ask which schema to use (`clarify`, `clarify-ai-qa`, `clarify-qa`) when
+  a change is created without one.
 - `docs/how-it-works.md`: what the kit adds to OpenSpec, part by part, with the file behind each part. A test
   keeps it complete.
 

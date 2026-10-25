@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // answers-gate — PreToolUse hook (Write|Edit|MultiEdit|Bash).
-// Blocks writing a clarify-schema artifact while the question round it depends on is unanswered or
+// Blocks writing a clarify-family artifact while the question round it depends on is unanswered or
 // unconfirmed (proposal→Main, specs→Specs, design→Design, verification-plan→Verification).
+// On a test-case schema (clarify-ai-qa, clarify-qa) design.md also needs a complete test-cases stage
+// (check-test-cases --stage).
 // Bash: a command that writes to such an artifact (redirect, tee, cp, mv, sed -i, ...) is gated too;
 // this is a heuristic — CI (check-answers) is the backstop.
 import { existsSync } from 'node:fs';
 import { runHook, hookRoot, touchedFiles, block } from '../lib/hook-io.mjs';
-import { locateInChange, changeSchema, changeDir } from '../lib/project.mjs';
+import { locateInChange, changeSchema, changeDir, isClarifyFamily, hasTestCases } from '../lib/project.mjs';
 import { ROUND_FOR_ARTIFACT } from '../lib/clarifications.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
+import { checkTestCases } from '../checks/check-test-cases.mjs';
 import { isMain } from '../lib/report.mjs';
 
 const MAX_LISTED = 8;
@@ -22,18 +25,31 @@ export function bashTargets(command) {
   return [...command.matchAll(GATED_PATH)].map((m) => m[1]);
 }
 
-function explain(change, artifact, report) {
+function listErrors(report) {
   const errors = report.findings.filter((f) => f.level === 'error');
+  const lines = errors.slice(0, MAX_LISTED).map((f) => `  - ${f.file ? `${f.file}${f.line ? `:${f.line}` : ''}: ` : ''}${f.message}`);
+  if (errors.length > MAX_LISTED) lines.push(`  - ... and ${errors.length - MAX_LISTED} more`);
+  return lines;
+}
+
+function explain(change, artifact, report) {
   const round = ROUND_FOR_ARTIFACT[artifact];
   const lines = [
     `sdd-kit answers-gate: ${artifact} of change "${change}" cannot be written yet — the ${round} round in clarifications.md is not complete and confirmed.`,
-    ...errors.slice(0, MAX_LISTED).map((f) => `  - ${f.file ? `${f.file}${f.line ? `:${f.line}` : ''}: ` : ''}${f.message}`),
+    ...listErrors(report),
   ];
-  if (errors.length > MAX_LISTED) lines.push(`  - ... and ${errors.length - MAX_LISTED} more`);
   lines.push(
     `Continue the question protocol (openspec/protocols/questions.md): ask the user, write the answers into clarifications.md, analyse them, then get an explicit "Looks correct" on the ${round} round summary. Do not write ${artifact} any other way.`,
   );
   return lines.join('\n');
+}
+
+function explainTestCases(change, report) {
+  return [
+    `sdd-kit answers-gate: design of change "${change}" cannot be written yet — the test-cases stage is not complete.`,
+    ...listErrors(report),
+    'Continue the test-cases stage (openspec/protocols/test-cases.md): fix the test cases, settle every blocker and major finding of the AI QA review, and get an explicit "Looks correct" in "Stage result" of test-cases.md. Do not write design.md any other way.',
+  ].join('\n');
 }
 
 export function gate(input) {
@@ -50,9 +66,14 @@ export function gate(input) {
     const loc = locateInChange(root, path);
     if (!loc || !(loc.artifact in ROUND_FOR_ARTIFACT)) continue;
     if (!existsSync(changeDir(root, loc.change))) continue;
-    if (changeSchema(root, loc.change) !== 'clarify') continue;
+    const schema = changeSchema(root, loc.change);
+    if (!isClarifyFamily(schema)) continue;
     const report = checkAnswers({ root, change: loc.change, artifact: loc.artifact });
     if (!report.ok) return explain(loc.change, loc.artifact, report);
+    if (loc.artifact === 'design' && hasTestCases(schema)) {
+      const stage = checkTestCases({ root, change: loc.change, stage: true });
+      if (!stage.ok) return explainTestCases(loc.change, stage);
+    }
   }
   return null;
 }

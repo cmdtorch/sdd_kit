@@ -8,7 +8,7 @@
 //   verification-plan.md → check-traceability (plan + trace; markers are checked at archive)
 // When the last task in tasks.md is checked off it reminds Claude of the end-of-apply steps.
 import { runHook, hookRoot, touchedFiles, addContext } from '../lib/hook-io.mjs';
-import { locateInChange, changeSchema, isKitSchema, readChangeFile } from '../lib/project.mjs';
+import { locateInChange, changeSchema, isKitSchema, isClarifyFamily, readChangeFile } from '../lib/project.mjs';
 import { isMain } from '../lib/report.mjs';
 import { taskCounts } from '../lib/markdown.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
@@ -21,10 +21,10 @@ const MAX_LISTED = 10;
 function checksFor(artifact, schema, root, change, rel) {
   switch (artifact) {
     case 'clarifications':
-      return schema === 'clarify' ? [checkAnswers({ root, change })] : [];
+      return isClarifyFamily(schema) ? [checkAnswers({ root, change })] : [];
     case 'proposal':
     case 'design':
-      return schema === 'clarify' ? [checkGrounding({ root, change, file: rel })] : [];
+      return isClarifyFamily(schema) ? [checkGrounding({ root, change, file: rel })] : [];
     case 'specs':
       return [checkSpecs({ root, change })];
     case 'verification-plan':

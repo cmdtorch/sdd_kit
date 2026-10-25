@@ -4,6 +4,8 @@ import { toLines, fenceMask, stripComments, sectionRange, firstTable, fold } fro
 import { normName } from './spec-parser.mjs';
 
 export const LEVELS = ['unit', 'integration', 'manual'];
+/** Levels a test case labelled `automated` may name in "Test case coverage" (test-case schemas). */
+export const CASE_LEVELS = ['unit', 'integration'];
 
 const EMPTY = /^(|—|–|-|none\.?|n\/a)$/i;
 
@@ -36,12 +38,21 @@ const col = (row, ...names) => {
   return '';
 };
 
+// "automated, e2e" / "unit + integration" / "—" -> lower-case items, placeholders dropped
+const list = (v) =>
+  String(v)
+    .replace(/`/g, '')
+    .split(/[,;/+]|\s+and\s+|\s+/)
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => x && !EMPTY.test(x));
+
 /** Parses verification-plan.md. */
 export function parsePlan(content) {
   const { lines, fences } = prepare(content);
   const coverage = tableUnder(lines, fences, 'Scenario coverage');
   const exclusions = tableUnder(lines, fences, 'Exclusions');
   const trace = tableUnder(lines, fences, 'Requirement trace');
+  const testCases = tableUnder(lines, fences, 'Test case coverage');
   return {
     coverage: {
       ...coverage,
@@ -57,6 +68,18 @@ export function parsePlan(content) {
     exclusions: {
       ...exclusions,
       rows: exclusions.rows.map((r) => ({ line: r.line, capability: normName(col(r, 'capability')), scenario: normName(col(r, 'scenario')), reason: col(r, 'reason') })),
+    },
+    // test-case schemas only: one row per test case of test-cases.md
+    testCases: {
+      ...testCases,
+      rows: testCases.rows.map((r) => ({
+        line: r.line,
+        capability: normName(col(r, 'capability')),
+        scenario: normName(col(r, 'scenario')),
+        name: normName(col(r, 'case', 'test case')),
+        labels: list(col(r, 'labels')),
+        levels: list(col(r, 'level', 'levels')),
+      })),
     },
     trace: {
       ...trace,

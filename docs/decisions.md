@@ -35,3 +35,22 @@ counts tasks; staying on 1.13.0 would keep teams on guidance upstream has since 
 | # | Decision |
 |---|---|
 | R10 | **OpenSpec pinned to 1.15.0.** The kit schemas take the 1.15.0 upstream text verbatim as a prefix (pristine copy in `fixtures/upstream/spec-driven-1.15.0/`); kit rules are unchanged. The kit follows upstream where they overlap: tasks are counted with OpenSpec's checkbox rules (only `x` is done), a MODIFIED requirement over 500 characters only warns (upstream: keep an existing requirement whole), `x-` keys of `.openspec.yaml` are allowed, the kit-only `verification-plan.md` template gets a `# Verification Plan` title like the upstream ones. Facts re-verified in `docs/openspec-facts.md`. |
+
+## 2026-10-25 — Test-cases stage (`clarify-ai-qa`, `clarify-qa`)
+
+Why: question rounds find gaps in requirements, but nothing made the AI think through the cases a manual QA
+engineer would check; they surfaced later as QA bugs, and tests were written from the developer's point of
+view. The owner wants Gherkin test cases before the code, reviewed by QA in a loop, as the common source of TDD
+tests and the later E2E stage. The stage stays optional while it is tried out.
+
+| # | Decision |
+|---|---|
+| R11 | **Two new schemas, `clarify-ai-qa` and `clarify-qa`**: full copies of `clarify` with a `test-cases` artifact between the specs and the design (the design requires it). `clarify-ai-qa`: the AI QA reviewer only; `clarify-qa`: the AI QA reviewer, then a human QA. They differ only in the hand-over; a test holds every shared artifact equal to `clarify`. `clarify` and `lean` are unchanged; `lean` gets no stage. Only the schema decides the flow. |
+| R12 | **Clarify family.** `clarify`, `clarify-ai-qa` and `clarify-qa` are recognised by helpers in `openspec/tooling/lib/project.mjs` (`isClarifyFamily`, `hasTestCases`, `KIT_SCHEMAS`) instead of the literal `clarify` in each hook and check. |
+| R13 | **`test-cases.md` format** (`openspec/protocols/test-cases.md`): `## <capability>` / `### Scenario:` / `#### Case:`, a `Labels:` line (`automated`, `e2e`, `manual`; never `unit`/`integration`), Given / When / Then with concrete data, in English; case names unique per capability. QA remarks are blockquotes with status `open` / `closed` / `reopened`; only QA closes. "Spec changes during test-case review" records every spec change; "Stage result" holds accepted findings (matched by Finding text, no IDs), `Handed over to QA` and the `Looks correct` confirmation. |
+| R14 | **Gates.** `check-test-cases` checks structure and coverage; with `--stage` the completion of the stage. The answers gate blocks `design.md` until `--stage` passes; the archive gate runs the check and needs an `@case` test for every `automated` case. |
+| R15 | **AI review loop limit.** At most three runs of the `test-cases-reviewer` subagent per loop, enforced by the `test-cases-run-limit` hook (counter in `reviews/test-cases-runs.json`); then the developer fixes or accepts. A scenario added after the stage is confirmed starts a new loop; QA is not asked again. |
+| R16 | **Schema starter.** A `schema-starter` hook blocks `openspec new change` without `--schema` and makes the agent ask a three-choice menu (`clarify`, `clarify-ai-qa`, `clarify-qa`); the project default does not count, `lean` is not offered, the terminal is not affected. Code, not instruction text. |
+| R17 | **`@case <capability-path> :: <case name>`** references in tests, with the marker placement rules. The verification plan gets a *Test case coverage* table with a level for each `automated` case. A reference to an archived change's case is silent; an unknown one is a warning. |
+| R18 | **Test cases are not merged on archive**: `test-cases.md` stays in the archived change. Switching between the two test-case schemas is a manual edit of `schema:` in `.openspec.yaml`; no command. |
+| R19 | **E2E stage deferred.** `e2e` cases are only listed at the end of apply, waiting for it; executable Gherkin and test-case management tools are out of scope. |
