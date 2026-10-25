@@ -3,18 +3,23 @@
 // text, usually a line comment above the test, in any language:
 //   # @scenario inventory/sales-export :: Successful export
 //   // @scenario inventory/sales-export :: Successful export
+// The marker starts its line: only indentation and a comment opener may come before it, so prose and
+// string literals that mention a marker are not counted.
 // The kit only reads files; it never runs tests. Files come from git (tracked + untracked, .gitignore
 // respected); outside git the tree is walked with the usual dependency/build directories skipped.
+// Paths listed in openspec/markers-ignore (the project's file, one pattern per line) are not scanned.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { normName } from './spec-parser.mjs';
 
-const MARKER = /@scenario\s+(\S+)\s+::\s+(.+)$/;
+// indentation, then at most a short comment opener (#, //, /*, *, <!--, --, ;, %, {#, <%--, {{!--)
+const MARKER = /^\s*[^\w\s]{0,5}\s*@scenario\s+(\S+)\s+::\s+(.+)$/;
 // comment closers and string quotes that may follow the scenario name on the same line
 const TRAILER = /\s*(\*\/|-->|--%>|%>|#\}|"""|'''|["'`]\s*[,)]*)\s*$/;
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', 'target', '.venv', 'venv', '__pycache__', '.next', '.nuxt', 'coverage']);
 const MAX_BYTES = 1024 * 1024;
+export const IGNORE_FILE = 'openspec/markers-ignore';
 
 /** Project files to scan, relative to root. `openspec/` is excluded: it holds the plan, not tests. */
 export function listProjectFiles(root) {
@@ -30,7 +35,39 @@ export function listProjectFiles(root) {
   } catch {
     files = walk(root, root);
   }
-  return files.filter((f) => !f.startsWith('openspec/') && !f.startsWith('.claude/'));
+  const ignored = ignoreMatcher(root);
+  return files.filter((f) => !f.startsWith('openspec/') && !f.startsWith('.claude/') && !ignored(f));
+}
+
+// Patterns from openspec/markers-ignore, relative to the project root: `docs/`, `CHANGELOG.md`,
+// `**/examples`. `*` and `?` stay inside one path segment, `**` crosses them; a pattern also covers
+// everything below it. Blank lines and `#` comments are skipped.
+export function ignoreMatcher(root) {
+  const p = join(root, IGNORE_FILE);
+  if (!existsSync(p)) return () => false;
+  const res = readFileSync(p, 'utf8')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => new RegExp(`^${globSource(l.replace(/^\/+|\/+$/g, ''))}(?:/.*)?$`));
+  return (file) => res.some((re) => re.test(file));
+}
+
+function globSource(glob) {
+  let out = '';
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === '*' && glob[i + 1] === '*') {
+      i++;
+      if (glob[i + 1] === '/') {
+        i++;
+        out += '(?:.*/)?';
+      } else out += '.*';
+    } else if (c === '*') out += '[^/]*';
+    else if (c === '?') out += '[^/]';
+    else out += c.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+  return out;
 }
 
 function walk(root, dir) {

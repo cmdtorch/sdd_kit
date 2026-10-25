@@ -73,13 +73,15 @@ def test_successful_export(...):
 it('exports the paid sales of the period', async () => { /* ... */ });
 ```
 
-- The format is `@scenario <capability-path> :: <Scenario name>`, with nothing after the name except
-  a comment closer (`*/`, `-->`).
+- The format is `@scenario <capability-path> :: <Scenario name>`. Only indentation and a comment opener
+  (`#`, `//`, `/*`, `<!--`, `--`, …) may come before it, and nothing after the name except a comment
+  closer (`*/`, `-->`). A marker mentioned in prose or inside a string is not counted.
 - One test may carry several markers (one per line). A scenario may have several tests.
 - Helper tests without a marker are fine. Each test that comes from a spec scenario carries its marker,
   and so does each regression test for a bug in specified behaviour.
 - The kit finds markers by reading the project files (git-tracked and untracked, not ignored, outside
-  `openspec/`). Check them with
+  `openspec/`). Paths listed in `openspec/markers-ignore` (one pattern per line: `docs/`, `CHANGELOG.md`,
+  `**/examples`) are skipped: use it for documentation or sample code that shows markers. Check them with
   `node openspec/tooling/checks/check-traceability.mjs --change <change> --markers`.
 
 ## 4. What a good test looks like

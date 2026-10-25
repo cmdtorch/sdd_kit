@@ -4,6 +4,13 @@ All notable changes to sdd-kit. Versions follow [Semantic Versioning](https://se
 MAJOR — a change a project must act on (format of an artifact, a gate that blocks more, a removed command);
 MINOR — new capability, backwards compatible; PATCH — fixes.
 
+## Unreleased
+
+- `openspec/markers-ignore` (the project's file): paths where the kit does not look for scenario markers,
+  e.g. documentation or sample code that shows them.
+- A marker counts only when it starts its line (after indentation and a comment opener), as `testing.md` §3
+  already required. Markers mentioned in prose or inside string literals are no longer picked up.
+
 ## 0.2.0 — 2026-10-18
 
 The kit no longer depends on the project's stack or layout. **Breaking** for projects on 0.1.0.

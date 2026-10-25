@@ -102,5 +102,6 @@ npx github:<org>/sdd-kit uninstall
 | "answers-gate: proposal … cannot be written yet" | a question round is open. Answer the questions in `clarifications.md` and confirm the summary with exactly `Looks correct` |
 | "archive-gate: … no test carries the marker for …" | add `@scenario <capability> :: <Scenario name>` as a comment above the test (`openspec/protocols/testing.md` §3) |
 | "archive-gate: … no test review" | run the `test-reviewer` subagent, or record a human decision in `reviews/test-review.md` |
+| check-traceability: "marker names unknown scenario" in docs or sample code | list those paths in `openspec/markers-ignore`, one pattern per line (`docs/`, `**/examples`) |
 | doctor: "kit files edited" | intended edits stay yours. Otherwise `update --force` restores them, with backups |
 | subagent: "This command requires approval" | accept the workspace trust dialog, or approve the command once |

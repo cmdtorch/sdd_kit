@@ -17,3 +17,12 @@ wizard that asked for the stack). The owner wants one kit that any project can u
 | R6 | **Archive gate** checks: all tasks done; check-answers, check-grounding, check-specs, check-traceability pass; every automated scenario has a marked test; test review READY or a human decision. |
 | R7 | **Backend → frontend handoff removed** (`api.mjs`, OpenAPI diff, `handoff.mjs`, `check-handoff`, stores). It ran only after the backend was finished, so the frontend still waited. To be redesigned **contract-first**: the API contract is agreed during design, and both sides start from it. |
 | R8 | Kept from 0.1.0: Node ESM with zero dependencies; OpenSpec pinned to 1.13.0; the `clarify` and `lean` schemas; grounding; spec and test reviewers; answers-gate; artifact-feedback; session-start; installer with a hash manifest; the kit workflow profile (no `propose`). |
+
+## 2026-10-25 — Fewer false scenario markers
+
+Why: in a repository whose docs and samples show markers (the kit's own repository: 28 false hits), every hit
+became a "marker names unknown scenario" warning.
+
+| # | Decision |
+|---|---|
+| R9 | A marker counts only at the start of its line (indentation and a comment opener of at most five characters before it). Paths in `openspec/markers-ignore` are not scanned. The file belongs to the project: the installer never ships, updates or removes it. |

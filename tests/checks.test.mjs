@@ -255,4 +255,26 @@ describe('scenario markers (any language)', () => {
     const files = new Set(collectMarkers(root).map((m) => m.file));
     assert.deepEqual([...files].sort(), ['tests/test_export.py', 'tests/test_sales.py']);
   });
+  test('a marker mentioned in prose or inside a string is not counted', () => {
+    const text = [
+      'Add `@scenario inventory/sales-export :: Empty period` above the test.',
+      "  assert.equal(x, '@scenario inventory/sales-export :: Empty period');",
+      "  write(file, '# @scenario inventory/sales-export :: Empty period');",
+      '{{!-- @scenario web/sales-page :: Shows the empty state --}}',
+    ].join('\n');
+    assert.deepEqual(parseMarkers(text).map((m) => m.line), [4]);
+  });
+  test('paths in openspec/markers-ignore are not scanned', () => {
+    const root = project();
+    mkdirSync(join(root, 'docs', 'deep', 'examples'), { recursive: true });
+    for (const f of ['docs/guide.md', 'docs/deep/examples/a.py', 'NOTES.md', 'tests/fixtures_test.py']) {
+      writeFileSync(join(root, f), '# @scenario inventory/sales-export :: Empty period\n');
+    }
+    const scanned = () => [...new Set(collectMarkers(root).map((m) => m.file))].sort();
+    assert.equal(scanned().length, 6);
+    writeFileSync(join(root, 'openspec/markers-ignore'), '# examples, not tests\ndocs/\n\n/NOTES.md\ntests/fixtures_*.py\n');
+    assert.deepEqual(scanned(), ['tests/test_export.py', 'tests/test_sales.py']);
+    writeFileSync(join(root, 'openspec/markers-ignore'), '**/examples\n');
+    assert.deepEqual(scanned(), ['NOTES.md', 'docs/guide.md', 'tests/fixtures_test.py', 'tests/test_export.py', 'tests/test_sales.py']);
+  });
 });
