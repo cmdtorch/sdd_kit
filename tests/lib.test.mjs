@@ -172,7 +172,7 @@ describe('spec parser', () => {
   });
 
   test('main spec', () => {
-    const m = parseMainSpec(readFileSync(join(REPO, 'fixtures/projects/school-api/openspec/specs/inventory/student-sales/spec.md'), 'utf8'));
+    const m = parseMainSpec(readFileSync(join(REPO, 'fixtures/projects/checks-good/openspec/specs/inventory/student-sales/spec.md'), 'utf8'));
     assert.equal(m.requirements.length, 1);
     assert.deepEqual(m.requirements[0].scenarios.map((s) => s.name), ['Accountant records a sale', 'Teacher cannot record a sale']);
   });

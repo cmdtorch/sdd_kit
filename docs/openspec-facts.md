@@ -10,8 +10,11 @@ Status legend: **VERIFIED**, **REFUTED** (the claim from CLAUDE.md or the docs i
 **PARTLY** (true with caveats).
 
 Pristine copy of the built-in schema: `fixtures/upstream/spec-driven-1.13.0/`
-(`schema.yaml` sha256 `37ace6cc…2f1c`). It matches the verbatim copy in
-`research/openspec-stage0-report.md` byte for byte (apart from the markdown fences).
+(`schema.yaml` sha256 `37ace6cc…2f1c`).
+
+Facts were collected while building 0.1.0. Decision numbers `D<n>` and the `fixtures/dry-runs/phase*`
+evidence files refer to the `archive/v0.1` branch. Facts about parts removed in 0.2.0 (pytest/Playwright
+runners, the Stop hook, API handoff, generated CI, monorepo, stores) were dropped from this file.
 
 ---
 
@@ -94,7 +97,7 @@ Pristine copy of the built-in schema: `fixtures/upstream/spec-driven-1.13.0/`
 | L2 | `init` creates `openspec/{config.yaml, specs/.gitkeep, changes/archive/.gitkeep}` | VERIFIED | — |
 | L3 | `init --language <lang>` exists ("Write new OpenSpec artifacts in this language") | VERIFIED (new) | `init --help`. Not needed: D1 = English |
 
-## 7a. Added in phase 1
+## 8. Added in phase 1
 
 | # | Claim | Status | Evidence | Kit implication |
 |---|---|---|---|---|
@@ -116,8 +119,6 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | K1 | Common stdin fields: `session_id, transcript_path, cwd, prompt_id, permission_mode, effort, hook_event_name` | VERIFIED | logged input |
 | K2 | `Edit` tool_input = `{file_path, old_string, new_string, replace_all}`; `Write` = `{file_path, content}`; `Bash` = `{command}` (+ optional description/timeout) | VERIFIED | logged input. A docs summary showing `edits[{old_text,new_text}]` for Edit was **wrong**. `MultiEdit` was not available in this build; the kit handles both `file_path` and `edits[].file_path` |
 | K3 | PreToolUse **exit 2 blocks** the call; stderr reaches Claude as `PreToolUse:Write hook error: [<command>]: <stderr>` | VERIFIED | blocked Write of `blocked.md`; the agent quoted the message |
-| K4 | Stop **exit 2** makes Claude continue with stderr as the instruction; the next Stop arrives with `stop_hook_active: true` (first one `false`) | VERIFIED | Claude created `done.txt` as told, then the second Stop had `stop_hook_active: true` |
-| K5 | Stop input also has `last_assistant_message`, `background_tasks`, `session_crons` | VERIFIED | logged input |
 | K6 | SessionStart input has `source` (`startup`, …); JSON `hookSpecificOutput.additionalContext` reaches Claude | VERIFIED | agent repeated the secret word from the context |
 | K7 | PostToolUse input has `tool_response` (Write: `{type, filePath, content, structuredPatch, originalFile, userModified}`) and `duration_ms`; `additionalContext` reaches Claude | VERIFIED | agent repeated the code word |
 | K8 | `${CLAUDE_PROJECT_DIR}` is expanded inside `command` and exported as env var; hook cwd = project dir | VERIFIED | logged env and cwd |
@@ -133,42 +134,7 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | E2 | Forced `Write proposal.md` was blocked by `answers-gate`; the agent received the list of unanswered questions and the instruction | `fixtures/dry-runs/phase3-hooks/OUTPUT-forced-write.txt` |
 | E3 | Merged settings (pilot graphify hooks + kit hooks) work side by side | same run |
 
-## 11. Test tools (phase 5)
-
-| # | Claim | Status | Evidence |
-|---|---|---|---|
-| T1 | pytest: a plugin can report `@pytest.mark.scenario` markers with `--collect-only`, and per-test outcomes in a run; with pytest-xdist the markers travel in `report.user_properties` and only the controller (no `workerinput`) writes the file — output identical with and without `-n 2` | VERIFIED | pytest 9.1.1 + pytest-xdist; `fixtures/results/pytest-*.json`; `tests/verify.test.mjs` (real pytest when `SDD_KIT_PYTHON` is set) |
-| T2 | pytest `--strict-markers` accepts the marker once the plugin registers it in `pytest_configure`; without the plugin the project must register it (preset note) | VERIFIED | fixture `pytest.ini` uses `--strict-markers` |
-| T3 | Playwright `--list --reporter=json` includes test `annotations` (with `location.file` absolute); a run adds `status`: `expected` / `unexpected` / `skipped` / `flaky` and `results[]`; `config.rootDir` = testDir; top-level suites are files, nested suites are `describe` blocks | VERIFIED | @playwright/test 1.63.0; `fixtures/results/playwright-*.json` |
-| T4 | A Playwright test that does not use `page` runs without browsers installed | VERIFIED | same run (no `npx playwright install`) |
-| T5 | `PLAYWRIGHT_JSON_OUTPUT_NAME=<file>` writes the JSON report to a file; with `--reporter=json,html` the HTML report still goes to `playwright-report/` and stdout is free text; works with `--list` too | VERIFIED | Playwright 1.63.0 |
-
-## 12. Kit gates end-to-end (phase 5, real Claude Code)
-
-| # | Result | Evidence |
-|---|---|---|
-| G1 | Checking the last task armed the gate; each stop ran verification (fake suite with one failing test) and was blocked with the failure; after 3 blocks the stop was allowed and the human was told (no loop) | `fixtures/dry-runs/phase5-gates/OUTPUT-stop-gate.txt`; the fake runner logged 5 runs |
-| G2 | The agent itself refused to archive a red change without the human's go-ahead | same output |
-| G3 | `openspec archive add-sales-export --yes` was blocked by archive-gate; the change stayed in place | second run |
-| G4 | Found and fixed: after a handover the gate re-ran in later sessions (3 more full runs); now it stays quiet until files change. `session-start` printed a "questions block" line unconditionally (the agent repeated it wrongly); now only when questions are open | regression tests in `tests/verify.test.mjs` |
-
-## 13. API and handoff (phase 6)
-
-| # | Claim | Status | Evidence |
-|---|---|---|---|
-| A1 | `manage.py spectacular --format openapi-json --file <out>` exports OpenAPI 3 JSON without a database; `@action` routes appear as separate paths; serializers become `components.schemas` referenced via `$ref`; read-only fields carry `readOnly: true`; pagination wraps lists in `Paginated…` schemas | VERIFIED | drf-spectacular 0.30.0, Django 6.1, DRF 3.18; `fixtures/openapi/drf-*.json` |
-| A2 | The kit's operation diff on that pair: 1 added + 5 modified operations, 5 breaking (removed response field `note`, new required request field `currency` on POST/PUT; PATCH stays optional) | VERIFIED | `tests/handoff.test.mjs` |
-| A3 | Content fingerprint via `git write-tree` on a temporary index (copied from the real one) is stable across commits and changes only with content | VERIFIED | regression test "committing after verification does not make it stale" |
-| A4 | Real Claude Code on a frontend change imported with `handoff.mjs`: 13 questions, all about UI/UX; two API gaps raised as `For: Dev` questions (handoff JSON vs spec "Excel file"; missing 400 for an invalid period); questions in Russian per config | VERIFIED | `fixtures/dry-runs/phase6-frontend-import/` |
-
-## 14. CI (phase 7)
-
-| # | Claim | Status | Evidence |
-|---|---|---|---|
-| CI1 | Generated workflows (every preset combination) and the kit's own `test.yml` pass `actionlint` (rhysd/actionlint compiled to wasm, npm `actionlint` 2.0.6) and `@action-validator/cli` schema validation; a planted `${{ github.reff }}` is caught | VERIFIED | manual run in a scratch dir (not a kit dependency) |
-| CI2 | The workflows have **not** run on GitHub yet | NOT VERIFIED | first real run: the pilot's first PR after installing with `--ci` |
-
-## 15. Subagents, commands, reviews (phase 8, Claude Code 2.1.288)
+## 11. Subagents, commands, reviews (phase 8, Claude Code 2.1.288)
 
 | # | Claim | Status | Evidence |
 |---|---|---|---|
@@ -177,44 +143,3 @@ Method: a scratch project with hooks that log their stdin, driven by `claude -p`
 | R3 | `permissions.allow` in project `.claude/settings.json` is **ignored in an untrusted workspace** ("this workspace has not been trusted"); `--allowedTools` given to `claude -p` did not let the subagent run a Bash command either | VERIFIED | phase 8 runs. The kit adds allow entries for its read-only scripts (effective in trusted projects) and the reviewer protocol falls back to manual collection |
 | R4 | test-reviewer on planted weak tests: 3 blockers on exactly the planted defects (status-only, `is not None`, e2e not checking the download) + real extra findings (missing school_admin coverage, unasserted "no sale is stored", invalid exclusion, hand-written matrix) | VERIFIED | `fixtures/dry-runs/phase8-reviews/OUTPUT-test-reviewer.txt` |
 | R5 | spec-reviewer on planted spec gaps: blockers for the vague THEN and the missing permission scenarios, plus the client's "see totals" requirement lost from the specs | VERIFIED | `fixtures/dry-runs/phase8-reviews/spec-review.md` |
-
-## 16. Monorepo adapter (phase 9)
-
-| # | Claim | Status | Evidence |
-|---|---|---|---|
-| M1 | Sample monorepo (`fixtures/projects/monorepo-sample`): kit installed with `--adapter monorepo --preset django,playwright --ci`; `verify.mjs` ran real pytest (via uv, in `backend/`) and real Playwright Chromium (in `e2e/`, against Django + the frontend started by `webServer`) → 4/4 Met with root-relative test paths | VERIFIED | `tests/monorepo.test.mjs` (opt-in `SDD_KIT_E2E=1`) |
-| M2 | Full chain in a fresh clone (no local kit state): kit update → verify → `ci.mjs verify` (+ API baseline) → archive gate → `openspec archive` through the wrapper → `ci.mjs checks --base main` on the archived change: green; `validate --strict` clean | VERIFIED | same test |
-| M3 | `docker compose config --quiet` validates the compose file without access to the Docker daemon | VERIFIED | docker 26.1 / compose 2.26 |
-| M4 | Building and running the compose stack, and the generated workflow on GitHub | NOT VERIFIED | no Docker daemon access here; first run in CI |
-| M5 | A Playwright Chromium can run without root when its missing system libraries are unpacked from `apt-get download` debs and passed via `LD_LIBRARY_PATH` | VERIFIED | environment workaround for this machine only; CI uses `playwright install --with-deps` |
-
-## 17. Stores and references (phase 10, OpenSpec 1.13.0)
-
-Experiments in an isolated XDG_CONFIG_HOME / XDG_DATA_HOME. Answers to the "Unknown" items of CLAUDE.md:
-
-| # | Question | Answer | Evidence |
-|---|---|---|---|
-| ST1 | Where is the store registry? | `$XDG_DATA_HOME/openspec/stores/registry.yaml` (`stores.<id>.backend.local_path`), per machine; the store carries `.openspec-store/store.yaml` (`version`, `id`) | `store setup` / `store register --json` |
-| ST2 | Where does a custom schema resolve for a change in a store (code repo with `store: <id>`)? | **Only in the store** (`<store>/openspec/schemas`). A schema in the code repo is not found ("Schema 'clarify' not found") | `new change --schema clarify` from the code repo |
-| ST3 | Where are `context` / `rules` read from in store-only mode? | **From the store's config.yaml**; the code repo's context and rules are ignored | instruction markers |
-| ST4 | Where do changes live, what may the agent edit? | In the store; `status.actionContext.allowedEditRoots` = the store only — store-only mode is meant for planning, not for code living in the code repo | `status --json` |
-| ST5 | `references: [<id>]` in a repo with its own openspec/ root | Read-only link: `openspec context --json` lists the store as `referenced_store` with a fetch hint; every `instructions --json` carries `references: [{store_id, root, specs:[{id, summary}], fetch}]`; `show/list --store <id>` read its specs and changes | frontend experiment |
-| ST6 | Is a referenced store write-protected? | **No**: `new change --store <id>` would create a change in it (failed only on an unknown schema). The kit hook blocks `openspec new/archive … --store <referenced id>` | experiment + `tests/split.test.mjs` |
-| ST7 | Does OpenSpec sync or check freshness of stores? | No: `store doctor` reports structure only, never fetch state | `store doctor --json` |
-| ST8 | How do hooks in a code repo find store files? | Registry file (`XDG_DATA_HOME`), falling back to `openspec store list --json` | `lib/stores.mjs` |
-| ST9 | CI checkout of the store repo | Not needed for the chosen design: the frontend change copies the backend handoff and specs into `sources/` at import time, so frontend CI checks run without the backend; E2E exists only in monorepos (D23) | design |
-
-## 18. Onboarding time (phase 11)
-
-| # | Measurement (clean npm cache/prefix, isolated XDG dirs, this machine's network) | Result |
-|---|---|---|
-| O1 | New developer: `npm i -g @fission-ai/openspec@1.13.0` + clone of a repo with the kit + `doctor.mjs` → "Ready" | 3.9 s + <0.1 s (local remote) + 0.6 s |
-| O2 | Team lead: `npx --package=<kit tarball> sdd-kit install --preset django --ci` into a new repo (incl. `openspec init`) | 2.6 s |
-| O3 | Not measured: installing Node / Claude Code, the workspace trust dialog, a real network clone | human steps; minutes, not tens of minutes |
-
-## 8. Not covered in phase 0 (planned later)
-
-- Stores: where a custom schema and `context/rules` resolve for a change living in a store; CI checkout → phase 10 (split adapter). Note: store registration sits under `XDG_DATA_HOME` (`getGlobalDataDir`), **not** `XDG_CONFIG_HOME`, so the XDG trick does not hide stores.
-- `references:` read-only behaviour → phase 10.
-- `instructions apply` → `state: all_done` → phase 5.
-- Claude Code hook semantics (events, stdin JSON, exit code 2, `decision` output, stop-hook re-entry flag) → phase 3, before writing any hook.
