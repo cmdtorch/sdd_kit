@@ -5,6 +5,11 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
+## Unreleased
+
+- `docs/how-it-works.md`: what the kit adds to OpenSpec, part by part, with the file behind each part. A test
+  keeps it complete.
+
 ## 0.3.0 — 2026-10-25
 
 **Breaking:** the archive gate blocks more (a `- [~]` or `- []` task is now open), and the pinned OpenSpec CLI is

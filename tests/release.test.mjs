@@ -38,7 +38,7 @@ describe('versioning', () => {
 });
 
 describe('documentation matches the code', () => {
-  const docs = ['README.md', ...readdirSync(join(REPO, 'docs', 'guide')).map((f) => `docs/guide/${f}`)];
+  const docs = ['README.md', 'docs/how-it-works.md', ...readdirSync(join(REPO, 'docs', 'guide')).map((f) => `docs/guide/${f}`)];
   test('every tool and protocol the docs mention exists in the kit', () => {
     for (const d of docs) {
       for (const m of read(d).matchAll(/openspec\/(tooling\/(?:bin|checks|hooks)\/[\w-]+\.mjs|protocols\/[\w-]+\.md)/g)) {
@@ -51,6 +51,17 @@ describe('documentation matches the code', () => {
       for (const m of read(d).matchAll(/\]\((?!https?:|#|mailto:)([^)#\s]+)/g)) {
         assert.ok(existsSync(resolve(REPO, dirname(d), m[1])), `${d} links to missing ${m[1]}`);
       }
+    }
+  });
+  test('docs/how-it-works.md names every kit file (templates by their directory)', () => {
+    const doc = read('docs/how-it-works.md');
+    const walk = (dir) => readdirSync(join(REPO, dir), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(`${dir}/${e.name}`) : [`${dir}/${e.name}`]));
+    const installed = (f) => f.replace(/^kit\/openspec\//, 'openspec/').replace(/^kit\/claude\//, '.claude/');
+    const files = [...walk('kit'), ...walk('installer')].map((f) => (/\/templates\//.test(f) ? f.replace(/templates\/.*/, 'templates/') : f));
+    for (const f of new Set(files)) {
+      const name = /^kit\/[^/]+$/.test(f) ? f : installed(f);
+      const shown = name.replace(/schemas\/(clarify|lean)\/templates\//, 'schemas/<schema>/templates/');
+      assert.ok(doc.includes(name) || doc.includes(shown), `docs/how-it-works.md does not mention ${name}`);
     }
   });
   test('every installer option is documented', () => {

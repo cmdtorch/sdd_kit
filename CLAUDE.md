@@ -13,6 +13,9 @@ to be installed into startup projects (2–3 developers each).
 - Layout: `kit/` is what gets installed (`kit/openspec/` → project `openspec/`, `kit/claude/` → `.claude/`),
   `installer/` installs it, `tests/` + `fixtures/` test it (`npm test`). Decisions: `docs/decisions.md`.
   Contributor rules, upgrading OpenSpec and releasing: `CONTRIBUTING.md`.
+- What the kit adds to OpenSpec, part by part: `docs/how-it-works.md`. Read it first to understand the kit.
+  Every change to `kit/` or `installer/` updates it in the same change (`npm test` fails when a kit file
+  is not mentioned there).
 - The kit must stay stack- and layout-agnostic: no presets, no framework-specific code, no role labels.
 
 ## Commands

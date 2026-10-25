@@ -110,6 +110,7 @@ The installer keeps a hash manifest: updates never overwrite files you edited, a
 
 ## Documentation
 
+- [How it works: what the kit adds to OpenSpec](docs/how-it-works.md)
 - [Install, update, uninstall, onboarding](docs/guide/install.md)
 - [Daily workflow](docs/guide/workflow.md)
 - [Decisions](docs/decisions.md), [verified OpenSpec and Claude Code facts](docs/openspec-facts.md),

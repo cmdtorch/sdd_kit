@@ -12,6 +12,8 @@ bigger change, and open an issue first for anything that changes the workflow.
   verbatim at the start, kit rules are appended after it. `tests/schemas.test.mjs` checks this.
 - Each change to behaviour comes with a test, a `CHANGELOG.md` entry under `## Unreleased` and, for a design
   decision, a row in `docs/decisions.md` (append-only).
+- [docs/how-it-works.md](docs/how-it-works.md) describes every part of the kit. Update it with each change to
+  `kit/` or `installer/`; `npm test` fails when a kit file is not mentioned there.
 
 ## Setup
 
