@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { runHook, hookRoot, addContext } from '../lib/hook-io.mjs';
-import { listChanges, changeSchema, changeDir, isKitSchema, readChangeFile } from '../lib/project.mjs';
+import { listChanges, changeSchema, changeDir, isKitSchema, isClarifyFamily, readChangeFile } from '../lib/project.mjs';
 import { parseClarifications, roundStatus } from '../lib/clarifications.mjs';
 import { isMain } from '../lib/report.mjs';
 import { taskCounts } from '../lib/markdown.mjs';
@@ -16,6 +16,8 @@ import { taskCounts } from '../lib/markdown.mjs';
 export const ARTIFACT_ORDER = {
   clarify: ['clarifications', 'proposal', 'specs', 'design', 'verification-plan', 'tasks'],
   lean: ['proposal', 'specs', 'verification-plan', 'tasks'],
+  'clarify-ai-qa': ['clarifications', 'proposal', 'specs', 'test-cases', 'design', 'verification-plan', 'tasks'],
+  'clarify-qa': ['clarifications', 'proposal', 'specs', 'test-cases', 'design', 'verification-plan', 'tasks'],
 };
 
 function exists(dir, id) {
@@ -37,7 +39,7 @@ export function changeLine(root, name, schema) {
     const { done, open } = taskCounts(readChangeFile(root, name, 'tasks.md') || '');
     parts.push(open ? `apply: ${done}/${done + open} tasks done` : 'all tasks done — run the full test suite, then archive');
   }
-  if (schema === 'clarify') {
+  if (isClarifyFamily(schema)) {
     const content = readChangeFile(root, name, 'clarifications.md');
     if (content) {
       const parsed = parseClarifications(content);

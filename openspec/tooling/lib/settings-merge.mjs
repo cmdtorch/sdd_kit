@@ -3,10 +3,12 @@
 // other hooks (e.g. graphify), plugins, permissions and unknown keys stay exactly as they are.
 // Kit hooks are recognised by their command pointing into `openspec/tooling/hooks/`, so a re-run
 // replaces old kit entries instead of duplicating them, and `removeKitHooks` cleanly uninstalls.
-// Kit permissions (read-only kit scripts in `permissions.allow`) are recognised by `openspec/tooling/`.
+// Kit permissions (read-only kit scripts in `permissions.allow`) are recognised by `openspec/tooling/`; the
+// fingerprint commands of the UI inventory (`sha256sum` / `shasum -a 256` on files under `openspec/changes/`)
+// by their exact kit entries.
 
 const KIT_HOOK = /openspec\/tooling\/hooks\//;
-const KIT_PERMISSION = /openspec\/tooling\//;
+const KIT_PERMISSION = /openspec\/tooling\/|^Bash\((?:sha256sum|shasum -a 256) openspec\/changes\/\*\)$/;
 
 export function isKitHook(h) {
   return Boolean(h && h.type === 'command' && typeof h.command === 'string' && KIT_HOOK.test(h.command));

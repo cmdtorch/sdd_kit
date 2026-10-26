@@ -144,6 +144,11 @@ export function firstTable(lines, start, end) {
 // most one marker. Only `x`/`X` is done; `[ ]`, `[]`, `[~]`, `[-]` and any other marker are open.
 const TASK_LINE = /^\s*(?:[-*+]|\d{1,9}[.)])\s*\[(?:\s*([^\]\s]?)\s*\](?![([])|\s+\])/;
 
+/** True for a task checkbox line (done or open), as OpenSpec reads it. */
+export function isTaskLine(line) {
+  return TASK_LINE.test(line);
+}
+
 /** Done and open task checkboxes in a tasks file (fences included, like OpenSpec). */
 export function taskCounts(content) {
   let done = 0;

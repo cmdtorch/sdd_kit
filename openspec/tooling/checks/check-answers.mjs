@@ -11,7 +11,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseClarifications, roundStatus, answerLetters, describe, ROUND_FOR_ARTIFACT, KNOWN_ROUNDS } from '../lib/clarifications.mjs';
-import { changeDir, changeSchema, readChangeFile } from '../lib/project.mjs';
+import { changeDir, changeSchema, readChangeFile, isClarifyFamily, CLARIFY_FAMILY } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-answers';
@@ -38,7 +38,7 @@ export function checkAnswers({ root, change, artifact, round }) {
   const dir = changeDir(root, change);
   if (!existsSync(dir)) throw new UsageError(`change "${change}" not found at ${dir}`);
   const schema = changeSchema(root, change);
-  if (schema !== 'clarify') return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (question rounds exist only in "clarify")`);
+  if (!isClarifyFamily(schema)) return skippedReport(CHECK, `change "${change}" uses schema "${schema}" (question rounds exist only in ${CLARIFY_FAMILY.map((s) => `"${s}"`).join(', ')})`);
   if (artifact && !(artifact in ROUND_FOR_ARTIFACT)) {
     return skippedReport(CHECK, `artifact "${artifact}" does not depend on a question round`);
   }

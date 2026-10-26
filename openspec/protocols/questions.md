@@ -29,6 +29,7 @@ Depth: Comprehensive
 
 - [desc] Developer description: "<the developer's request, verbatim>"
 - [D1] <title of a requirement source> — `sources/<file>`
+- [U1] Screenshot: <screen, variant> — `sources/ui/<file>`
 
 ## Main round
 
@@ -76,6 +77,9 @@ Depth: Comprehensive
   - Text pasted into the conversation is saved by you as `sources/D<n>.md`.
   - For a `.docx` or another format you cannot read, ask the developer to export it to PDF or
     Markdown, or to paste the text.
+- `[U<n>]` is a UI screenshot in `sources/ui/` (PNG, JPG or WebP). Screenshots switch the change into UI
+  mode: follow `openspec/protocols/ui-inventory.md` — register each one, write `ui-inventory.md` **before**
+  the Main round questions, and ask about the gaps between the screens and the requirements.
 - The register is the complete list of permitted sources. Your background knowledge and common
   practice are not sources.
 
@@ -135,6 +139,11 @@ Why this is asked: the requirement says "users can export" but the report contai
 | Design | `design.md` | architectural forks only: choices that would change the specs, the approach or the task breakdown (data model options, sync vs async, migration strategy, new dependencies). Deferrable details stay out |
 | Verification | `verification-plan.md` | which scenarios are critical; which need an integration test rather than a unit test; test data the scenarios need; environments; checks that can only be done manually |
 | Apply | — (during implementation) | only real gaps found while coding. Append `## Apply round` and follow the same flow |
+
+In UI mode the Main round also asks about every element on a screenshot that no source names, every
+requirement with no element or state on the screenshots, and every missing screen state (empty, error,
+loading); a screenshot added or replaced later gets its questions in the current round
+(`openspec/protocols/ui-inventory.md` §5, §7).
 
 ### How many questions
 

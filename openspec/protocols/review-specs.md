@@ -12,6 +12,8 @@ confirm — but a finding backed only by taste is a suggestion (`minor`), never 
 - `openspec/changes/<change>/proposal.md` — scope reference
 - `openspec/changes/<change>/specs/**/spec.md` — what you review
 - existing main specs of the touched capabilities (`openspec show "<capability>" --type spec`)
+- UI mode only (the change has screenshots in `sources/ui/`): `openspec/changes/<change>/ui-inventory.md` and
+  the screenshots it lists (`openspec/protocols/ui-inventory.md`)
 
 Do not read design, tasks or code: the specs must stand on their own.
 
@@ -26,7 +28,16 @@ Do not read design, tasks or code: the specs must stand on their own.
    "etc.", "as usual", "relevant", "some".
 4. **Errors and edges.** For each requirement: who must *not* be able to do it, invalid input, empty or
    boundary data, conflicts (concurrency, duplicates), and what the user sees in each case.
-5. **Format.** Scenario names are unique within the capability and say what the case is (they become test
+5. **UI (UI mode only).**
+   - Every `in scope` or `mock` element is really covered by the scenarios its `Scenarios` cell names: the
+     scenario exercises that element, not just the same screen.
+   - A `mock` element's scenario states what the user sees (a message, a disabled state) and what does not
+     happen. A THEN like "nothing happens" alone is a `major` finding that names the scenario and says what
+     the user sees is missing.
+   - The inventory lists the interactive elements and screen states of the screenshots, and only them: an
+     element or state on a screenshot that is missing, or static text, data columns or decoration listed as an
+     element, is a finding.
+6. **Format.** Scenario names are unique within the capability and say what the case is (they become test
    keys). `MODIFIED` requirements contain the full requirement. A new capability has a real `## Purpose`.
 
 ## Output

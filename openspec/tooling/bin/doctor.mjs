@@ -49,7 +49,7 @@ export function doctor(root) {
 
   const settings = join(root, '.claude', 'settings.json');
   const st = existsSync(settings) ? readFileSync(settings, 'utf8') : '';
-  const hooks = ['session-start', 'answers-gate', 'archive-gate', 'artifact-feedback'].filter((h) => !st.includes(`openspec/tooling/hooks/${h}.mjs`));
+  const hooks = ['session-start', 'answers-gate', 'archive-gate', 'artifact-feedback', 'schema-starter', 'test-cases-run-limit'].filter((h) => !st.includes(`openspec/tooling/hooks/${h}.mjs`));
   if (hooks.length) add('error', 'hooks', `kit hooks missing in .claude/settings.json: ${hooks.join(', ')}`, `npx github:cmdtorch/sdd_kit#v${kit.kitVersion} update`);
   else add('ok', 'hooks', 'kit hooks registered in .claude/settings.json');
 
