@@ -7,6 +7,15 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+- UI screenshots as requirement sources, on all four schemas: PNG, JPG or WebP files in a change's `sources/ui/`
+  switch it into UI mode (`openspec/protocols/ui-inventory.md`). The agent writes `ui-inventory.md` (screens,
+  interactive elements, states, SHA-256 fingerprints) before the Main round questions and asks about the gaps
+  between the screens and the requirements; every element gets a decision (`in scope`, `mock`, `out of scope`,
+  `decoration`, `existing`) and every built element a scenario. New check `check-ui`, run by the answers gate
+  and the archive gate; `[U<n>]` source tags; `e2e` labels on UI test cases; a `## Screens` table in the design
+  and screenshot links in UI tasks. Changes without screenshots are not affected. The artifact feedback hook
+  shows `check-ui` errors right after `ui-inventory.md` or `tasks.md` is written; hidden files such as
+  `.DS_Store` in `sources/ui/` are ignored; `sha256sum` and `shasum -a 256` are allowed without a prompt.
 - Test-cases stage, after an automated pilot: a repeated AI QA review re-checks its previous findings and looks
   for new ones only in what changed, so the loop converges; cases changed after the last review run are listed
   under "Stage result" as not reviewed by the AI; the answers gate says when a follow-up question reopened the

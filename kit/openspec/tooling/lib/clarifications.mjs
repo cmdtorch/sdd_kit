@@ -54,14 +54,16 @@ function readAnswer(lines, i) {
 
 /**
  * Parses clarifications.md.
- * Returns { depth, sources:{desc, docs:Set}, rounds:[...], questions: Map(n -> question), problems:[{line, message}] }.
+ * Returns { depth, sources:{desc, docs:Set, ui:Map(tag -> {file, line})}, rounds:[...], questions: Map(n -> question),
+ * problems:[{line, message}] }. `sources.ui` holds the screenshot registrations `- [U<n>] ... sources/ui/<file>`
+ * (file: the first image file name on the line, or null).
  * Lines are 1-based. HTML comments and fenced code are ignored.
  */
 export function parseClarifications(content) {
   const raw = toLines(content);
   const fences = fenceMask(raw);
   const lines = stripComments(raw, fences).map((l, i) => (fences[i] ? '' : l));
-  const result = { depth: null, sources: { desc: false, docs: new Set() }, rounds: [], questions: new Map(), problems: [] };
+  const result = { depth: null, sources: { desc: false, docs: new Set(), ui: new Map() }, rounds: [], questions: new Map(), problems: [] };
 
   let section = null; // 'sources' | round object | null
   let item = null; // current question / summary / changes entry
@@ -98,6 +100,13 @@ export function parseClarifications(content) {
       if (/^\s*[-*]\s+\[desc\]/.test(line)) result.sources.desc = true;
       const d = line.match(/^\s*[-*]\s+\[(D\d+)\]/);
       if (d) result.sources.docs.add(d[1]);
+      const u = line.match(/^\s*[-*]\s+\[U(\d+)\]/);
+      if (u) {
+        const file = line.match(/([^\s`/\\()\[\]]+\.(?:png|jpe?g|webp))(?![\w.])/i);
+        const tag = `U${Number(u[1])}`;
+        if (result.sources.ui.has(tag)) result.problems.push({ line: ln, message: `[${tag}] is registered twice under "## Sources"` });
+        else result.sources.ui.set(tag, { file: file ? file[1] : null, line: ln });
+      }
       continue;
     }
     if (!section) continue;

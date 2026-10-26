@@ -91,6 +91,7 @@ export function isKitSchema(schema) {
 const ARTIFACT_FILES = {
   'clarifications.md': 'clarifications',
   'proposal.md': 'proposal',
+  'test-cases.md': 'test-cases',
   'design.md': 'design',
   'verification-plan.md': 'verification-plan',
   'tasks.md': 'tasks',

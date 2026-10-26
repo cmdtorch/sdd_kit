@@ -2,12 +2,14 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // check-grounding — every substantive block of proposal.md / design.md carries a source tag
 // (openspec/protocols/grounding.md): [Q<n>] (answered + confirmed), [D<n>] (registered), [desc],
+// [U<n>] (a screenshot registered under "## Sources" whose file is in sources/ui/),
 // or [assumption] (only inside "## Assumptions & Open Questions").
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { toLines, fenceMask, stripComments } from '../lib/markdown.mjs';
 import { parseClarifications, roundStatus, isBlankAnswer } from '../lib/clarifications.mjs';
 import { changeDir, changeSchema, readChangeFile, isClarifyFamily, CLARIFY_FAMILY } from '../lib/project.mjs';
+import { UI_DIR } from '../lib/ui-inventory.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-grounding';
@@ -16,7 +18,7 @@ const USAGE = `Usage: check-grounding --change <name> [--file proposal.md|design
 Checks source tags in proposal.md and design.md of a clarify-family change (clarify, clarify-ai-qa, clarify-qa).`;
 
 export const FILES = ['proposal.md', 'design.md'];
-const TAG = /\[(Q\d+|D\d+|desc|assumption)\]/g;
+const TAG = /\[(Q\d+|D\d+|U\d+|desc|assumption)\]/g;
 const ASSUMPTIONS_HEADING = /^##\s+Assumptions\s*&\s*Open Questions\s*$/i;
 const EXEMPT = [/^none\.?$/i, /^n\/a\.?$/i, /^\*\*[^*]+:\*\*$/, /^\*\*[^*]+\*\*:$/];
 
@@ -96,6 +98,12 @@ export function checkGrounding({ root, change, file }) {
     }
     if (tag === 'assumption') return;
     if (!parsed) return;
+    if (tag.startsWith('U')) {
+      const reg = parsed.sources.ui.get(`U${Number(tag.slice(1))}`);
+      if (!reg) f.error(path, line, `[${tag}] is not registered under "## Sources" in clarifications.md`, `register the screenshot as "- [${tag}] Screenshot — \`${UI_DIR}/<file>\`"`);
+      else if (!reg.file || !existsSync(join(dir, UI_DIR, reg.file))) f.error(path, line, `[${tag}] is registered for ${reg.file ? `\`${reg.file}\`` : 'no file'}, which is missing from ${UI_DIR}/`);
+      return;
+    }
     if (tag.startsWith('D')) {
       if (!parsed.sources.docs.has(tag)) f.error(path, line, `[${tag}] is not registered under "## Sources" in clarifications.md`);
       return;
@@ -131,7 +139,7 @@ export function checkGrounding({ root, change, file }) {
       if (EXEMPT.some((r) => r.test(plain))) continue;
       if (!tags.length) {
         const preview = plain.length > 70 ? plain.slice(0, 67) + '...' : plain;
-        f.error(path, b.line, `untagged statement: "${preview}"`, 'end it with [Q<n>], [D<n>] or [desc]; if no source supports it, move it to Assumptions or ask a follow-up');
+        f.error(path, b.line, `untagged statement: "${preview}"`, 'end it with [Q<n>], [D<n>], [U<n>] or [desc]; if no source supports it, move it to Assumptions or ask a follow-up');
       }
     }
     if (hasAssumptions && assumptionBlocks === 0) {

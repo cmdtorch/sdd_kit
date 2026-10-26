@@ -74,7 +74,10 @@
       "Bash(node openspec/tooling/checks/check-specs.mjs *)",
       "Bash(node openspec/tooling/checks/check-test-cases.mjs *)",
       "Bash(node openspec/tooling/checks/check-traceability.mjs *)",
-      "Bash(node openspec/tooling/checks/lint-kit.mjs *)"
+      "Bash(node openspec/tooling/checks/check-ui.mjs *)",
+      "Bash(node openspec/tooling/checks/lint-kit.mjs *)",
+      "Bash(sha256sum openspec/changes/*)",
+      "Bash(shasum -a 256 openspec/changes/*)"
     ]
   }
 }

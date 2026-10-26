@@ -14,6 +14,8 @@ context: |
   - Tests and verification: openspec/protocols/testing.md (use the project's own test commands)
   - Test cases (`clarify-ai-qa`, `clarify-qa`): openspec/protocols/test-cases.md
   - Requirement sources go to openspec/changes/<change>/sources/ as .md, .pdf or .txt.
+  - UI screenshots (PNG, JPG, WebP) go to openspec/changes/<change>/sources/ui/ and switch on UI mode:
+    openspec/protocols/ui-inventory.md
   New features use `clarify`, or `clarify-ai-qa` / `clarify-qa` for Gherkin test cases reviewed by the
   AI QA reviewer / by it and a human QA; small, clear changes use `lean`. Always name the schema.
   Changes on other schemas (e.g. spec-driven) keep their own workflow.

@@ -310,6 +310,25 @@ describe('install with the real OpenSpec CLI', { skip: cliSkipReason() }, () => 
   });
 });
 
+describe('UI sources after install', () => {
+  test('the UI protocol, check and parser are installed, tracked and removed again; the check is allowed', async () => {
+    const UI_FILES = ['openspec/protocols/ui-inventory.md', 'openspec/tooling/checks/check-ui.mjs', 'openspec/tooling/lib/ui-inventory.mjs'];
+    const root = pilot();
+    await install(opts(root));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of UI_FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    assert.ok(settings.permissions.allow.includes('Bash(node openspec/tooling/checks/check-ui.mjs *)'));
+    for (const p of ['Bash(sha256sum openspec/changes/*)', 'Bash(shasum -a 256 openspec/changes/*)']) assert.ok(settings.permissions.allow.includes(p), `${p} lets the AI compute fingerprints without a prompt`);
+    assert.match(read(root, 'openspec/config.yaml'), /sources\/ui\/[\s\S]*openspec\/protocols\/ui-inventory\.md/);
+    uninstall({ target: root });
+    for (const f of UI_FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+  });
+});
+
 describe('test-case schemas after install', { skip: cliSkipReason() }, () => {
   const QA_FILES = [
     '.claude/agents/test-cases-reviewer.md',

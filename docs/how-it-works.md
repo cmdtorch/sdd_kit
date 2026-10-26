@@ -17,6 +17,7 @@ Paths are given as they appear in a project after installation. In this reposito
 | rules are text the agent may or may not follow | Claude Code hooks that block an artifact or an archive until its rules hold |
 | `propose` writes every artifact in one pass | a workflow profile without `propose`, so no question round is skipped |
 | no link between spec scenarios and tests | scenario markers in tests, a verification level per scenario, a test reviewer; `@case` references from tests to test cases |
+| requirement sources are text | UI screenshots as sources: a UI inventory of every element and state, a decision for each, a scenario for each built one |
 | `openspec archive --yes` archives with open tasks | an archive gate: tasks, checks, marked tests and a test review |
 | `openspec init` / `update` | an installer that merges into existing settings, keeps local edits and uninstalls cleanly |
 
@@ -74,6 +75,13 @@ clarifications → proposal → specs → test-cases → design → verification
 - `clarify`, `clarify-ai-qa` and `clarify-qa` form the *clarify family*: every hook and check that applies to
   `clarify` applies to all three (`openspec/tooling/lib/project.mjs`).
 
+**UI mode, on all four schemas.** A change whose `sources/ui/` holds a screenshot (PNG, JPG, WebP) is in UI mode
+(`openspec/protocols/ui-inventory.md`); without one nothing changes. Each schema's instructions then add: the
+UI inventory `ui-inventory.md` before the Main round questions (on `lean`: before the proposal, with the
+decisions recorded by the agent and listed in the proposal); questions about the gaps between the screens and the
+requirements; a scenario for every `in scope` or `mock` element; a `## Screens` table in the design; screen
+names and screenshot links in UI tasks; opening the screenshots before building a screen.
+
 The templates are in `openspec/schemas/<schema>/templates/` (`openspec/schemas/clarify-ai-qa/templates/` and
 `openspec/schemas/clarify-qa/templates/` also hold `test-cases.md`).
 
@@ -84,10 +92,11 @@ Rules the agent reads while it works, in `openspec/protocols/`:
 | File | Defines |
 |---|---|
 | `openspec/protocols/questions.md` | the question format (options, `Why this is asked`, `Not yet defined`); the rounds Main, Specs, Design, Verification and Apply; answer modes; mandatory analysis of the answers for vagueness and contradictions; the summary confirmed with exactly `Looks correct` |
-| `openspec/protocols/grounding.md` | source tags `[Q<n>]`, `[D<n>]`, `[desc]`, `[assumption]` and the register of source documents |
+| `openspec/protocols/grounding.md` | source tags `[Q<n>]`, `[D<n>]`, `[U<n>]` (screenshots), `[desc]`, `[assumption]` and the register of source documents |
 | `openspec/protocols/testing.md` | verification levels `unit`, `integration`, `manual`; the verification plan format, incl. *Test case coverage*; scenario markers and `@case` references; what a good test asserts; the end of apply, incl. the lists of `manual` and `e2e` test cases |
 | `openspec/protocols/test-cases.md` | the test-case document: format, labels, unique case names; the AI review loop; when the stage may change a spec; QA remarks and their statuses `open` / `closed` / `reopened`; "Stage result" (accepted findings, `Handed over to QA`, the `Looks correct` confirmation); late scenarios; switching between the two test-case schemas |
-| `openspec/protocols/review-specs.md` | what the spec reviewer checks and how it reports |
+| `openspec/protocols/ui-inventory.md` | UI mode: screenshots in `sources/ui/` and their `[U<n>]` tags; the `ui-inventory.md` format (screenshots with SHA-256 fingerprints, screens, variants, elements); the five decisions `in scope`, `mock`, `out of scope`, `decoration`, `existing` and their sources; the Main round UI questions; late, replaced and deleted screenshots; scenario links and mock scenarios; the `## Screens` design table; screenshot links in tasks; the `lean` variant |
+| `openspec/protocols/review-specs.md` | what the spec reviewer checks and how it reports; in UI mode also the inventory and mock scenarios |
 | `openspec/protocols/review-tests.md` | what the test reviewer checks and how it reports |
 | `openspec/protocols/review-test-cases.md` | what the AI QA reviewer checks (positive, error and boundary cases; a closed checklist of unusual conditions; concrete data; observable outcomes), severities, the READY rule and accepted findings |
 
@@ -101,11 +110,11 @@ hooks:
 
 | Hook | Event | What it does |
 |---|---|---|
-| `openspec/tooling/hooks/answers-gate.mjs` | before Write, Edit, MultiEdit, Bash | **blocks** writing proposal, specs, design or the verification plan while its question round is unanswered or unconfirmed; on the test-case schemas also `design.md` until `check-test-cases --stage` passes; shell writes (redirects, `tee`, `sed -i`, …) are caught too |
-| `openspec/tooling/hooks/archive-gate.mjs` | before `openspec archive` | **blocks** the archive unless every task is done, every check passes, every automated scenario has a marked test and the test review is READY or has a human decision; on the test-case schemas also unless `test-cases.md` passes its check and every `automated` case has a test with its `@case` reference |
+| `openspec/tooling/hooks/answers-gate.mjs` | before Write, Edit, MultiEdit, Bash | **blocks** writing proposal, specs, design or the verification plan while its question round is unanswered or unconfirmed; on the test-case schemas also `design.md` until `check-test-cases --stage` passes. In UI mode, on all four schemas: runs `check-ui` at the stage of the artifact before the proposal, specs, test cases, design, verification plan and tasks, and blocks adding questions to `clarifications.md` until `ui-inventory.md` exists; shell writes (redirects, `tee`, `sed -i`, …) are caught too |
+| `openspec/tooling/hooks/archive-gate.mjs` | before `openspec archive` | **blocks** the archive unless every task is done, every check passes, every automated scenario has a marked test and the test review is READY or has a human decision; on the test-case schemas also unless `test-cases.md` passes its check and every `automated` case has a test with its `@case` reference; in UI mode, on all four schemas, also unless `check-ui` passes in archive mode |
 | `openspec/tooling/hooks/schema-starter.mjs` | before Bash | **blocks** `openspec new change` (also through the kit wrapper) without `--schema`, and tells the agent to ask the developer a three-choice menu: no test cases (`clarify`), AI QA reviewer only (`clarify-ai-qa`), AI QA reviewer then a human QA (`clarify-qa`). The project default schema does not count; commands run in a terminal are not affected |
 | `openspec/tooling/hooks/test-cases-run-limit.mjs` | before Agent / Task | counts runs of the `test-cases-reviewer` subagent per change in `reviews/test-cases-runs.json` and **blocks** a fourth run in a loop; a new loop starts for scenarios added after the stage is confirmed |
-| `openspec/tooling/hooks/artifact-feedback.mjs` | after Write, Edit, MultiEdit | runs the check that matches the written artifact and hands its errors back to the agent; when the last task is checked, reminds it of the end-of-apply steps |
+| `openspec/tooling/hooks/artifact-feedback.mjs` | after Write, Edit, MultiEdit | runs the check that matches the written artifact and hands its errors back to the agent (never blocks); in UI mode also `check-ui` after `ui-inventory.md` (base stage) and after `tasks.md` (its UI tasks without a screenshot link, found now instead of at the archive); when the last task is checked, reminds it of the end-of-apply steps |
 | `openspec/tooling/hooks/session-start.mjs` | session start | where each change stands, open questions, unconfirmed rounds, task progress; warns about a wrong OpenSpec version or drifted skills |
 
 ## 4. Checks
@@ -116,10 +125,11 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
 | Check | Verifies |
 |---|---|
 | `openspec/tooling/checks/check-answers.mjs` | every question is answered, every round whose artifact exists is confirmed, the file format is valid |
-| `openspec/tooling/checks/check-grounding.mjs` | every substantive block of proposal and design carries a source tag; `[Q<n>]` only from confirmed rounds; assumptions only in their section |
+| `openspec/tooling/checks/check-grounding.mjs` | every substantive block of proposal and design carries a source tag; `[Q<n>]` only from confirmed rounds; `[U<n>]` only when registered and its file exists; assumptions only in their section |
 | `openspec/tooling/checks/check-specs.mjs` | Purpose of a new capability ≥ 50 characters; ADDED requirement ≤ 500 characters; `#### Scenario:` format and unique names; a THEN in every scenario; no source tags in specs; no `###` headers OpenSpec skips |
 | `openspec/tooling/checks/check-traceability.mjs` | every scenario is in the verification plan (with a level, or excluded with a reason); every requirement is traced to its sources; with `--markers`, every `unit` or `integration` scenario has a test carrying its marker; on the test-case schemas also the *Test case coverage* table and, with `--markers`, an `@case` reference for every `automated` case (a reference to an archived case is silent, an unknown one is a warning) |
-| `openspec/tooling/checks/check-test-cases.mjs` | test-case schemas: every scenario has a test case and every case sits under a scenario of the delta specs; unique case names per capability; Given / When / Then; labels; remark statuses. With `--stage`: the stage is complete (latest AI review READY or its blocker / major findings accepted, `Looks correct`; on `clarify-qa` also `Handed over to QA` and no open remark) |
+| `openspec/tooling/checks/check-test-cases.mjs` | test-case schemas: every scenario has a test case and every case sits under a scenario of the delta specs; unique case names per capability; Given / When / Then; labels (in UI mode `e2e` on every case under a scenario of a built inventory element); remark statuses. With `--stage`: the stage is complete (latest AI review READY or its blocker / major findings accepted, `Looks correct`; on `clarify-qa` also `Handed over to QA` and no open remark) |
+| `openspec/tooling/checks/check-ui.mjs` | UI mode, all four schemas, in stages by the artifact being written: only PNG / JPG / WebP and `screens.md` in `sources/ui/` (also when the mode is off; hidden files such as `.DS_Store` are ignored); `ui-inventory.md` exists; every screenshot registered and listed with a matching SHA-256 fingerprint, no deleted one; variants; a known decision for every element, backed by its source (clarify family); `[U<n>] <element>` citations; on `lean` the proposal names every element. From the design (`lean`: the verification plan) on: every `in scope` / `mock` element names existing scenarios. Before the verification plan and tasks: a `## Screens` row in the design for every screen with a built element. Archive: tasks naming a screen link its screenshot |
 | `openspec/tooling/checks/lint-kit.mjs` | misspelled fields in `schema.yaml`, `config.yaml` and `.openspec.yaml`, which OpenSpec ignores silently; a `context` over 50 KB, which OpenSpec drops whole |
 
 ## 5. Tests linked to scenarios
@@ -167,7 +177,8 @@ The reviewers only report; the main agent fixes, and the developer decides what 
     keeping the user's comments.
   - `installer/lib/gitignore.mjs`: versions `openspec/` and the shared parts of `.claude/`.
   - `openspec/tooling/lib/settings-merge.mjs`: merges the kit hooks into `.claude/settings.json` and removes
-    them again, leaving other hooks, plugins and permissions untouched.
+    them again with the kit permissions (kit scripts and the UI fingerprint commands), leaving other hooks,
+    plugins and permissions untouched.
 - **`openspec/tooling/bin/doctor.mjs`**: checks Node, the OpenSpec version, Claude Code, git, edited kit files,
   hooks and skills, and prints the fix for each problem.
 
@@ -182,6 +193,7 @@ Shared libraries in `openspec/tooling/lib/`, used by the checks and hooks:
 | `openspec/tooling/lib/spec-parser.mjs` | parser for delta and main specs |
 | `openspec/tooling/lib/markers.mjs` | finds scenario markers and `@case` references in project files |
 | `openspec/tooling/lib/test-cases.mjs` | parser for `test-cases.md` and `reviews/test-cases-review.md` |
+| `openspec/tooling/lib/ui-inventory.mjs` | the `sources/ui/` folder (UI mode, accepted formats) and the parser for `ui-inventory.md` |
 | `openspec/tooling/lib/reviews.mjs` | review input and review status |
 | `openspec/tooling/lib/markdown.mjs` | fences, tables, task counting |
 | `openspec/tooling/lib/yaml.mjs` | minimal YAML reader (no dependencies) |
@@ -195,4 +207,6 @@ Shared libraries in `openspec/tooling/lib/`, used by the checks and hooks:
 - It does not run the project's tests; the agent does, with the project's commands.
 - No browser E2E and no backend → frontend contract step yet ([decisions](decisions.md) R3, R7). Test cases
   labelled `e2e` are only listed, waiting for that stage.
+- It does not compare the built screen with the screenshot, read mockups from Figma or handle design tokens:
+  screenshots exported by hand are the only UI input.
 - Claude Code only.

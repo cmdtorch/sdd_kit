@@ -5,7 +5,9 @@
 // Default: structure and coverage of test-cases.md (openspec/protocols/test-cases.md) — every delta-spec
 //   scenario has a test case, every test case sits under a scenario of the delta specs, case names are
 //   unique within a capability, every case has Given/When/Then steps and verification labels
-//   (automated, e2e, manual), every remark has the status open, closed or reopened.
+//   (automated, e2e, manual), every remark has the status open, closed or reopened. In UI mode
+//   (openspec/protocols/ui-inventory.md) every case under a scenario named by an `in scope` or `mock`
+//   element of ui-inventory.md carries the `e2e` label.
 // --stage: also the completion of the test-cases stage (gate before writing design.md):
 //   clarify-ai-qa — the latest AI QA review is READY, or every blocker and major finding of it is listed in
 //                   "Stage result" as accepted or fixed by hand; the stage confirmation is "Looks correct"
@@ -15,6 +17,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadChangeDeltas, changeScenarios } from '../lib/spec-parser.mjs';
 import { parseTestCases, parseCaseReview, openRemarks, isListed, TEST_CASES_FILE, CASE_REVIEW, LABELS, REMARK_STATUSES, HANDED_OVER } from '../lib/test-cases.mjs';
+import { scanUiFolder, isUiMode, parseInventory, allElements, INVENTORY_FILE, BUILT_DECISIONS } from '../lib/ui-inventory.mjs';
 import { changeDir, changeSchema, readChangeFile, hasTestCases, TEST_CASE_SCHEMAS } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
@@ -78,9 +81,11 @@ export function checkTestCases({ root, change, stage = false }) {
   }
 
   // --- cases: names, labels, steps ---------------------------------------------------------------
+  const uiElements = uiElementsByScenario(root, change, dir);
   for (const cap of doc.capabilities) {
     const seen = new Map();
     for (const sc of cap.scenarios) {
+      const elements = uiElements.get(`${cap.name} :: ${sc.name}`);
       for (const c of sc.cases) {
         if (seen.has(c.name)) f.error(file, c.line, `duplicate test case name "${c.name}" in ${cap.name} (first at line ${seen.get(c.name)})`, 'case names must be unique within a capability');
         else seen.set(c.name, c.line);
@@ -89,6 +94,9 @@ export function checkTestCases({ root, change, stage = false }) {
         } else {
           for (const l of c.labels.filter((x) => !LABELS.includes(x))) {
             f.error(file, c.labelsLine, `test case "${c.name}" (${cap.name}) has unknown label "${l}" (allowed: ${LABELS.join(', ')})`, 'the unit / integration level belongs to the verification plan, not the test case');
+          }
+          if (elements && !c.labels.includes('e2e')) {
+            f.error(file, c.labelsLine, `test case "${c.name}" (${cap.name}) is under the scenario "${sc.name}", which covers the UI element${elements.length > 1 ? 's' : ''} ${elements.map((e) => `"${e}"`).join(', ')}; the \`e2e\` label is required`, `write "Labels: ${[...c.labels.filter((l) => l !== 'e2e'), 'e2e'].join(', ')}"`);
           }
         }
         for (const kind of ['given', 'when', 'then']) {
@@ -145,6 +153,26 @@ export function checkTestCases({ root, change, stage = false }) {
     }
   }
   return makeReport(CHECK, f.list, { change, stage });
+}
+
+/**
+ * In UI mode: the scenarios named by `in scope` / `mock` elements of ui-inventory.md, as a Map
+ * "<capability> :: <scenario>" -> [element names]. Empty when the change has no screenshot or no inventory.
+ */
+function uiElementsByScenario(root, change, dir) {
+  const out = new Map();
+  if (!isUiMode(scanUiFolder(dir))) return out;
+  const content = readChangeFile(root, change, INVENTORY_FILE);
+  if (content === null) return out;
+  for (const { element } of allElements(parseInventory(content))) {
+    if (!BUILT_DECISIONS.includes(element.decision)) continue;
+    for (const ref of element.scenarios) {
+      const key = `${ref.capability} :: ${ref.scenario}`;
+      if (!out.has(key)) out.set(key, []);
+      if (!out.get(key).includes(element.name)) out.get(key).push(element.name);
+    }
+  }
+  return out;
 }
 
 if (isMain(import.meta.url)) {

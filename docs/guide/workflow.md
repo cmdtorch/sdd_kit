@@ -105,6 +105,30 @@ one. A test that proves a case carries a reference next to its scenario marker:
 // @case inventory/sales-export :: Export of a month with two sales
 ```
 
+### 2b. Screenshots of the UI (all schemas)
+
+For frontend work, export the mockups from your design tool as PNG (JPG and WebP work too) and put them in
+`openspec/changes/<change>/sources/ui/`, ideally before the Main round. One file per screen and variant, named in
+screen order: `01-orders-list.png`, `02-orders-list-mobile.png`. An optional `sources/ui/screens.md` may say
+what each one shows. Any other file there (SVG, PDF, a Figma file) blocks the next artifact until it is exported
+as PNG. The rules are in `openspec/protocols/ui-inventory.md`.
+
+- A screenshot switches the change into **UI mode**; without screenshots nothing changes.
+- Before its first questions the agent writes `ui-inventory.md`: every screen with its interactive elements
+  (buttons, links, fields, toggles, menus) and states (empty, error, loading). It then asks about every element
+  your description does not mention, every requirement with nothing on the screens, and every missing state.
+- Every element gets a decision: `in scope`, `mock` (a stub now), `out of scope`, `decoration` or `existing`.
+  Out of scope, decoration and mock come only from your answers. You review them all in the round summary.
+- Every `in scope` and `mock` element needs a spec scenario before the design; on the test-case schemas its test
+  cases are labelled `e2e`. The design maps each screen to its pages and components, and UI tasks link their
+  screenshots; the agent opens them before it builds a screen.
+- Adding, replacing or deleting a screenshot later is fine: the next artifact (or the archive) waits until the
+  agent has updated the inventory and asked about the new elements in the current round. Delete every screenshot
+  and UI mode is off again.
+- On `lean` the agent records the decisions itself and lists them in the proposal; no questions are asked.
+
+Screenshots stay in git with the change and are archived with it.
+
 ### 3. Apply
 
 ```
@@ -162,7 +186,7 @@ guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates a
 |---|---|
 | session start | where each change stands, open questions, OpenSpec version and skills drift |
 | `openspec new change` without `--schema` | the schema starter asks which schema to use |
-| writing an artifact | answers-gate blocks it while its question round is open; on the test-case schemas the design also waits for the test-cases stage |
+| writing an artifact | answers-gate blocks it while its question round is open; on the test-case schemas the design also waits for the test-cases stage; in UI mode it also waits for an up-to-date UI inventory (`check-ui`) |
 | running the AI QA reviewer | the run-limit hook blocks a fourth run in a loop |
 | after writing an artifact | the matching check runs, and its errors go back to the agent |
 | last task checked | a reminder of the end-of-apply steps |

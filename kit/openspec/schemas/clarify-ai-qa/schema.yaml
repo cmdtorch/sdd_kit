@@ -30,6 +30,13 @@ artifacts:
          summary confirmation yet.
       4. Offer the answer modes with AskUserQuestion and end your turn.
 
+      UI mode (screenshots in `sources/ui/`, PNG, JPG or WebP): register each as
+      `[U<n>]` under `## Sources`, open every screenshot and write
+      `ui-inventory.md` BEFORE step 3; then also ask in the Main round about
+      elements no source names, requirements with no element on the screens and
+      missing screen states. Every element needs a decision before the proposal.
+      Follow `openspec/protocols/ui-inventory.md`.
+
       In later turns, continue the protocol in this same file: collect answers,
       analyse them, add follow-ups, and finish with the Main round summary
       confirmation. Never create proposal.md until that summary answer is exactly
@@ -91,6 +98,11 @@ artifacts:
         entry there is tagged [assumption] and was listed in a confirmed summary.
       - Scope comes only from confirmed answers and sources: unselected options
         never become scope, non-goals or requirements.
+      - UI mode (screenshots in `sources/ui/`): every element of
+        `ui-inventory.md` has a decision backed by its source, and the inventory
+        matches the screenshots (`openspec/protocols/ui-inventory.md`). Cite a
+        screenshot as [U<n>] and an element on it as `[U<n>] <element-name>`; a
+        screenshot alone never puts an element in scope.
     requires:
       - clarifications
 
@@ -223,6 +235,11 @@ artifacts:
         (`openspec/protocols/review-specs.md`) and show its verdict and findings to
         the user. The user decides: fix the spec, ask a follow-up in the Specs
         round, or accept. Do not move on to design before the user has seen them.
+      - UI mode: every `in scope` or `mock` element of `ui-inventory.md` is
+        covered by a scenario. Right after the spec files, write the scenarios
+        into its Scenarios cell as `<capability-path> :: <Scenario name>`. A
+        `mock` scenario states what the user sees and what does not happen
+        (`openspec/protocols/ui-inventory.md` section 6).
     requires:
       - proposal
 
@@ -249,7 +266,8 @@ artifacts:
       2. Every case has a `Labels:` line with one or more of `automated`,
          `e2e`, `manual`, and the steps `**Given**`, `**When**` and `**Then**`
          with concrete data (amounts, dates, names, messages). Write the cases
-         in English.
+         in English. In UI mode every case under a scenario that an `in scope`
+         or `mock` element of `ui-inventory.md` names carries `e2e`.
       3. Run the `test-cases-reviewer` subagent
          (`openspec/protocols/review-test-cases.md`) and fix its findings. The
          loop runs at most three times; after the third run show the remaining
@@ -316,6 +334,11 @@ artifacts:
       - Ground every substantive block per `openspec/protocols/grounding.md`;
         each decision cites the answers or sources that settle it. End with
         `## Assumptions & Open Questions` (`None.` if empty).
+      - UI mode: add `## Screens` with the table `| Screen | Pages and components |`
+        and a row for every `ui-inventory.md` screen with an `in scope` or `mock`
+        element, ending with its screenshot tags, e.g.
+        `| export-modal | ExportDialog, OrdersPage [U3] |`
+        (`openspec/protocols/ui-inventory.md` section 8).
     requires:
       - proposal
       - test-cases
@@ -435,6 +458,10 @@ artifacts:
         checks for the developer, and run
         `node openspec/tooling/checks/check-traceability.mjs --change <name> --markers`
         (see `openspec/protocols/testing.md` section 6).
+      - UI mode: a task that builds or changes a screen names it in backticks (the
+        screen name from `ui-inventory.md`) and links a screenshot of that screen,
+        e.g. ``- [ ] 3.2 Build the `export-modal` dialog per sources/ui/04-export-modal.png ...``
+        (`openspec/protocols/ui-inventory.md` section 8).
     requires:
       - specs
       - design
@@ -464,3 +491,7 @@ apply:
       are listed for the developer.
     - Never weaken tests or quality targets to get green; after two failed fix
       attempts stop and ask the human.
+    - UI mode: before writing the code of a screen, open its screenshots and its
+      section of `ui-inventory.md`. A screenshot added or replaced now goes into
+      the inventory, with questions in the Apply round
+      (`openspec/protocols/ui-inventory.md` section 7).

@@ -54,3 +54,18 @@ tests and the later E2E stage. The stage stays optional while it is tried out.
 | R17 | **`@case <capability-path> :: <case name>`** references in tests, with the marker placement rules. The verification plan gets a *Test case coverage* table with a level for each `automated` case. A reference to an archived change's case is silent; an unknown one is a warning. |
 | R18 | **Test cases are not merged on archive**: `test-cases.md` stays in the archived change. Switching between the two test-case schemas is a manual edit of `schema:` in `.openspec.yaml`; no command. |
 | R19 | **E2E stage deferred.** `e2e` cases are only listed at the end of apply, waiting for it; executable Gherkin and test-case management tools are out of scope. |
+
+## 2026-10-26 — UI screenshots as requirement sources
+
+Why: the kit should drive frontend work too, but mockups never reached the question rounds; a button that is on
+the mockup and not in the written requirements was found only during implementation or by QA. Figma's own tools
+are paid, so screenshots exported by hand are the input. Change `add-ui-sources`.
+
+| # | Decision |
+|---|---|
+| R20 | **UI mode by presence.** A change is in UI mode while `sources/ui/` holds a PNG, JPG/JPEG or WebP (any case); no new schema or menu choice. Only those files and the notes file `screens.md` may sit there; anything else blocks. With every screenshot deleted the mode is off and the inventory ignored. All four kit schemas. |
+| R21 | **Screenshots are sources `[U<n>]`**, registered under `## Sources` (on `lean`: in the inventory), kept in git and archived with the change, never merged into the main specs. An element is cited as `[U<n>] <element-name>`. A screenshot alone never backs an `in scope` decision. |
+| R22 | **`ui-inventory.md` in Markdown** (`openspec/protocols/ui-inventory.md`): a screenshots table with SHA-256 fingerprints written by the AI (`sha256sum` / `shasum -a 256`; no kit command), one section per screen with its variants, and an element table (Element, Type, Variants, Decision, Source, Scenarios). Only interactive elements and screen states are listed. Written before the Main round questions; a hook blocks the questions without it. |
+| R23 | **Five decisions**: `in scope`, `mock`, `out of scope`, `decoration`, `existing`. On the clarify family `in scope` cites `[desc]`, `[D<n>]` or an answered `[Q<n>]`; `mock`, `out of scope` and `decoration` cite an answered question of a confirmed round; `existing` cites nothing. On `lean` the AI decides without questions or citations and lists every element in the proposal. |
+| R24 | **Gates in `check-ui`**, run by the answers gate before every planning artifact and by the archive gate: decisions before the proposal; a scenario for every `in scope` / `mock` element before the design (`lean`: the verification plan); a `## Screens` design row per built screen before the verification plan and tasks; screenshot links in tasks that name a screen at the archive. Late, replaced (fingerprint) and deleted screenshots block until the inventory is updated; questions about them go to the current round. |
+| R25 | **`e2e` label** on every test case under a scenario of a built element (test-case schemas). Comparing the built screen with the screenshot, Figma and design tokens are out of scope. |
