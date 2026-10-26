@@ -88,12 +88,18 @@ Accepted findings:
 1. Run the `test-cases-reviewer` subagent (`openspec/protocols/review-test-cases.md`), naming the change. It
    writes `reviews/test-cases-review.md` with the verdict READY or NOT-READY and findings of severity
    `blocker`, `major` or `minor`. It only reports.
-2. Fix the test cases for each blocker and major finding and run the reviewer again.
+2. Fix the test cases for each blocker and major finding and run the reviewer again. In its task, name the
+   cases and scenarios you added or changed since its previous run: a repeated run re-checks its previous
+   findings and looks for new ones only there, so the loop converges.
 3. **At most three reviewer runs per loop.** The kit's hook `test-cases-run-limit` counts the runs in
    `reviews/test-cases-runs.json` and blocks a fourth one. Stop earlier when a run is READY. After a third
    NOT-READY run, show the developer every remaining blocker and major finding and ask them to fix or accept
    each one.
 4. Record each finding the developer accepted or fixed by hand under "Stage result" (§6).
+5. **After the last run of a loop, the AI reviewer sees nothing more.** Change cases then only to settle what
+   the developer decided. List every case added or changed after the last run under "Stage result" as
+   `- Not reviewed by the AI QA reviewer: <case name> (<capability>)` and show that list to the developer
+   before the hand-over or the confirmation, so a human checks those cases with extra care.
 
 Minor findings never block; fix them when cheap.
 
@@ -123,7 +129,9 @@ Remove the cases of a removed scenario; rewrite the cases of a changed scenario 
 
 A follow-up question asked during the stage goes into the **Specs round** of `clarifications.md`, as any
 follow-up does (`openspec/protocols/questions.md`): next free number, `(follow-up to Q<n>)` when it follows up
-an answer, and the round's summary `[Answer]:` reset to blank. Do not run the reviewer again and do not
+an answer, and the round's summary `[Answer]:` reset to blank. Write it into the file right away and then
+tell the developer; do not ask for permission to ask it. Until the round is confirmed again the answers gate
+blocks writing the delta specs. Do not run the reviewer again and do not
 complete the stage until the Specs round is answered and confirmed with `Looks correct`. QA is asked no
 questions.
 

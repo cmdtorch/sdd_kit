@@ -65,6 +65,17 @@ hand, one list item each, naming its requirement or test case with a short reaso
 - When a finding from your previous report still holds, repeat its Finding text **word for word**, so an
   acceptance written for it keeps matching.
 
+## Repeated runs
+
+The first run of a loop (no previous report, or the caller says it is a new loop) is a full review. On a
+repeated run the loop must converge, so do not review everything again:
+
+1. Re-check every blocker and major finding of your previous report: still holds → repeat it word for word;
+   fixed → drop it.
+2. Look for new findings only in the cases and scenarios the caller names as added or changed since your
+   previous run, and in the requirements they belong to. Do not report new gaps in unchanged parts.
+3. When the caller names no changes, do step 1 only.
+
 ## Output
 
 Write `openspec/changes/<change>/reviews/test-cases-review.md` — the only file you write; it replaces the
@@ -94,9 +105,10 @@ Return a short summary to the caller: the verdict and the blocker and major find
 ## For the main agent (after the review)
 
 - Fix the test cases for each blocker and major finding and run the reviewer again — at most three runs per
-  review loop. The kit's hook `test-cases-run-limit` blocks a fourth run; after the third `NOT-READY` show the
-  remaining blocker and major findings to the developer and ask them to fix or accept each one. List each
-  accepted or hand-fixed finding under "Stage result" as described above.
+  review loop. On a repeated run, name in the reviewer's task the cases and scenarios you added or changed
+  since its previous run (see "Repeated runs"). The kit's hook `test-cases-run-limit` blocks a fourth run;
+  after the third `NOT-READY` show the remaining blocker and major findings to the developer and ask them to
+  fix or accept each one. List each accepted or hand-fixed finding under "Stage result" as described above.
 - A finding that needs a scenario the spec lacks is handled by the spec-change rule of
   `openspec/protocols/test-cases.md`: add it yourself only for an error case, empty state, boundary value or
   unusual condition that changes no existing outcome and contradicts no confirmed answer; otherwise ask the

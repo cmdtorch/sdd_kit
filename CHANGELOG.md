@@ -7,6 +7,11 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+- Test-cases stage, after an automated pilot: a repeated AI QA review re-checks its previous findings and looks
+  for new ones only in what changed, so the loop converges; cases changed after the last review run are listed
+  under "Stage result" as not reviewed by the AI; the answers gate says when a follow-up question reopened the
+  Specs round; follow-up questions are written without asking permission first.
+
 ## 0.4.0-beta.1 — 2026-10-25
 
 **Pre-release for a pilot.** The test-cases stage is experimental: it has passed the kit's test suite but not yet

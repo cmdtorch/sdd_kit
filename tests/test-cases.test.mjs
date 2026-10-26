@@ -77,6 +77,18 @@ describe('clarify rules hold in the test-case schemas', () => {
     assert.match(r.stderr, /"Main" round summary is not confirmed/);
   });
 
+  // @scenario test-cases/review :: Stage waits for the answer
+  test('clarify-qa: a spec write during the stage says the Specs round was reopened by a follow-up', () => {
+    const root = project('clarify-qa');
+    const write = () => hook('answers-gate.mjs', root, { tool_name: 'Edit', tool_input: { file_path: join(root, C, 'specs/inventory/sale-export/spec.md') } });
+    assert.equal(write().code, 0, 'confirmed Specs round must allow the write');
+    plant(root, `${C}/clarifications.md`, 'Request changes\n\n[Answer]: Looks correct\n\n## Design round', 'Request changes\n\n[Answer]:\n\n## Design round');
+    const r = write();
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /specs of change "add-sale-export" cannot be written yet — the Specs round/);
+    assert.match(r.stderr, /test-cases stage reopened the Specs round with a follow-up question/);
+  });
+
   // @scenario workflow/test-case-schemas :: Archive gate applies to scenarios
   test('clarify-qa: a unit scenario without a marked test blocks the archive and is named', () => {
     const root = project('clarify-qa');
