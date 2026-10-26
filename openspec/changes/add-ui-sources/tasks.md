@@ -31,7 +31,7 @@
 - [x] 5.1 Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and major findings
 - [x] 5.2 Run the full suite `npm test` and `node openspec/tooling/bin/doctor.mjs`; fix what fails and report the commands and results
 - [x] 5.3 Run `node openspec/tooling/checks/check-traceability.mjs --change add-ui-sources --markers` and `openspec validate add-ui-sources --strict`
-- [ ] 5.4 Write `manual-checks.md` with the manual rows of the verification plan ("Button not in the requirements gets a question", "Requirement without a UI element gets a question", "Missing screen state gets a question", "Mock scenario without a visible outcome is a review finding", "Screenshots are opened before the screen is built") and run them in the pilot on a real frontend task (a separate test project with the kit installed and real screenshots), checking that QA finds no forgotten button; record the outcome and fix usability findings in this change
+- [ ] 5.4 Write `manual-checks.md` with the manual rows of the verification plan ("Button not in the requirements gets a question", "Requirement without a UI element gets a question", "Missing screen state gets a question", "Mock scenario without a visible outcome is a review finding", "Screenshots are opened before the screen is built", "Yes without screenshots stops until continue", "Empty folder on continue is asked again", "Lean asks about mockups before the proposal") and run them in the pilot on a real frontend task (a separate test project with the kit installed and real screenshots), checking that QA finds no forgotten button; record the outcome and fix usability findings in this change
 
 ## 6. Review follow-ups
 
@@ -39,6 +39,13 @@
 - [x] 6.2 Run `check-ui` in `artifact-feedback.mjs` after writes of `ui-inventory.md` (stage base) and `tasks.md` (stage archive, findings in `tasks.md` only), never blocking (design D4); integration tests running the hook as a process for "Inventory errors are shown after the inventory is written" (ui-sources/screenshots) and "Missing screenshot link is shown after the tasks are written" (ui-sources/implementation)
 - [x] 6.3 Allow `sha256sum` and `shasum -a 256` on files under `openspec/changes/` in `kit/claude-settings.fragment.json`, recognise them as kit permissions in `settings-merge.mjs`, and assert them in the installer and settings-merge tests
 - [x] 6.4 Update `docs/how-it-works.md`, the CHANGELOG `Unreleased` entry and the protocol; run `npm test`, `check-traceability --markers` and `openspec validate add-ui-sources --strict`
+
+## 7. Mockups question (pilot feedback)
+
+- [x] 7.1 Write failing tests for "Screenshots in the folder need no mockups question", "Inventory left after deleting screenshots needs no mockups question", "Change past the proposal is not checked" (unit, `check-answers`) and "Proposal is blocked without the mockups question", "Answered mockups question lets the proposal through" (integration, `answers-gate` run as a process) (ui-sources/screenshots); verify they fail
+- [x] 7.2 Add the mockups-question error to `kit/openspec/tooling/checks/check-answers.mjs` for `--artifact proposal` (design D8: no `proposal.md`, no Main round question title with `(UI mockups)`, no accepted screenshot in `sources/ui/`, no `ui-inventory.md`); add the `(UI mockups)` question to the Main round of the fixtures and test data whose proposal write must pass; run the group 7 tests and the full suite and verify they pass
+- [x] 7.3 Add the mockups question to `kit/openspec/protocols/ui-inventory.md` and `questions.md` (first Main round question, the mark, "yes" → create `sources/ui/`, formats, stop until `/opsx:continue`, one more question on an empty folder, no question when screenshots exist, the lean variant) and to the `clarifications` instruction of the three clarify schemas and the proposal instruction of `lean`; run the test that the clarify-family instructions are identical
+- [x] 7.4 Update `docs/how-it-works.md`, `docs/guide/workflow.md`, `docs/decisions.md` and the CHANGELOG `Unreleased` entry; run `npm test`, `node openspec/tooling/checks/check-traceability.mjs --change add-ui-sources --markers` and `openspec validate add-ui-sources --strict`
 
 ## Workflow follow-up
 

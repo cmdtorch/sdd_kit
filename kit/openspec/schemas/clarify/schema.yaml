@@ -31,6 +31,15 @@ artifacts:
          blank. Do not write a summary confirmation yet.
       4. Offer the answer modes with AskUserQuestion and end your turn.
 
+      Mockups: when `sources/ui/` holds no screenshot, before step 3 write
+      `## Main round` with only the question "Are there UI mockups for this
+      change? (UI mockups)", ask it and end your turn. On "yes" create
+      `sources/ui/`, say what to export there (PNG, JPG or WebP; no `.fig`,
+      SVG or PDF; optional `screens.md`) and that `/opsx:continue` goes on, and
+      stop. Continued with the folder still empty: ask once more, wait or
+      continue without mockups. On "no" go on with step 3
+      (`openspec/protocols/ui-inventory.md` section 1).
+
       UI mode (screenshots in `sources/ui/`, PNG, JPG or WebP): register each as
       `[U<n>]` under `## Sources`, open every screenshot and write
       `ui-inventory.md` BEFORE step 3; then also ask in the Main round about

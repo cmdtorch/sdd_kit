@@ -8,6 +8,14 @@
 | ui-sources/screenshots | Screenshots switch the UI mode on | Notes file alone does not switch the mode on | integration | no | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
 | ui-sources/screenshots | Screenshots switch the UI mode on | Deleting every screenshot switches the mode off | integration | no | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
 | ui-sources/screenshots | Screenshots switch the UI mode on | One screenshot switches the mode on | integration | no | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
+| ui-sources/screenshots | The AI asks whether the change has mockups | Yes without screenshots stops until continue | manual | no | pilot: a change with no screenshots, answer "yes" |
+| ui-sources/screenshots | The AI asks whether the change has mockups | Empty folder on continue is asked again | manual | no | pilot: `/opsx:continue` with an empty `sources/ui/` |
+| ui-sources/screenshots | The AI asks whether the change has mockups | Lean asks about mockups before the proposal | manual | no | pilot: a `lean` change with no screenshots |
+| ui-sources/screenshots | The proposal waits for the mockups question | Proposal is blocked without the mockups question | integration | yes | temp project from a fixture, Main round without the `(UI mockups)` question, hook run as a process |
+| ui-sources/screenshots | The proposal waits for the mockups question | Answered mockups question lets the proposal through | integration | no | temp project from a fixture, Main round with an answered `(UI mockups)` question, hook run as a process |
+| ui-sources/screenshots | The proposal waits for the mockups question | Screenshots in the folder need no mockups question | unit | no | clarifications text and a generated 1×1 PNG in a temp change |
+| ui-sources/screenshots | The proposal waits for the mockups question | Inventory left after deleting screenshots needs no mockups question | unit | no | clarifications text and an inventory in a temp change, no screenshots |
+| ui-sources/screenshots | The proposal waits for the mockups question | Change past the proposal is not checked | unit | no | clarifications text and a `proposal.md` in a temp change |
 | ui-sources/screenshots | UI check errors block the next artifact and the archive | Out of scope without an answer blocks the proposal | integration | yes | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
 | ui-sources/screenshots | UI check errors block the next artifact and the archive | Inventory and questions are written while elements have no decision | integration | no | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
 | ui-sources/screenshots | UI check errors block the next artifact and the archive | Questions about a late screenshot are not blocked | integration | no | temp project from a fixture, generated 1×1 PNGs in sources/ui/, hook run as a process |
@@ -77,7 +85,9 @@
 
 | Capability | Requirement | Sources |
 |---|---|---|
-| ui-sources/screenshots | Screenshots switch the UI mode on | [Q1][Q2][Q25] |
+| ui-sources/screenshots | Screenshots switch the UI mode on | [Q1][Q2][Q25][Q31] |
+| ui-sources/screenshots | The AI asks whether the change has mockups | [Q31][Q32][Q33] |
+| ui-sources/screenshots | The proposal waits for the mockups question | [Q34][Q33] |
 | ui-sources/screenshots | UI check errors block the next artifact and the archive | [Q7][Q14][Q21] |
 | ui-sources/screenshots | Each screenshot is a registered source | [Q4][Q14] |
 | ui-sources/screenshots | Only PNG, JPG and WebP are accepted | [Q3][Q20] |

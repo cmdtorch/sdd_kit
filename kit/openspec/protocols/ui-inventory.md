@@ -7,7 +7,8 @@ the design tool are requirement sources. Before the first questions the AI lists
 element gets a decision, and every element the change builds gets a scenario. A button on the mockup that no
 requirement mentions is asked about before the proposal, not found by QA.
 
-Without a screenshot nothing here applies, and every workflow behaves as without this protocol. When every
+Without a screenshot nothing here applies except the mockups question (§1), and every workflow behaves as
+without this protocol. When every
 screenshot is deleted, UI mode is off again and `ui-inventory.md` is ignored.
 
 **`ui-inventory.md` is the source of truth for the UI.** Decisions about an element made in chat count only
@@ -28,6 +29,35 @@ once they are in the inventory (and, on the clarify family, in an answer in `cla
   `openspec/specs/`.
 - **Variants of one screen** (desktop and mobile, different user roles) are separate screenshots but one
   screen of the inventory (§3).
+
+### Asking for mockups
+
+The developer may not know that screenshots can be given, so ask — unless `sources/ui/` already holds a
+screenshot; then go straight to §2.
+
+- **Clarify family:** the first Main round question is "Are there UI mockups for this change?", with the mark
+  `(UI mockups)` at the end of its heading (always in English, like `(follow-up to Q<n>)`). Write and ask it
+  alone, before the other Main round questions:
+
+  ```markdown
+  ### Q1. Are there UI mockups for this change? (UI mockups)
+  Why this is asked: screenshots of the mockups become requirement sources, and every button on them gets a decision.
+  - A. Yes, I will export them as screenshots
+  - B. No, there will be no mockups
+  - C. Not yet defined
+  - X. Other (please specify)
+  ```
+
+  The proposal is blocked while the Main round has no question with this mark, `sources/ui/` holds no
+  screenshot and there is no `ui-inventory.md`. A change whose proposal exists is not checked.
+- **`lean`:** ask the same in chat before the proposal and record it under `## Clarifications` of the proposal.
+- **"Yes":** create `openspec/changes/<change>/sources/ui/`, tell the developer to export every screen and state
+  as PNG, JPG or WebP into it (no `.fig`, SVG or PDF; optional notes in `screens.md`; names that sort in screen
+  order), and to run `/opsx:continue` when all are there. Then stop: write no other question and no artifact.
+- **Continued with an empty folder:** ask once more — wait for the screenshots, or continue without mockups.
+  Record the reply as a follow-up question in the same round.
+- **"No"** (or "continue without mockups"): go on with the other questions; nothing else here applies.
+  Screenshots added later are handled as late screenshots (§7).
 
 ## 2. Registering screenshots as `[U<n>]`
 
@@ -217,6 +247,7 @@ those questions is never blocked; the next artifact and the archive are, until t
 
 `lean` has no question rounds; the rest of this protocol applies unchanged.
 
+- Without screenshots, ask about mockups in chat before the proposal (§1).
 - Write `ui-inventory.md` before the proposal; its screenshots table is the register (§2).
 - Record a decision for every element yourself, without questions and without citations (Source `—`). If a
   decision would mean guessing user-visible behaviour or scope, stop and recommend `clarify`.

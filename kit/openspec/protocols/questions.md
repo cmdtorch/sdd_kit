@@ -140,7 +140,8 @@ Why this is asked: the requirement says "users can export" but the report contai
 | Verification | `verification-plan.md` | which scenarios are critical; which need an integration test rather than a unit test; test data the scenarios need; environments; checks that can only be done manually |
 | Apply | — (during implementation) | only real gaps found while coding. Append `## Apply round` and follow the same flow |
 
-In UI mode the Main round also asks about every element on a screenshot that no source names, every
+Without screenshots in `sources/ui/`, the first Main round question asks whether the change has UI mockups,
+marked `(UI mockups)` (`openspec/protocols/ui-inventory.md` §1). In UI mode the Main round also asks about every element on a screenshot that no source names, every
 requirement with no element or state on the screenshots, and every missing screen state (empty, error,
 loading); a screenshot added or replaced later gets its questions in the current round
 (`openspec/protocols/ui-inventory.md` §5, §7).

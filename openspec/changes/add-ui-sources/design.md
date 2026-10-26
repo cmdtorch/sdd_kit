@@ -80,13 +80,20 @@ A new check `openspec/tooling/checks/check-ui.mjs` with the parser `openspec/too
 
 ### D7. Docs
 
-`docs/how-it-works.md` names the new files, `docs/guide/workflow.md` explains screenshots, and `docs/decisions.md` records the decision [D1].
+`docs/how-it-works.md` names the new files, `docs/guide/workflow.md` explains screenshots and the mockups question, and `docs/decisions.md` records the decision [D1].
+
+### D8. The mockups question
+
+Pilot feedback: without a question the developer does not learn that screenshots can be given [Q31]. The question-round instructions and `ui-inventory.md` tell the AI to ask "Are there UI mockups for this change?" as the first Main round question, marked `(UI mockups)` in its heading (English in every questions language, like `(follow-up to Q<n>)`), unless `sources/ui/` already holds a screenshot [Q31][Q33]. On "yes" the AI creates `sources/ui/`, names the accepted formats, the forbidden ones (`.fig`, SVG, PDF) and the optional `screens.md`, and stops until `/opsx:continue`; an empty folder then gets one more question, wait or continue without mockups [Q32]. On `lean` the AI asks in chat before the proposal and records the answer there [Q31].
+
+`check-answers` with `--artifact proposal` adds one error while `proposal.md` does not exist, no Main round question title contains `(UI mockups)`, and the change has neither an accepted screenshot in `sources/ui/` nor `ui-inventory.md` (an inventory means screenshots were there when the round ran) [Q34][Q33][Q25]. The existing-proposal condition leaves every change past the proposal untouched; `lean` has no question rounds and is skipped by `check-answers` already [Q34]. The stop after "yes" and the repeated question are instructions only: telling "yes" from "no" by option letters is not reliable, so they are checked in the pilot [Q32][Q29]. Rejected: a question in the `schema-starter` menu, whose answer would be recorded nowhere [Q31].
 
 ## Risks / Trade-offs
 
 - [Risk] The Main round question gate recognises questions by a `### Q` heading in the written text → a heuristic; the proposal gate is the backstop [Q5][Q7].
 - [Risk] The AI may record a fingerprint without looking at the image → the mismatch message does not print the value, and the round summary shows every element to the developer [Q26][Q5].
 - [Trade-off] Screenshots cost tokens (about 2 000 per 1 500×1 000 image) and grow the repository; they stay in git as decided [Q9][D1].
+- [Risk] The AI may continue after "yes" without waiting for the screenshots → only instructions hold it; the late-screenshot gates catch screenshots added afterwards, and the pilot checks the stop [Q32][Q8].
 - [Risk] The clarify-family instructions are long; a shared text keeps the three schemas equal [Q2].
 
 ## Assumptions & Open Questions

@@ -187,6 +187,29 @@ describe('ui-sources/screenshots (hooks)', () => {
   });
 });
 
+describe('ui-sources/screenshots: the mockups question (hooks, design D8)', () => {
+  const MOCKUPS_Q = '### Q6. Are there UI mockups for this change? (UI mockups)\nWhy this is asked: screenshots become requirement sources.\n- A. Yes\n- B. No, there will be no mockups\n- C. Not yet defined\n- X. Other (please specify)\n\n[Answer]: B\n\n';
+  /** checks-good before its proposal: a confirmed Main round and no screenshots. */
+  function beforeProposal() {
+    const root = baseProject();
+    rmSync(join(root, C, 'proposal.md'));
+    return root;
+  }
+
+  // @scenario ui-sources/screenshots :: Proposal is blocked without the mockups question
+  test('a confirmed Main round without the question blocks the proposal', () => {
+    const root = beforeProposal();
+    blocked(write(root, `${C}/proposal.md`, '## Why\n'), /proposal of change "add-sales-export" cannot be written yet/, /\(UI mockups\)/);
+  });
+
+  // @scenario ui-sources/screenshots :: Answered mockups question lets the proposal through
+  test('an answered (UI mockups) question lets the proposal through', () => {
+    const root = beforeProposal();
+    plant(root, `${C}/clarifications.md`, '## Main round\n\n', `## Main round\n\n${MOCKUPS_Q}`);
+    allowed(write(root, `${C}/proposal.md`, '## Why\n'), 'proposal.md');
+  });
+});
+
 describe('ui-sources/inventory (hooks)', () => {
   // @scenario ui-sources/inventory :: Main round questions are blocked without an inventory
   test('Main round questions in clarifications.md wait for the inventory', () => {

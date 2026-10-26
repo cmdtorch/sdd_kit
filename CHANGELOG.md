@@ -28,9 +28,11 @@ need it before they can be archived. `clarify` and `lean` changes without `e2e.m
   between the screens and the requirements; every element gets a decision (`in scope`, `mock`, `out of scope`,
   `decoration`, `existing`) and every built element a scenario. New check `check-ui`, run by the answers gate
   and the archive gate; `[U<n>]` source tags; `e2e` labels on UI test cases; a `## Screens` table in the design
-  and screenshot links in UI tasks. Changes without screenshots are not affected. The artifact feedback hook
+  and screenshot links in UI tasks. Changes without screenshots get only the mockups question below. The artifact feedback hook
   shows `check-ui` errors right after `ui-inventory.md` or `tasks.md` is written; hidden files such as
   `.DS_Store` in `sources/ui/` are ignored; `sha256sum` and `shasum -a 256` are allowed without a prompt.
+  Without screenshots the agent first asks whether the change has mockups (`(UI mockups)`, the first Main round
+  question; on `lean` in chat); on "yes" it creates `sources/ui/` and waits for `/opsx:continue`.
 - Test-cases stage, after an automated pilot: a repeated AI QA review re-checks its previous findings and looks
   for new ones only in what changed, so the loop converges; cases changed after the last review run are listed
   under "Stage result" as not reviewed by the AI; the answers gate says when a follow-up question reopened the

@@ -79,7 +79,9 @@ clarifications → proposal → specs → test-cases → design → verification
   `clarify` applies to all three (`openspec/tooling/lib/project.mjs`).
 
 **UI mode, on all four schemas.** A change whose `sources/ui/` holds a screenshot (PNG, JPG, WebP) is in UI mode
-(`openspec/protocols/ui-inventory.md`); without one nothing changes. Each schema's instructions then add: the
+(`openspec/protocols/ui-inventory.md`). Without one, the agent first asks whether the change has mockups: the
+first Main round question, marked `(UI mockups)` (on `lean`: in chat before the proposal); on "yes" it creates
+`sources/ui/` and waits for `/opsx:continue`; on "no" nothing changes. Each schema's instructions then add: the
 UI inventory `ui-inventory.md` before the Main round questions (on `lean`: before the proposal, with the
 decisions recorded by the agent and listed in the proposal); questions about the gaps between the screens and the
 requirements; a scenario for every `in scope` or `mock` element; a `## Screens` table in the design; screen
@@ -138,7 +140,7 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
 
 | Check | Verifies |
 |---|---|
-| `openspec/tooling/checks/check-answers.mjs` | every question is answered, every round whose artifact exists is confirmed, the file format is valid |
+| `openspec/tooling/checks/check-answers.mjs` | every question is answered, every round whose artifact exists is confirmed, the file format is valid; before the first proposal of a change with no screenshot and no `ui-inventory.md`, the Main round holds the `(UI mockups)` question |
 | `openspec/tooling/checks/check-grounding.mjs` | every substantive block of proposal and design carries a source tag; `[Q<n>]` only from confirmed rounds; `[U<n>]` only when registered and its file exists; assumptions only in their section |
 | `openspec/tooling/checks/check-specs.mjs` | Purpose of a new capability ≥ 50 characters; ADDED requirement ≤ 500 characters; `#### Scenario:` format and unique names; a THEN in every scenario; no source tags in specs; no `###` headers OpenSpec skips |
 | `openspec/tooling/checks/check-traceability.mjs` | every scenario is in the verification plan (with a level, or excluded with a reason); every requirement is traced to its sources; with `--markers`, every `unit` or `integration` scenario has a test carrying its marker; on the test-case schemas also the *Test case coverage* table and, with `--markers`, an `@case` reference for every `automated` case (a reference to an archived case is silent, an unknown one is a warning) |

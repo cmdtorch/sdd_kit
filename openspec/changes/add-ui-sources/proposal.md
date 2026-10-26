@@ -7,7 +7,9 @@ The kit is meant to drive frontend work as well as backend work, but UI mockups 
 ## What Changes
 
 - Screenshots placed in the change become requirement sources, each with its own tag `U<n>`; PNG, JPG and WebP are accepted, and they are kept in git with the change and archived with it [Q1][Q3][Q4][Q9].
-- The UI mode switches on by itself when a change has screenshots; without screenshots every workflow behaves as today, and no new choice is added when a change is created [Q1].
+- The UI mode switches on by itself when a change has screenshots; without screenshots every workflow behaves as today [Q1].
+- The AI asks whether the change has mockups as the first Main round question (on `lean`: in chat before the proposal, the answer recorded in the proposal); "yes" without screenshots → it creates `sources/ui/`, explains what to put there and stops until `/opsx:continue`, asking once more if the folder is still empty; screenshots already in the folder → no question [Q31][Q32][Q33].
+- The proposal cannot be written while the Main round has no question marked `(UI mockups)` and `sources/ui/` holds no screenshot; changes past the proposal and `lean` are not checked [Q34].
 - The mode works in all four kit workflows: `clarify`, `clarify-ai-qa`, `clarify-qa` and `lean` [Q2].
 - Before the Main round questions, the AI writes a UI inventory: the interactive elements (buttons, links, fields, toggles, menus) and screen states (empty, error, loading) of every screen; the developer reviews it together with the round summary [Q5][Q6].
 - Variants of one screen (desktop, mobile, roles) are separate screenshots but one screen in the inventory, with each element marked by the variants that show it [Q10].
@@ -23,7 +25,7 @@ The kit is meant to drive frontend work as well as backend work, but UI mockups 
 ## Capabilities
 
 ### New Capabilities
-- `ui-sources/screenshots`: screenshots as requirement sources — where they go, accepted formats, `U<n>` tags, storage, and screenshots that arrive late [Q1][Q3][Q4][Q8][Q9]
+- `ui-sources/screenshots`: screenshots as requirement sources — the question about mockups, where they go, accepted formats, `U<n>` tags, storage, and screenshots that arrive late [Q1][Q3][Q4][Q8][Q9][Q31]
 - `ui-sources/inventory`: the UI inventory — what it lists, who writes it, screen variants, the decision for every element and the Main round gate, and the `lean` variant [Q5][Q6][Q7][Q10][Q14]
 - `ui-sources/coverage`: every in-scope element covered by a spec scenario before the specs are complete, and the `e2e` label for test cases of such scenarios [Q7][Q11]
 - `ui-sources/implementation`: the screen-to-component table in the design, screenshot links in UI tasks, and the rule to open screenshots before building a screen [Q15]

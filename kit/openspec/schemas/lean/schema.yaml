@@ -55,6 +55,11 @@ artifacts:
         or scope, stop and recommend the `clarify` schema instead.
       - If you asked the user anything, record each question and answer in a
         `## Clarifications` section at the end of the proposal (the user's words).
+      - Mockups: when `sources/ui/` holds no screenshot, ask in chat whether
+        the change has UI mockups before writing this proposal, and record it
+        under `## Clarifications`. On "yes" create `sources/ui/`, say what to
+        export there (PNG, JPG or WebP; no `.fig`, SVG or PDF) and stop until
+        the developer continues (`openspec/protocols/ui-inventory.md` section 1).
       - UI mode (screenshots in `sources/ui/`, PNG, JPG or WebP): before the
         proposal, open every screenshot and write `ui-inventory.md` (its
         screenshots table registers them as [U<n>]) with a decision for every

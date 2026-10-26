@@ -107,8 +107,10 @@ one. A test that proves a case carries a reference next to its scenario marker:
 
 ### 2b. Screenshots of the UI (all schemas)
 
-For frontend work, export the mockups from your design tool as PNG (JPG and WebP work too) and put them in
-`openspec/changes/<change>/sources/ui/`, ideally before the Main round. One file per screen and variant, named in
+The agent's first question in a change is whether it has UI mockups (on `lean`: asked in chat before the
+proposal). Answer "yes" and it creates `openspec/changes/<change>/sources/ui/` and waits: export the mockups from
+your design tool as PNG (JPG and WebP work too), put them there and run `/opsx:continue`. Screenshots already in
+the folder skip the question. One file per screen and variant, named in
 screen order: `01-orders-list.png`, `02-orders-list-mobile.png`. An optional `sources/ui/screens.md` may say
 what each one shows. Any other file there (SVG, PDF, a Figma file) blocks the next artifact until it is exported
 as PNG. The rules are in `openspec/protocols/ui-inventory.md`.

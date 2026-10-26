@@ -4,7 +4,7 @@
 // Every test builds a small change in a temp project and writes tiny generated images into `sources/ui/`.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,7 @@ import { parseInventory, scanUiFolder, isUiMode } from '../kit/openspec/tooling/
 import { checkUi, UI_STAGES, uiStageFor } from '../kit/openspec/tooling/checks/check-ui.mjs';
 import { checkGrounding } from '../kit/openspec/tooling/checks/check-grounding.mjs';
 import { checkTestCases } from '../kit/openspec/tooling/checks/check-test-cases.mjs';
+import { checkAnswers } from '../kit/openspec/tooling/checks/check-answers.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CHANGE = 'add-orders-export';
@@ -466,6 +467,60 @@ describe('citations and the lean proposal', () => {
     assertClean(ui(root));
     plant(dir, 'proposal.md', '- bulk-delete: decided\n', '');
     assertCaught(ui(root), /"bulk-delete".*missing from the proposal/);
+  });
+});
+
+describe('the mockups question (check-answers, design D8)', () => {
+  const MOCKUPS = /\(UI mockups\)/;
+  const forProposal = (root) => checkAnswers({ root, change: CHANGE, artifact: 'proposal' });
+  const mockupsErrors = (r) => errors(r).filter((f) => MOCKUPS.test(f.message));
+  /** The project() change with every screenshot and the inventory removed: a change without mockups. */
+  function noMockups() {
+    const p = project();
+    for (const [, f] of SHOTS) rmSync(join(p.dir, 'sources', 'ui', f));
+    rmSync(join(p.dir, 'ui-inventory.md'));
+    return p;
+  }
+
+  test('a change with no screenshot, no inventory and no question gets the error (baseline)', () => {
+    const r = forProposal(noMockups().root);
+    assert.equal(mockupsErrors(r).length, 1, messages(r));
+  });
+
+  // @scenario ui-sources/screenshots :: Screenshots in the folder need no mockups question
+  test('a registered screenshot replaces the question, with no inventory yet', () => {
+    const { root, dir } = project({ shots: [['U1', '01-orders-list.png']], inventory: false });
+    assert.equal(existsSync(join(dir, 'ui-inventory.md')), false);
+    assert.deepEqual(mockupsErrors(forProposal(root)), []);
+  });
+
+  // @scenario ui-sources/screenshots :: Inventory left after deleting screenshots needs no mockups question
+  test('an inventory left after every screenshot is deleted replaces the question', () => {
+    const { root, dir } = project();
+    for (const [, f] of SHOTS) rmSync(join(dir, 'sources', 'ui', f));
+    assert.deepEqual(mockupsErrors(forProposal(root)), []);
+  });
+
+  // @scenario ui-sources/screenshots :: Change past the proposal is not checked
+  test('an existing proposal.md turns the rule off', () => {
+    const { root, dir } = noMockups();
+    writeFileSync(join(dir, 'proposal.md'), '## Why\n\nExport orders.\n');
+    assert.deepEqual(mockupsErrors(forProposal(root)), []);
+  });
+
+  test('the mark counts only in a Main round question heading', () => {
+    const { root, dir } = noMockups();
+    plant(dir, 'clarifications.md', '### Q3. Is the promo banner link clickable?', '### Q3. Is the promo banner link clickable? (UI mockups)');
+    assert.equal(mockupsErrors(forProposal(root)).length, 1, 'a Specs round question does not count');
+    plant(dir, 'clarifications.md', '### Q1. Is bulk delete part of this change?', '### Q1. Is bulk delete part of this change? (UI mockups)');
+    assert.deepEqual(mockupsErrors(forProposal(root)), []);
+  });
+
+  test('lean changes are not checked', () => {
+    const { root, dir } = project({ schema: 'lean' });
+    for (const [, f] of SHOTS) rmSync(join(dir, 'sources', 'ui', f));
+    rmSync(join(dir, 'ui-inventory.md'));
+    assert.equal(forProposal(root).skipped, true);
   });
 });
 

@@ -11,12 +11,12 @@ A change SHALL be in UI mode when its `sources/ui/` folder holds at least one sc
 
 #### Scenario: Change without screenshots needs no inventory
 - **GIVEN** a `clarify` change with no `sources/ui/` folder and no `ui-inventory.md`
-- **WHEN** the AI writes `proposal.md` after a confirmed Main round
+- **WHEN** the AI writes `proposal.md` after a confirmed Main round with the mockups question answered
 - **THEN** the write is not blocked by any UI rule
 
 #### Scenario: Notes file alone does not switch the mode on
 - **GIVEN** a `clarify` change whose `sources/ui/` holds only `screens.md`
-- **WHEN** the AI writes `proposal.md` after a confirmed Main round
+- **WHEN** the AI writes `proposal.md` after a confirmed Main round with the mockups question answered
 - **THEN** the write is not blocked by any UI rule
 
 #### Scenario: Deleting every screenshot switches the mode off
@@ -28,6 +28,52 @@ A change SHALL be in UI mode when its `sources/ui/` folder holds at least one sc
 - **GIVEN** a `clarify` change with the screenshot `sources/ui/01-orders-list.png` and no `ui-inventory.md`
 - **WHEN** the AI writes `proposal.md` after a confirmed Main round
 - **THEN** the write is blocked with a message that says the UI inventory is missing
+
+### Requirement: The AI asks whether the change has mockups
+When `sources/ui/` holds no screenshot, the AI SHALL ask whether the change has UI mockups: on the question-round schemas as the first Main round question, marked `(UI mockups)` in its heading; on `lean` in chat before the proposal, recording the answer in it. On "yes" it SHALL create `sources/ui/`, say which files to put there and stop until the developer continues, and ask once more (wait or continue without mockups) if the folder is still empty.
+
+#### Scenario: Yes without screenshots stops until continue
+- **GIVEN** a `clarify` change with no screenshots, and the developer answers "yes" to the mockups question
+- **WHEN** the AI handles the answer
+- **THEN** `sources/ui/` exists, the AI has named the accepted formats and `/opsx:continue`, and no further question or artifact is written
+
+#### Scenario: Empty folder on continue is asked again
+- **GIVEN** a change whose mockups question is answered "yes" and whose `sources/ui/` is still empty
+- **WHEN** the developer runs `/opsx:continue`
+- **THEN** the AI asks whether to wait or to continue without mockups before writing anything else
+
+#### Scenario: Lean asks about mockups before the proposal
+- **GIVEN** a `lean` change with no screenshots
+- **WHEN** the AI starts the proposal
+- **THEN** it asks in chat whether the change has mockups, and the proposal records the answer
+
+### Requirement: The proposal waits for the mockups question
+On the question-round schemas, writing `proposal.md` SHALL be blocked while it does not exist, the Main round has no question marked `(UI mockups)`, and the change has neither a screenshot in `sources/ui/` nor `ui-inventory.md`. Changes whose proposal exists and `lean` changes SHALL NOT be checked.
+
+#### Scenario: Proposal is blocked without the mockups question
+- **GIVEN** a `clarify` change with no `sources/ui/` folder, no `proposal.md`, and a confirmed Main round with no question marked `(UI mockups)`
+- **WHEN** the AI writes `proposal.md`
+- **THEN** the write is blocked with a message that names the mark `(UI mockups)`
+
+#### Scenario: Answered mockups question lets the proposal through
+- **GIVEN** a `clarify` change with no `sources/ui/` folder and a confirmed Main round whose question "Q1. Are there UI mockups for this change? (UI mockups)" is answered
+- **WHEN** the AI writes `proposal.md`
+- **THEN** the write is not blocked
+
+#### Scenario: Screenshots in the folder need no mockups question
+- **GIVEN** a `clarify` change with the registered screenshot `01-orders-list.png`, no `proposal.md`, and a confirmed Main round with no question marked `(UI mockups)`
+- **WHEN** the answers check runs for `proposal.md`
+- **THEN** it reports no error about the mockups question
+
+#### Scenario: Inventory left after deleting screenshots needs no mockups question
+- **GIVEN** a `clarify` change with `ui-inventory.md`, every screenshot deleted, no `proposal.md`, and a confirmed Main round with no question marked `(UI mockups)`
+- **WHEN** the answers check runs for `proposal.md`
+- **THEN** it reports no error about the mockups question
+
+#### Scenario: Change past the proposal is not checked
+- **GIVEN** a `clarify` change with no screenshots, an existing `proposal.md`, and a confirmed Main round with no question marked `(UI mockups)`
+- **WHEN** the answers check runs on the change
+- **THEN** it reports no error about the mockups question
 
 ### Requirement: UI check errors block the next artifact and the archive
 The UI check SHALL run before every planning artifact after `clarifications.md` (on `lean`, before every planning artifact) and before the archive, judging the files already in the change; while it reports errors, that write and the archive SHALL be blocked with its messages. Writing `ui-inventory.md` (its errors SHALL be shown to the AI after it) and the questions and answers in `clarifications.md` SHALL NOT be blocked by a UI rule, except that the Main round questions wait for the inventory.
