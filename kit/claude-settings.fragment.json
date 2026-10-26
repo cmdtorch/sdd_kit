@@ -68,8 +68,10 @@
   },
   "permissions": {
     "allow": [
+      "Bash(node openspec/tooling/bin/e2e-run.mjs *)",
       "Bash(node openspec/tooling/bin/review-input.mjs *)",
       "Bash(node openspec/tooling/checks/check-answers.mjs *)",
+      "Bash(node openspec/tooling/checks/check-e2e.mjs *)",
       "Bash(node openspec/tooling/checks/check-grounding.mjs *)",
       "Bash(node openspec/tooling/checks/check-specs.mjs *)",
       "Bash(node openspec/tooling/checks/check-test-cases.mjs *)",

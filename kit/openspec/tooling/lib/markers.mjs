@@ -112,10 +112,17 @@ export function parseCaseRefs(content) {
   return parseRefs(content, CASE_REF);
 }
 
-/** Every reference of one keyword in the project: [{...parsed, file}]. */
-function collect(root, keyword, parse) {
+/** True when the project-relative `file` lies in the folder `under` (any file when `under` is empty). */
+export function isUnder(file, under) {
+  if (!under) return true;
+  return file === under || file.startsWith(`${under}/`);
+}
+
+/** Every reference of one keyword in the project, or only in the folder `under`: [{...parsed, file}]. */
+function collect(root, keyword, parse, under) {
   const out = [];
   for (const file of listProjectFiles(root)) {
+    if (!isUnder(file, under)) continue;
     const p = join(root, file);
     let content;
     try {
@@ -130,12 +137,35 @@ function collect(root, keyword, parse) {
   return out;
 }
 
-/** Every marker in the project: [{capability, scenario, file, line}]. */
-export function collectMarkers(root) {
-  return collect(root, '@scenario', parseMarkers);
+/** Every marker in the project (or in the folder `under`): [{capability, scenario, file, line}]. */
+export function collectMarkers(root, { under = '' } = {}) {
+  return collect(root, '@scenario', parseMarkers, under);
 }
 
-/** Every case reference in the project: [{capability, name, file, line}]. */
-export function collectCaseRefs(root) {
-  return collect(root, '@case', parseCaseRefs);
+/** Every case reference in the project (or in the folder `under`): [{capability, name, file, line}]. */
+export function collectCaseRefs(root, { under = '' } = {}) {
+  return collect(root, '@case', parseCaseRefs, under);
+}
+
+// a blank line or a line that is only a comment (or a decorator) between the markers and their test
+const BETWEEN = /^\s*($|\/\/|#|\/\*|\*|<!--|--|;|%|@)/;
+
+/**
+ * The references of the test that starts on `line` (1-based) of a file's content: the marker and case
+ * lines directly above it, read upwards over blank, comment and decorator lines until the first line of
+ * code. Returns { cases: [{capability, name}], scenarios: [{capability, scenario}] } in file order.
+ */
+export function refsAbove(content, line) {
+  const lines = content.split(/\r?\n/);
+  const cases = [];
+  const scenarios = [];
+  for (let i = Math.min(line, lines.length + 1) - 2; i >= 0; i--) {
+    const l = lines[i];
+    const c = parseCaseRefs(l)[0];
+    const s = parseMarkers(l)[0];
+    if (c) cases.unshift({ capability: c.capability, name: c.name });
+    else if (s) scenarios.unshift({ capability: s.capability, scenario: s.scenario });
+    else if (!BETWEEN.test(l)) break;
+  }
+  return { cases, scenarios };
 }

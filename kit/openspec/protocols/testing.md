@@ -8,7 +8,8 @@ test cases (§2 *Test case coverage*, §3 case references, §6 the lists of case
 Every spec scenario is a promise. A test exists to prove one promise — never just to raise the test
 count. A test that would still pass with the feature broken is worse than no test: it gives false confidence.
 
-The kit does not know the project's stack and never runs tests itself. Use the project's own commands
+The kit does not know the project's stack and never runs the project's tests itself, except the E2E tests of
+the E2E stage, which it runs through its own script (`openspec/protocols/e2e.md`). Use the project's own commands
 (README, CLAUDE.md, Makefile, package scripts, CI config). Say which commands you used. If you cannot
 find how to run the tests, ask the developer once and suggest writing the commands into CLAUDE.md.
 
@@ -22,7 +23,8 @@ find how to run the tests, ask the developer once and suggest writing the comman
 | full suite | the whole test suite + the project's quality checks (lint, types, build) | once at the end of apply, and in the project's CI |
 
 Test cases carry coarser **verification labels** (`openspec/protocols/test-cases.md`): `automated` (a test
-below the user interface), `e2e` (the full user path through the interface, left for the E2E stage) and
+below the user interface), `e2e` (the full user path through the interface, tested in the E2E stage of
+`openspec/protocols/e2e.md`) and
 `manual` (checked by hand). A case never names a level; the verification plan picks `unit` and/or
 `integration` for each `automated` case.
 
@@ -104,7 +106,8 @@ it('exports the paid sales of the period', async () => { /* ... */ });
 - **Case references** (test-case schemas): a test that proves a test case also carries
   `@case <capability-path> :: <case name>` with the exact case name of `test-cases.md`, with the same
   placement rules. One test may reference several cases; a case may have several tests. Before archive,
-  every `automated` case has at least one test that references it; `e2e` and `manual` cases do not need one.
+  every `automated` case has at least one test that references it; an `e2e` case needs an E2E test in the
+  E2E stage (`openspec/protocols/e2e.md`), a `manual` case none.
   A reference to a case of an archived change is fine; a reference that matches no case of an active or
   archived change is warned about (usually a typo or a renamed case).
 
@@ -153,20 +156,27 @@ it('exports the paid sales of the period', async () => { /* ... */ });
 3. `manual` rows: list them for the developer, with what to check and the expected outcome. A human
    performs them. On the test-case schemas the list also has every test case labelled `manual`, with its
    name, its steps and the expected outcome of its Then.
-4. On the test-case schemas, also list the test cases labelled `e2e` (alone or with other labels) as
-   **waiting for the E2E stage**, by capability and case name. They do not block the archive.
+4. **E2E stage**, when the change needs it (`openspec/protocols/e2e.md`): E2E tests for the `e2e` cases
+   (or the listed scenarios on `clarify` and `lean`), run only with `node openspec/tooling/bin/e2e-run.mjs`,
+   and in UI mode the comparison with the screenshots. When E2E is skipped, list the test cases labelled `e2e`
+   (alone or with other labels) as **manual checks for QA**, by capability and case name, and say that E2E was
+   skipped. At the end of the stage list its accepted cases the same way, with their reasons.
 5. Run the archive checks yourself:
-   `node openspec/tooling/checks/check-traceability.mjs --change <change> --markers`.
+   `node openspec/tooling/checks/check-traceability.mjs --change <change> --markers`, and when the change has
+   `e2e.md`, `node openspec/tooling/checks/check-e2e.mjs --change <change> --mode archive`.
 6. Archive with `openspec archive <change>`. The archive gate checks that every task is done, every
    automated scenario has a marked test, the artifacts pass the kit checks and the test review is done; on
    the test-case schemas also that `test-cases.md` passes its check and every `automated` case has a test
-   with its case reference. Test cases stay in the archived change; they are not merged into the specs.
+   with its case reference; and that the E2E stage is complete (on the test-case schemas `e2e.md` with the
+   E2E decision is required; `Mode: skipped` never blocks). Test cases stay in the archived change; they are
+   not merged into the specs.
 
 ## 7. When something fails
 
 - **Never weaken quality to get green.** Do not delete tests, skip them, mark them as expected failures,
   loosen assertions, lower thresholds or edit a test so it matches wrong behaviour. Change a test only
   when the test itself is wrong, and say why.
-- **At most two fix attempts** per failure. Then stop and ask the human. Give the options and their
+- **At most two fix attempts** per failure (an E2E test of the E2E stage gets three,
+  `openspec/protocols/e2e.md` §8). Then stop and ask the human. Give the options and their
   consequences (cost, risk, what stays unverified). Giving up on a target is the human's decision,
   never yours.

@@ -3,7 +3,8 @@
 // other hooks (e.g. graphify), plugins, permissions and unknown keys stay exactly as they are.
 // Kit hooks are recognised by their command pointing into `openspec/tooling/hooks/`, so a re-run
 // replaces old kit entries instead of duplicating them, and `removeKitHooks` cleanly uninstalls.
-// Kit permissions (read-only kit scripts in `permissions.allow`) are recognised by `openspec/tooling/`; the
+// Kit permissions (kit scripts in `permissions.allow`: the checks, review-input and the E2E runner e2e-run)
+// are recognised by `openspec/tooling/`; the
 // fingerprint commands of the UI inventory (`sha256sum` / `shasum -a 256` on files under `openspec/changes/`)
 // by their exact kit entries.
 

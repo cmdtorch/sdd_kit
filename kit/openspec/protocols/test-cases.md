@@ -74,7 +74,7 @@ Accepted findings:
   | Label | Meaning |
   |---|---|
   | `automated` | proven by a test below the user interface (the verification plan picks `unit` or `integration`) |
-  | `e2e` | the full user path through the interface; waits for the E2E stage |
+  | `e2e` | the full user path through the interface; tested in the E2E stage (`openspec/protocols/e2e.md`) |
   | `manual` | checked by hand only |
 
   `automated, e2e` is common: the backend now, the path through the UI later. A case never names `unit` or

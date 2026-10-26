@@ -153,7 +153,34 @@ Requirement gaps found while coding go into the *Apply round*; the agent asks in
 2. The agent runs the project's **full test suite and quality checks** and fixes what fails. It never weakens a
    test to get green; after two failed attempts it stops and asks you.
 3. **Manual checks**: the agent lists them; a human performs them. On the test-case schemas the list includes the
-   `manual` test cases, and the `e2e` test cases are listed as waiting for the E2E stage.
+   `manual` test cases; the `e2e` test cases go to the E2E stage, or to QA as manual checks when E2E is skipped.
+
+### 3a. E2E stage (web applications in a monorepo)
+
+When the change touches a web application whose backend is in the same repository, the Main round asks whether
+it needs E2E tests and against which backend: the real one, started locally on an empty test database, or stubbed
+responses. On `lean` the agent asks before the first task. A mobile app, a backend-only change or a frontend whose
+backend lives in another repository gets no E2E.
+
+After the last task the agent runs the stage (`openspec/protocols/e2e.md`) and records it in `e2e.md`:
+
+1. It asks once whether you start the application (and give its address) or it starts it with the project's
+   command; when the project has none, it offers to write one.
+2. When the project has no Playwright, it asks your permission to install it in its own folder (for example
+   `e2e/`, with its own `package.json`, Chromium only, no retries). If you refuse, E2E is skipped.
+3. It writes one Playwright test per `e2e` test case (on `clarify` and `lean`: per scenario it lists and shows
+   you), each tagged `@case` or `@scenario`. Tests create their own users and data; passwords stay out of git.
+4. It runs them only with `node openspec/tooling/bin/e2e-run.mjs --change <name>`, which records every run in
+   `e2e-runs.json`. A failing test gets at most three fix attempts, then it is yours to decide: fix, or accept the
+   case with a reason (its test stays as a skipped test, and the case goes to QA).
+5. With screenshots in `sources/ui/`, it opens every screen at the screenshot's size and state and compares the two
+   by looking: missing or extra elements, texts, layout, colours, clearly different sizes. Differences get the same
+   three attempts, or you accept them with a reason.
+
+The stage is complete when every required test has a passed result that is still valid. Changing the application
+afterwards needs a new run: the agent reruns by itself after a business-logic change and asks you after a minor
+one; if you decide no run is needed, it records that under `## No new run needed`. To skip E2E for a change, say
+so: the agent sets `Mode: skipped` and lists the `e2e` cases for QA.
 
 ### 4. Archive
 
@@ -168,8 +195,12 @@ The archive gate allows this only when:
 - every scenario planned as `unit` or `integration` has a test that carries its marker;
 - the test review is `READY`, or a human decision is recorded;
 - on the test-case schemas: `test-cases.md` passes its check (every scenario has a case) and every `automated`
-  case has a test with its `@case` reference. `e2e` and `manual` cases do not block the archive. Test cases stay
-  in the archived change.
+  case has a test with its `@case` reference. `manual` cases do not block the archive. Test cases stay
+  in the archived change;
+- the E2E stage is complete: every `e2e` case (or listed scenario) has a passed, still valid result recorded by
+  `e2e-run.mjs`, or is accepted, and no screenshot has an open difference. On `clarify-ai-qa` and `clarify-qa`
+  the change needs `e2e.md` (`Mode: skipped` when it has no E2E); on `clarify` and `lean` a change without it has
+  no E2E.
 
 ## A small change (`lean`)
 
@@ -178,7 +209,8 @@ The archive gate allows this only when:
 ```
 
 The flow is proposal → specs → verification-plan → tasks → apply, with no question rounds. If the agent would have to
-guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates are the same.
+guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates are the same. Before the first task
+the agent asks whether the change needs E2E (section 3a).
 
 ## What runs where
 
@@ -188,6 +220,7 @@ guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates a
 | `openspec new change` without `--schema` | the schema starter asks which schema to use |
 | writing an artifact | answers-gate blocks it while its question round is open; on the test-case schemas the design also waits for the test-cases stage; in UI mode it also waits for an up-to-date UI inventory (`check-ui`) |
 | running the AI QA reviewer | the run-limit hook blocks a fourth run in a loop |
-| after writing an artifact | the matching check runs, and its errors go back to the agent |
+| after writing an artifact | the matching check runs, and its errors go back to the agent (`check-e2e` after `e2e.md`) |
+| E2E stage | `e2e-run.mjs` runs Playwright and records the run in `e2e-runs.json` |
 | last task checked | a reminder of the end-of-apply steps |
 | `openspec archive` | archive gate |

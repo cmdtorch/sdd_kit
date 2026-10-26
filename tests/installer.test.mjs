@@ -329,6 +329,34 @@ describe('UI sources after install', () => {
   });
 });
 
+describe('E2E stage after install', () => {
+  test('the E2E protocol, runner, check and libraries are installed, tracked and removed again; runner and check are allowed', async () => {
+    const E2E_FILES = [
+      'openspec/protocols/e2e.md',
+      'openspec/tooling/bin/e2e-run.mjs',
+      'openspec/tooling/checks/check-e2e.mjs',
+      'openspec/tooling/lib/e2e-record.mjs',
+      'openspec/tooling/lib/e2e-runs.mjs',
+    ];
+    const root = pilot();
+    await install(opts(root));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of E2E_FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    for (const p of ['Bash(node openspec/tooling/bin/e2e-run.mjs *)', 'Bash(node openspec/tooling/checks/check-e2e.mjs *)']) {
+      assert.ok(settings.permissions.allow.includes(p), `${p} is allowed`);
+    }
+    assert.match(read(root, 'openspec/config.yaml'), /E2E[^\n]*openspec\/protocols\/e2e\.md/);
+    uninstall({ target: root });
+    for (const f of E2E_FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+    const after = existsSync(join(root, '.claude/settings.json')) ? JSON.parse(read(root, '.claude/settings.json')) : {};
+    assert.ok(!(after.permissions?.allow || []).some((p) => /e2e/.test(p)), 'uninstall removes the E2E permissions');
+  });
+});
+
 describe('test-case schemas after install', { skip: cliSkipReason() }, () => {
   const QA_FILES = [
     '.claude/agents/test-cases-reviewer.md',

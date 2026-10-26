@@ -25,8 +25,10 @@ artifacts:
          areas the request touches.
       3. Write `## Main round` with questions per the protocol (Depth from the
          file header; default Comprehensive). Include exactly one explicit
-         scope-boundary question. Leave every `[Answer]:` blank. Do not write a
-         summary confirmation yet.
+         scope-boundary question. For a web application in a monorepo, also
+         ask whether the change needs E2E and against which backend
+         (`openspec/protocols/e2e.md` section 1). Leave every `[Answer]:`
+         blank. Do not write a summary confirmation yet.
       4. Offer the answer modes with AskUserQuestion and end your turn.
 
       UI mode (screenshots in `sources/ui/`, PNG, JPG or WebP): register each as
@@ -441,3 +443,11 @@ apply:
       section of `ui-inventory.md`. A screenshot added or replaced now goes into
       the inventory, with questions in the Apply round
       (`openspec/protocols/ui-inventory.md` section 7).
+    - E2E stage, last: when the change needs E2E (the Main round answer), follow
+      `openspec/protocols/e2e.md` after every task is done: write `e2e.md`,
+      Playwright tests for the `e2e` test cases (on `clarify`: for the listed
+      scenarios), run them only with `node openspec/tooling/bin/e2e-run.mjs
+      --change <name>`, at most three fix attempts per test, and in UI mode
+      compare every screenshot with the built screen. When E2E is not needed or
+      is skipped, write `e2e.md` with `Mode: skipped` (required on the test-case
+      schemas) and list the `e2e` test cases for QA as manual checks.

@@ -105,8 +105,10 @@ The installer keeps a hash manifest: updates never overwrite files you edited, a
 - **Claude Code only.** Other agents (Cursor, Codex, …) are not supported.
 - **OpenSpec is pinned.** Each kit version supports exactly one OpenSpec version; doctor and session start
   warn on a mismatch.
-- **No browser E2E** and no backend → frontend contract step yet ([decisions](docs/decisions.md) R3, R7).
-- The kit never runs your tests. It relies on the agent using the commands your project documents.
+- **Browser E2E only for web applications in a monorepo**, with Playwright for JavaScript and Chromium only;
+  no backend → frontend contract step yet ([decisions](docs/decisions.md) R7, R26).
+- The kit runs only the E2E tests, through its own script; for every other test it relies on the agent
+  using the commands your project documents.
 
 ## Documentation
 

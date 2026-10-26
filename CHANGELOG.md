@@ -7,6 +7,21 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+**Breaking:** on `clarify-ai-qa` and `clarify-qa` the archive now needs `e2e.md`, the E2E decision of the change.
+For a change without E2E write `e2e.md` with `# E2E Stage` and `Mode: skipped`; active changes on these schemas
+need it before they can be archived. `clarify` and `lean` changes without `e2e.md` archive as before.
+
+- E2E stage (`openspec/protocols/e2e.md`), on all four schemas, for web applications in a monorepo: the last step
+  of apply. The Main round asks whether the change needs E2E and against which backend (real, on an empty test
+  database, or stubbed); on `lean` the agent asks before the first task. The agent records the stage in `e2e.md`,
+  installs Playwright (JavaScript, its own folder, Chromium only, `retries: 0`) only with permission, asks once
+  who starts the application, writes a Playwright test for every `e2e` test case (on `clarify` and `lean`: for
+  the spec scenarios it lists), fixes a failing test in at most three attempts, and lets the developer accept a
+  case with a reason. In UI mode it compares every screenshot with the built screen. Skipped E2E lists the `e2e`
+  cases for QA. New script `openspec/tooling/bin/e2e-run.mjs` runs Playwright and records every run in the
+  change's `e2e-runs.json` (the only results the archive trusts; results go stale when the application or the
+  test changes); new check `check-e2e`, run by the archive gate and, in format mode, after `e2e.md` is written.
+  The script and the check are allowed without a prompt.
 - UI screenshots as requirement sources, on all four schemas: PNG, JPG or WebP files in a change's `sources/ui/`
   switch it into UI mode (`openspec/protocols/ui-inventory.md`). The agent writes `ui-inventory.md` (screens,
   interactive elements, states, SHA-256 fingerprints) before the Main round questions and asks about the gaps

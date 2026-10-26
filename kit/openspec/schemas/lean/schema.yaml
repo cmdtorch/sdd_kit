@@ -324,3 +324,11 @@ apply:
       section of `ui-inventory.md`. A screenshot added or replaced now goes into
       the inventory with your decisions, which you also add to the proposal
       (`openspec/protocols/ui-inventory.md` sections 7 and 9).
+    - E2E: before the first task ask the developer whether the change needs E2E
+      (a web application in a monorepo only) and against which backend, and
+      record the answer in `e2e.md` (`openspec/protocols/e2e.md`). When it
+      does, run the E2E stage last, after every task is done: Playwright tests
+      for the scenarios listed in `e2e.md`, run only with
+      `node openspec/tooling/bin/e2e-run.mjs --change <name>`, at most three
+      fix attempts per test, and in UI mode compare every screenshot with the
+      built screen.

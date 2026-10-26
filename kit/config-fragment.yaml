@@ -16,6 +16,7 @@ context: |
   - Requirement sources go to openspec/changes/<change>/sources/ as .md, .pdf or .txt.
   - UI screenshots (PNG, JPG, WebP) go to openspec/changes/<change>/sources/ui/ and switch on UI mode:
     openspec/protocols/ui-inventory.md
+  - E2E stage (web application in a monorepo, Playwright): openspec/protocols/e2e.md
   New features use `clarify`, or `clarify-ai-qa` / `clarify-qa` for Gherkin test cases reviewed by the
   AI QA reviewer / by it and a human QA; small, clear changes use `lean`. Always name the schema.
   Changes on other schemas (e.g. spec-driven) keep their own workflow.

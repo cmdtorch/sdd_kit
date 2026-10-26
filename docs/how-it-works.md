@@ -18,10 +18,13 @@ Paths are given as they appear in a project after installation. In this reposito
 | `propose` writes every artifact in one pass | a workflow profile without `propose`, so no question round is skipped |
 | no link between spec scenarios and tests | scenario markers in tests, a verification level per scenario, a test reviewer; `@case` references from tests to test cases |
 | requirement sources are text | UI screenshots as sources: a UI inventory of every element and state, a decision for each, a scenario for each built one |
-| `openspec archive --yes` archives with open tasks | an archive gate: tasks, checks, marked tests and a test review |
+| no browser tests | an E2E stage after the implementation: Playwright tests of the `e2e` cases run through a kit script that records the results, and a comparison of the built screens with the screenshots |
+| `openspec archive --yes` archives with open tasks | an archive gate: tasks, checks, marked tests, a test review and a complete E2E stage |
 | `openspec init` / `update` | an installer that merges into existing settings, keeps local edits and uninstalls cleanly |
 
-The kit never runs the project's tests and knows no stack. The agent runs the project's own commands.
+The kit never runs the project's tests and knows no stack. The agent runs the project's own commands. The one
+exception is the E2E stage: Playwright tests in their own folder, run through the kit's script so the archive can
+trust their results.
 
 ## 1. Schemas
 
@@ -82,6 +85,16 @@ decisions recorded by the agent and listed in the proposal); questions about the
 requirements; a scenario for every `in scope` or `mock` element; a `## Screens` table in the design; screen
 names and screenshot links in UI tasks; opening the screenshots before building a screen.
 
+**E2E stage, on all four schemas.** The last step of apply, when the change needs E2E
+(`openspec/protocols/e2e.md`): a web application in a monorepo, decided per change by a Main round question
+(on `lean`: the agent asks before the first task). The agent writes the stage record `e2e.md` (mode
+`real backend`, `stubbed backend` or `skipped`, the test folder, who starts the application), Playwright tests
+for every `e2e` test case (on `clarify` and `lean`: for the spec scenarios it lists), runs them only through
+`openspec/tooling/bin/e2e-run.mjs`, fixes a failing test in at most three attempts and, in UI mode, compares
+every screenshot with the built screen. On `clarify-ai-qa` and `clarify-qa` the archive needs `e2e.md`;
+on `clarify` and `lean` a change without it has no E2E. `Mode: skipped` never blocks; its `e2e` cases are
+listed for QA.
+
 The templates are in `openspec/schemas/<schema>/templates/` (`openspec/schemas/clarify-ai-qa/templates/` and
 `openspec/schemas/clarify-qa/templates/` also hold `test-cases.md`).
 
@@ -96,6 +109,7 @@ Rules the agent reads while it works, in `openspec/protocols/`:
 | `openspec/protocols/testing.md` | verification levels `unit`, `integration`, `manual`; the verification plan format, incl. *Test case coverage*; scenario markers and `@case` references; what a good test asserts; the end of apply, incl. the lists of `manual` and `e2e` test cases |
 | `openspec/protocols/test-cases.md` | the test-case document: format, labels, unique case names; the AI review loop; when the stage may change a spec; QA remarks and their statuses `open` / `closed` / `reopened`; "Stage result" (accepted findings, `Handed over to QA`, the `Looks correct` confirmation); late scenarios; switching between the two test-case schemas |
 | `openspec/protocols/ui-inventory.md` | UI mode: screenshots in `sources/ui/` and their `[U<n>]` tags; the `ui-inventory.md` format (screenshots with SHA-256 fingerprints, screens, variants, elements); the five decisions `in scope`, `mock`, `out of scope`, `decoration`, `existing` and their sources; the Main round UI questions; late, replaced and deleted screenshots; scenario links and mock scenarios; the `## Screens` design table; screenshot links in tasks; the `lean` variant |
+| `openspec/protocols/e2e.md` | the E2E stage: when a change needs E2E and the Main round question; the `e2e.md` record (mode, test folder, start, scenarios, accepted cases, screens, no new run needed); Playwright for JavaScript in its own folder with `retries: 0`, Chromium only, installed with permission; starting the application; test data on an empty test database or in stubs, credentials out of git; a test follows its case; running only through `e2e-run.mjs`; three fix attempts; accepted cases kept as skipped tests; the visual check with temporary snapshots; result validity and changes after the stage; skipping and the list for QA |
 | `openspec/protocols/review-specs.md` | what the spec reviewer checks and how it reports; in UI mode also the inventory and mock scenarios |
 | `openspec/protocols/review-tests.md` | what the test reviewer checks and how it reports |
 | `openspec/protocols/review-test-cases.md` | what the AI QA reviewer checks (positive, error and boundary cases; a closed checklist of unusual conditions; concrete data; observable outcomes), severities, the READY rule and accepted findings |
@@ -111,10 +125,10 @@ hooks:
 | Hook | Event | What it does |
 |---|---|---|
 | `openspec/tooling/hooks/answers-gate.mjs` | before Write, Edit, MultiEdit, Bash | **blocks** writing proposal, specs, design or the verification plan while its question round is unanswered or unconfirmed; on the test-case schemas also `design.md` until `check-test-cases --stage` passes. In UI mode, on all four schemas: runs `check-ui` at the stage of the artifact before the proposal, specs, test cases, design, verification plan and tasks, and blocks adding questions to `clarifications.md` until `ui-inventory.md` exists; shell writes (redirects, `tee`, `sed -i`, …) are caught too |
-| `openspec/tooling/hooks/archive-gate.mjs` | before `openspec archive` | **blocks** the archive unless every task is done, every check passes, every automated scenario has a marked test and the test review is READY or has a human decision; on the test-case schemas also unless `test-cases.md` passes its check and every `automated` case has a test with its `@case` reference; in UI mode, on all four schemas, also unless `check-ui` passes in archive mode |
+| `openspec/tooling/hooks/archive-gate.mjs` | before `openspec archive` | **blocks** the archive unless every task is done, every check passes, every automated scenario has a marked test and the test review is READY or has a human decision; on the test-case schemas also unless `test-cases.md` passes its check and every `automated` case has a test with its `@case` reference; in UI mode, on all four schemas, also unless `check-ui` passes in archive mode; on all four schemas unless `check-e2e` passes in archive mode (on the test-case schemas `e2e.md` is required; on `clarify` and `lean` a change without it has no E2E; `Mode: skipped` never blocks) |
 | `openspec/tooling/hooks/schema-starter.mjs` | before Bash | **blocks** `openspec new change` (also through the kit wrapper) without `--schema`, and tells the agent to ask the developer a three-choice menu: no test cases (`clarify`), AI QA reviewer only (`clarify-ai-qa`), AI QA reviewer then a human QA (`clarify-qa`). The project default schema does not count; commands run in a terminal are not affected |
 | `openspec/tooling/hooks/test-cases-run-limit.mjs` | before Agent / Task | counts runs of the `test-cases-reviewer` subagent per change in `reviews/test-cases-runs.json` and **blocks** a fourth run in a loop; a new loop starts for scenarios added after the stage is confirmed |
-| `openspec/tooling/hooks/artifact-feedback.mjs` | after Write, Edit, MultiEdit | runs the check that matches the written artifact and hands its errors back to the agent (never blocks); in UI mode also `check-ui` after `ui-inventory.md` (base stage) and after `tasks.md` (its UI tasks without a screenshot link, found now instead of at the archive); when the last task is checked, reminds it of the end-of-apply steps |
+| `openspec/tooling/hooks/artifact-feedback.mjs` | after Write, Edit, MultiEdit | runs the check that matches the written artifact and hands its errors back to the agent (never blocks); in UI mode also `check-ui` after `ui-inventory.md` (base stage) and after `tasks.md` (its UI tasks without a screenshot link, found now instead of at the archive); `check-e2e` in format mode after `e2e.md`; when the last task is checked, reminds it of the end-of-apply steps |
 | `openspec/tooling/hooks/session-start.mjs` | session start | where each change stands, open questions, unconfirmed rounds, task progress; warns about a wrong OpenSpec version or drifted skills |
 
 ## 4. Checks
@@ -130,6 +144,7 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
 | `openspec/tooling/checks/check-traceability.mjs` | every scenario is in the verification plan (with a level, or excluded with a reason); every requirement is traced to its sources; with `--markers`, every `unit` or `integration` scenario has a test carrying its marker; on the test-case schemas also the *Test case coverage* table and, with `--markers`, an `@case` reference for every `automated` case (a reference to an archived case is silent, an unknown one is a warning) |
 | `openspec/tooling/checks/check-test-cases.mjs` | test-case schemas: every scenario has a test case and every case sits under a scenario of the delta specs; unique case names per capability; Given / When / Then; labels (in UI mode `e2e` on every case under a scenario of a built inventory element); remark statuses. With `--stage`: the stage is complete (latest AI review READY or its blocker / major findings accepted, `Looks correct`; on `clarify-qa` also `Handed over to QA` and no open remark) |
 | `openspec/tooling/checks/check-ui.mjs` | UI mode, all four schemas, in stages by the artifact being written: only PNG / JPG / WebP and `screens.md` in `sources/ui/` (also when the mode is off; hidden files such as `.DS_Store` are ignored); `ui-inventory.md` exists; every screenshot registered and listed with a matching SHA-256 fingerprint, no deleted one; variants; a known decision for every element, backed by its source (clarify family); `[U<n>] <element>` citations; on `lean` the proposal names every element. From the design (`lean`: the verification plan) on: every `in scope` / `mock` element names existing scenarios. Before the verification plan and tasks: a `## Screens` row in the design for every screen with a built element. Archive: tasks naming a screen link its screenshot |
+| `openspec/tooling/checks/check-e2e.mjs` | all four schemas, the E2E stage record `e2e.md`. Format mode (after `e2e.md` is written): a known mode; unless skipped, the test folder and the start (`command <cmd>` or `developer at <url>`); a reason for every accepted case and accepted difference; known screen results. Archive mode: the decision exists on the test-case schemas; unless skipped, every `e2e` case (or scenario listed under `## Scenarios`, which must exist in the delta specs) has a test in the test folder that references it, and a valid passed result recorded by `e2e-run.mjs` or an accepted case; runs made with `retries: 0`; no project file changed after the latest run unless its state is under `## No new run needed`; in UI mode every screenshot compared with no open difference |
 | `openspec/tooling/checks/lint-kit.mjs` | misspelled fields in `schema.yaml`, `config.yaml` and `.openspec.yaml`, which OpenSpec ignores silently; a `context` over 50 KB, which OpenSpec drops whole |
 
 ## 5. Tests linked to scenarios
@@ -141,6 +156,14 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
   reason. check-traceability and the archive gate hold the plan and the markers together.
 - **Case references.** On the test-case schemas a test that proves a test case also carries
   `@case <capability-path> :: <case name>`, with the same placement rules as a marker.
+- **E2E runs.** `openspec/tooling/bin/e2e-run.mjs --change <name> [-- <playwright args>]` runs
+  `npx playwright test --reporter=json` in the test folder named in `e2e.md` (with `E2E_BASE_URL` when the
+  developer starts the application) and appends the run to the change's `e2e-runs.json`: per test its file,
+  title, status and the `@case` / `@scenario` references above it, the retries setting, a SHA-256 of the
+  application files (outside `openspec/` and the test folder) and one per file of the test folder (Playwright
+  output and `node_modules/` skipped). A failed run is recorded too. A result stays valid until the application,
+  its own test file or a shared file of the test folder changes; `--state` prints the current state id for
+  `## No new run needed`. The archive trusts only this file.
 - **Review input.** `openspec/tooling/bin/review-input.mjs` prints every scenario with its THEN clauses, planned
   levels and marked tests: what the test reviewer reads.
 
@@ -191,9 +214,11 @@ Shared libraries in `openspec/tooling/lib/`, used by the checks and hooks:
 | `openspec/tooling/lib/clarifications.mjs` | parser for `clarifications.md` |
 | `openspec/tooling/lib/plan.mjs` | parser for `verification-plan.md`, incl. *Test case coverage* |
 | `openspec/tooling/lib/spec-parser.mjs` | parser for delta and main specs |
-| `openspec/tooling/lib/markers.mjs` | finds scenario markers and `@case` references in project files |
+| `openspec/tooling/lib/markers.mjs` | finds scenario markers and `@case` references in project files (or in one folder, for the E2E tests), and the references right above a test |
 | `openspec/tooling/lib/test-cases.mjs` | parser for `test-cases.md` and `reviews/test-cases-review.md` |
 | `openspec/tooling/lib/ui-inventory.mjs` | the `sources/ui/` folder (UI mode, accepted formats) and the parser for `ui-inventory.md` |
+| `openspec/tooling/lib/e2e-record.mjs` | parser for the E2E stage record `e2e.md` |
+| `openspec/tooling/lib/e2e-runs.mjs` | `e2e-runs.json`: the Playwright JSON report of a run, the fingerprints of the application and the test folder, the state id |
 | `openspec/tooling/lib/reviews.mjs` | review input and review status |
 | `openspec/tooling/lib/markdown.mjs` | fences, tables, task counting |
 | `openspec/tooling/lib/yaml.mjs` | minimal YAML reader (no dependencies) |
@@ -205,8 +230,9 @@ Shared libraries in `openspec/tooling/lib/`, used by the checks and hooks:
 ## What the kit does not do
 
 - It does not run the project's tests; the agent does, with the project's commands.
-- No browser E2E and no backend → frontend contract step yet ([decisions](decisions.md) R3, R7). Test cases
-  labelled `e2e` are only listed, waiting for that stage.
-- It does not compare the built screen with the screenshot, read mockups from Figma or handle design tokens:
-  screenshots exported by hand are the only UI input.
+- No backend → frontend contract step yet ([decisions](decisions.md) R7).
+- No E2E in CI, in browsers other than Chromium or for mobile applications; no E2E for a frontend whose backend
+  lives in another repository ([decisions](decisions.md) R26).
+- It does not read mockups from Figma, handle design tokens or compare screens pixel by pixel: screenshots
+  exported by hand are the only UI input, and the agent compares them with the built screens by looking.
 - Claude Code only.

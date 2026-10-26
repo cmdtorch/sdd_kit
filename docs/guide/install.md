@@ -11,8 +11,8 @@
 
 Linux, macOS and WSL are supported. Native Windows is not.
 
-The kit does not depend on the project's language, framework or repository layout. It never runs tests: the agent
-uses the project's own commands. Write them into `CLAUDE.md` or the README (how to run one test file, the whole
+The kit does not depend on the project's language, framework or repository layout. It never runs the project's tests (except
+the Playwright tests of the E2E stage, through its own script): the agent uses the project's own commands. Write them into `CLAUDE.md` or the README (how to run one test file, the whole
 suite, lint and type checks).
 
 ## Installing into a repository (once, by the team lead)
