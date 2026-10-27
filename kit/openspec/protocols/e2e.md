@@ -193,7 +193,7 @@ node openspec/tooling/bin/e2e-run.mjs --change <change> -- -g "two sales"    # b
 - **Accepted cases.** The developer may accept a single case with a reason. Then:
   - list it under `## Accepted cases` as `- <capability-path> :: <name> — <reason>`, with the developer's reason;
   - keep its test in the project, marked as skipped (`test.skip(...)`), with the reason in a comment above it;
-  - list it for QA at the end of the stage (§12).
+  - put it under "Not verified automatically" in `apply-report.md` (§12).
 
   Every other case or listed scenario must pass. Never skip, delete or weaken a test that is not accepted
   (`openspec/protocols/testing.md` §7).
@@ -256,13 +256,21 @@ When the change does not need E2E, the developer skips it on purpose, or Playwri
   `Note: skipped on purpose by the developer`, `Note: Playwright not allowed`);
 - tell the developer that E2E was skipped;
 - the test cases and the tests below the interface stay as they are; the archive is not blocked by the stage;
-- list every case labelled `e2e` for QA (§12): at the end of the implementation, or at the end of the stage
-  when E2E is skipped during it.
+- put every case labelled `e2e` under "Not verified automatically" in `apply-report.md` (§12): at the end of the
+  implementation, or at the end of the stage when E2E is skipped during it. When E2E was switched off or skipped
+  after a failed start check, the entries carry the developer's choice as `Consent:`
+  (`openspec/protocols/apply.md` §4).
 
-## 12. The list for QA
+## 12. The report for QA
 
-At the end of the stage (or of the implementation, when E2E is skipped) list for the developer, as manual checks
-for QA, by capability and name, with the steps and the expected outcome of the Then:
+At the end of the stage (or of the implementation, when E2E is skipped) update `apply-report.md`
+(`openspec/protocols/apply.md` §7); QA checks its entries after the archive:
 
-- every accepted case, with its reason;
-- when E2E is skipped, every case labelled `e2e`, and say that E2E was skipped.
+- every accepted case goes under "Not verified automatically" in `apply-report.md` with its reason and a `Consent:`
+  line with the developer's acceptance, so it is not asked again at the end;
+- when E2E is skipped, every case labelled `e2e` goes there too, with the reason (e.g. "E2E switched off" or
+  "tests were not run" and the cause); entries without a `Consent:` line go into the consent list
+  (`openspec/protocols/apply.md` §8).
+
+A change without the kit version stamp (`x-sdd-kit` in `.openspec.yaml`) has no `apply-report.md`: list these
+cases for the developer as manual checks for QA, by capability and name, with the steps and the expected outcome.

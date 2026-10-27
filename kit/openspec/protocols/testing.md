@@ -19,7 +19,7 @@ find how to run the tests, ask the developer once and suggest writing the comman
 |---|---|---|
 | `unit` | a unit of logic in isolation (rules, calculations, validation) | during TDD, scoped to what you are changing |
 | `integration` | several parts together through a real interface (an API call, a database, a component with its data layer) | during TDD, scoped; again with the full suite |
-| `manual` | checks that cannot reasonably be automated | listed for a human, never silently skipped |
+| `manual` | a check that cannot be automated, or the extra check of a dangerous function | listed for QA in `apply-report.md`, never a task (`openspec/protocols/apply.md` §7) |
 | full suite | the whole test suite + the project's quality checks (lint, types, build) | once at the end of apply, and in the project's CI |
 
 Test cases carry coarser **verification labels** (`openspec/protocols/test-cases.md`): `automated` (a test
@@ -27,6 +27,20 @@ below the user interface), `e2e` (the full user path through the interface, test
 `openspec/protocols/e2e.md`) and
 `manual` (checked by hand). A case never names a level; the verification plan picks `unit` and/or
 `integration` for each `automated` case.
+
+**Manual only with a reason.** A `manual` row of the plan (its "Manual reason" column) and a test case labelled
+`manual` (its `Manual reason:` line) give a reason that starts with `cannot be automated:` or `dangerous:`,
+followed by the explanation, e.g. `cannot be automated: a new developer judges whether the README is clear`.
+Difficulty or effort is never a reason: automate the check. Never ask the developer whether a check should be
+automated or stay manual; decide by these rules. The kit's checks report a missing or malformed reason, and the
+next artifact cannot be written until it is fixed.
+
+**Dangerous functions.** A function is **dangerous** when it moves money (payments, payouts, charges, balances),
+acts on many users or records at once, or deletes or changes data irreversibly. Sign-in, roles and access rights
+alone do not make a function dangerous: a check that a user without the admin role cannot open the admin page
+gets no `dangerous:` row. A dangerous scenario is tested automatically like any other (a `unit` or
+`integration` row, or an E2E test) and gets an additional `manual` row whose reason names why it is dangerous —
+e.g. a payout to the card of every user whose balance is above 1000, every hour: `dangerous: money, many users`.
 
 Pick the **cheapest level that really proves the scenario**. Use `integration` when the risk is in how
 the parts work together (permissions, persistence, serialisation, wiring), not for every validation rule.
@@ -38,10 +52,11 @@ the parts work together (permissions, persistence, serialisation, wiring), not f
 
 ## Scenario coverage
 
-| Capability | Requirement | Scenario | Level | Critical | Test data / setup |
-|---|---|---|---|---|---|
-| inventory/sale-export | Accountant exports sales | Successful export | integration | yes | 3 sales across 2 months |
-| inventory/sale-export | Accountant exports sales | Totals are rounded | unit | no | amounts 0.005, 0.015 |
+| Capability | Requirement | Scenario | Level | Critical | Test data / setup | Manual reason |
+|---|---|---|---|---|---|---|
+| inventory/sale-export | Accountant exports sales | Successful export | integration | yes | 3 sales across 2 months | — |
+| inventory/sale-export | Accountant exports sales | Totals are rounded | unit | no | amounts 0.005, 0.015 | — |
+| inventory/sale-export | Accountant exports sales | Export file opens in a spreadsheet | manual | no | the March file | cannot be automated: a person judges how the file looks in a spreadsheet |
 
 ## Exclusions
 
@@ -58,6 +73,7 @@ the parts work together (permissions, persistence, serialisation, wiring), not f
 ## Environment
 
 - <what the tests need: services, seed data, feature flags>
+- Running application: no
 
 ## Test case coverage
 
@@ -73,7 +89,8 @@ the parts work together (permissions, persistence, serialisation, wiring), not f
 - `Level` is one of `unit`, `integration`, `manual`. A scenario may need two rows (for example `unit`
   for the rule and `integration` for the permission check).
 - An exclusion needs a real reason, e.g. "behaviour unchanged, covered by existing test X". Being hard
-  to test is not a reason; such a scenario is `manual`.
+  to test is a reason neither for an exclusion nor for `manual`: automate it.
+- `Manual reason` is filled only on `manual` rows (§1); other rows have `—`.
 - *Requirement trace* maps each requirement to its sources (`[Q<n>]`, `[D<n>]`, `[desc]`). This is the
   only place where spec items are tied to clarification answers. On the test-case schemas, a requirement
   changed during the test-case review may also cite its entry of "Spec changes during test-case review".
@@ -81,6 +98,9 @@ the parts work together (permissions, persistence, serialisation, wiring), not f
   capability path, scenario name, case name and labels. A case labelled `automated` names its level:
   `unit`, `integration` or both (`unit, integration`). A case labelled only `e2e` or `manual` has no
   level (`—`).
+- *Environment* ends with the line `Running application: yes` or `Running application: no`: `yes` when
+  checks need the application running (integration checks through the running stack, or the E2E stage). With
+  `yes` the agent runs the start check before the first task (`openspec/protocols/apply.md` §4).
 
 ## 3. Scenario markers
 
@@ -153,29 +173,33 @@ it('exports the paid sales of the period', async () => { /* ... */ });
    major findings.
 2. Run the project's **full test suite and quality checks**. Fix what fails (§7). Report the commands
    and their result to the developer.
-3. `manual` rows: list them for the developer, with what to check and the expected outcome. A human
-   performs them. On the test-case schemas the list also has every test case labelled `manual`, with its
-   name, its steps and the expected outcome of its Then.
+3. Write `apply-report.md` (`openspec/protocols/apply.md` §7): every `manual` row and every test case labelled
+   `manual` under "Manual checks", with its steps, expected outcome and reason, dangerous checks first. QA
+   performs them after the archive; they are not tasks.
 4. **E2E stage**, when the change needs it (`openspec/protocols/e2e.md`): E2E tests for the `e2e` cases
    (or the listed scenarios on `clarify` and `lean`), run only with `node openspec/tooling/bin/e2e-run.mjs`,
-   and in UI mode the comparison with the screenshots. When E2E is skipped, list the test cases labelled `e2e`
-   (alone or with other labels) as **manual checks for QA**, by capability and case name, and say that E2E was
-   skipped. At the end of the stage list its accepted cases the same way, with their reasons.
+   and in UI mode the comparison with the screenshots. When E2E is skipped, every test case labelled `e2e`
+   (alone or with other labels) goes under "Not verified automatically" in `apply-report.md`; accepted cases
+   go there too, with their reasons. Then ask the consent list (`openspec/protocols/apply.md` §8).
 5. Run the archive checks yourself:
    `node openspec/tooling/checks/check-traceability.mjs --change <change> --markers`, and when the change has
    `e2e.md`, `node openspec/tooling/checks/check-e2e.mjs --change <change> --mode archive`.
-6. Archive with `openspec archive <change>`. The archive gate checks that every task is done, every
+6. Tell the developer the change is ready to archive (`openspec/protocols/apply.md` §9); the developer
+   archives it with `/opsx:archive`. The archive gate checks that every task is done, every
    automated scenario has a marked test, the artifacts pass the kit checks and the test review is done; on
    the test-case schemas also that `test-cases.md` passes its check and every `automated` case has a test
    with its case reference; and that the E2E stage is complete (on the test-case schemas `e2e.md` with the
-   E2E decision is required; `Mode: skipped` never blocks). Test cases stay in the archived change; they are
+   E2E decision is required; `Mode: skipped` never blocks). On a change with the kit version stamp it also
+   checks `apply-report.md`: a missing test is accepted only for an entry of "Not verified automatically" with
+   the developer's `Consent:`, and every such entry needs one. Test cases stay in the archived change; they are
    not merged into the specs.
 
 ## 7. When something fails
 
 - **Never weaken quality to get green.** Do not delete tests, skip them, mark them as expected failures,
   loosen assertions, lower thresholds or edit a test so it matches wrong behaviour. Change a test only
-  when the test itself is wrong, and say why.
+  when the test itself is wrong, and say why. Weakening a test needs the developer's explicit consent and goes
+  under "Weakened tests" in `apply-report.md` (`openspec/protocols/apply.md` §6).
 - **At most two fix attempts** per failure (an E2E test of the E2E stage gets three,
   `openspec/protocols/e2e.md` §8). Then stop and ask the human. Give the options and their
   consequences (cost, risk, what stays unverified). Giving up on a target is the human's decision,

@@ -411,3 +411,22 @@ describe('test-case schemas after install', { skip: cliSkipReason() }, () => {
     assert.doesNotMatch(after, /schema-starter|test-cases-run-limit|check-test-cases/);
   });
 });
+
+describe('autonomous apply after install', () => {
+  test('the apply protocol, the start check, the report check and the command guard are installed, registered and allowed', async () => {
+    const root = pilot();
+    const r = await install(opts(root));
+    assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of ['openspec/protocols/apply.md', 'openspec/tooling/bin/start-check.mjs', 'openspec/tooling/checks/check-apply-report.mjs', 'openspec/tooling/hooks/boundary-guard.mjs', 'openspec/tooling/lib/apply-report.mjs', 'openspec/tooling/lib/start-check.mjs']) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    assert.ok(!existsSync(join(root, 'openspec/project-tools')), 'the project tool list is a project file, not installed');
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    const guard = settings.hooks.PreToolUse.find((g) => g.hooks.some((h) => h.command.includes('openspec/tooling/hooks/boundary-guard.mjs')));
+    assert.equal(guard?.matcher, 'Bash');
+    for (const p of ['Bash(node openspec/tooling/bin/start-check.mjs *)', 'Bash(node openspec/tooling/checks/check-apply-report.mjs *)']) assert.ok(settings.permissions.allow.includes(p), p);
+    assert.ok(r.doctor.some((i) => i.check === 'hooks' && i.level === 'ok'), JSON.stringify(r.doctor));
+  });
+});

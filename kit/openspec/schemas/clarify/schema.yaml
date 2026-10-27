@@ -318,8 +318,9 @@ artifacts:
       1. Verification round first: append `## Verification round` to
          clarifications.md and run it per `openspec/protocols/questions.md` -
          which scenarios are critical, which need an integration test, what test
-         data the scenarios need, which environments, which checks can only be
-         manual.
+         data the scenarios need, which environments, and whether the checks
+         need the application running. Never ask whether a check should be
+         automated or stay manual.
          Write this file only after that round's summary answer is exactly
          `Looks correct`.
       2. List EVERY scenario of every delta spec in this change, using the exact
@@ -328,6 +329,15 @@ artifacts:
       3. Fill the Requirement trace table: each requirement -> its sources
          ([Q<n>], [D<n>], [desc]) from clarifications.md.
       4. Choose the cheapest level that really proves each scenario.
+      5. A `manual` row only when the check cannot be automated or the function
+         is dangerous (money, many users or records at once, irreversible
+         deletion or change; testing.md section 1). Its Manual reason column
+         starts with `cannot be automated:` or `dangerous:`; effort is never a
+         reason. A dangerous scenario also gets a unit or integration row (or an
+         E2E test). Manual checks go to QA after the archive, not into tasks.
+      6. End the Environment section with `Running application: yes` (checks
+         through the running stack, or the E2E stage) or
+         `Running application: no`.
     requires:
       - specs
       - design
@@ -408,11 +418,14 @@ artifacts:
       - Every test carries the scenario marker
         (`@scenario <capability-path> :: <Scenario name>`,
         `openspec/protocols/testing.md` section 3).
+      - No task asks a human to check something by hand: a `manual` row of the
+        plan goes to "Manual checks" in `apply-report.md` for QA after the
+        archive, never into tasks.md.
       - The final group starts with the test review task: run the `test-reviewer`
         subagent and fix blocker/major findings (`openspec/protocols/review-tests.md`).
       - The final group is integration only - no new behaviour: run the project's
-        full test suite and quality checks and fix what fails, list the manual
-        checks for the developer, and run
+        full test suite and quality checks and fix what fails, write
+        `apply-report.md` (`openspec/protocols/apply.md` section 7), and run
         `node openspec/tooling/checks/check-traceability.mjs --change <name> --markers`
         (see `openspec/protocols/testing.md` section 6).
       - UI mode: a task that builds or changes a screen names it in backticks (the
@@ -431,7 +444,17 @@ apply:
     Read context files, work through pending tasks, mark complete as you go.
     Pause if you hit blockers or need clarification.
 
-    KIT RULES (sdd-kit): follow `openspec/protocols/testing.md`.
+    KIT RULES (sdd-kit): follow `openspec/protocols/apply.md` and
+    `openspec/protocols/testing.md`.
+    - Run to the end - every task, the test review, the full suite and the E2E
+      stage - without a question to the developer, except at the stops of
+      apply.md section 2. Change nothing outside the project without the
+      developer's consent (section 5).
+    - Start check first: when the verification plan's Environment says
+      `Running application: yes`, start the application with the project's own
+      commands before the first task: `node openspec/tooling/bin/start-check.mjs
+      --change <name> --start "<command>" --url <address>`. When it fails, stop
+      and let the developer choose (apply.md section 4).
     - TDD per task group: tests first (with scenario markers), see them fail,
       then implement. Run tests scoped to the work; the full suite runs at the
       end.
@@ -444,10 +467,13 @@ apply:
     - At the end run the project's full test suite and quality checks
       (testing.md section 6). Apply is done only when they pass, every
       automated scenario has a marked test
-      (`check-traceability.mjs --change <name> --markers`) and the manual checks
-      are listed for the developer.
+      (`check-traceability.mjs --change <name> --markers`), `apply-report.md` is
+      written (apply.md section 7) and the consent list is answered (section
+      8). Then tell the developer the change is ready to archive (section 9);
+      do not archive it yourself.
     - Never weaken tests or quality targets to get green; after two failed fix
-      attempts stop and ask the human.
+      attempts stop and ask the human. A weakening needs the developer's consent
+      and goes under "Weakened tests" (apply.md section 6).
     - UI mode: before writing the code of a screen, open its screenshots and its
       section of `ui-inventory.md`. A screenshot added or replaced now goes into
       the inventory, with questions in the Apply round
@@ -459,4 +485,5 @@ apply:
       --change <name>`, at most three fix attempts per test, and in UI mode
       compare every screenshot with the built screen. When E2E is not needed or
       is skipped, write `e2e.md` with `Mode: skipped` (required on the test-case
-      schemas) and list the `e2e` test cases for QA as manual checks.
+      schemas) and put the `e2e` test cases under "Not verified automatically"
+      in `apply-report.md`.

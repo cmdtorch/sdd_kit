@@ -1,7 +1,8 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // Claude Code hook plumbing (semantics verified against Claude Code 2.1.288, docs/openspec-facts.md §9):
 //   - stdin: JSON with hook_event_name, cwd, tool_name, tool_input, stop_hook_active, ...
-//   - PreToolUse: exit 2 blocks the tool call; stderr is shown to Claude
+//   - PreToolUse: exit 2 blocks the tool call; stderr is shown to Claude; JSON on stdout with
+//     hookSpecificOutput.permissionDecision "ask" lets the developer approve or refuse the call
 //   - SessionStart / PostToolUse: JSON on stdout with hookSpecificOutput.additionalContext
 // Hooks fail open: an unexpected error never blocks the user (exit 1 = non-blocking); CI is the backstop.
 import { readFileSync } from 'node:fs';
@@ -36,6 +37,11 @@ export function touchedFiles(input) {
 export function block(message) {
   process.stderr.write(message.endsWith('\n') ? message : message + '\n');
   process.exit(2);
+}
+
+/** Asks the developer to approve a PreToolUse call; the reason is shown with the prompt. */
+export function ask(reason) {
+  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: reason } }) + '\n');
 }
 
 /** Adds context for Claude (SessionStart, PostToolUse, UserPromptSubmit). */

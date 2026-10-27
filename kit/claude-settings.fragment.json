@@ -37,6 +37,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/boundary-guard.mjs\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/schema-starter.mjs\"",
             "timeout": 10
           }
@@ -70,7 +80,9 @@
     "allow": [
       "Bash(node openspec/tooling/bin/e2e-run.mjs *)",
       "Bash(node openspec/tooling/bin/review-input.mjs *)",
+      "Bash(node openspec/tooling/bin/start-check.mjs *)",
       "Bash(node openspec/tooling/checks/check-answers.mjs *)",
+      "Bash(node openspec/tooling/checks/check-apply-report.mjs *)",
       "Bash(node openspec/tooling/checks/check-e2e.mjs *)",
       "Bash(node openspec/tooling/checks/check-grounding.mjs *)",
       "Bash(node openspec/tooling/checks/check-specs.mjs *)",

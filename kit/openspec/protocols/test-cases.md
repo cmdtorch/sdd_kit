@@ -75,8 +75,12 @@ Accepted findings:
   |---|---|
   | `automated` | proven by a test below the user interface (the verification plan picks `unit` or `integration`) |
   | `e2e` | the full user path through the interface; tested in the E2E stage (`openspec/protocols/e2e.md`) |
-  | `manual` | checked by hand only |
+  | `manual` | checked by hand only, by QA after the archive; needs a `Manual reason:` line |
 
+  A case labelled `manual` has a `Manual reason:` line under `Labels:` that starts with `cannot be automated:`
+  or `dangerous:` (`openspec/protocols/testing.md` §1), e.g.
+  `Manual reason: cannot be automated: a person judges how the name wraps`. Effort is not a reason; a dangerous
+  function keeps its `automated` cases and gets a `manual` case in addition.
   `automated, e2e` is common: the backend now, the path through the UI later. A case never names `unit` or
   `integration`; that choice belongs to the verification plan (`openspec/protocols/testing.md`).
 - **Unique, stable names.** A case name is unique within its capability (the same name in two capabilities

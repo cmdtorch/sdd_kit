@@ -242,6 +242,10 @@ export async function install(opts) {
   // self-check with the freshly installed tooling
   const { lintKit } = await import(pathToFileURL(join(root, 'openspec', 'tooling', 'checks', 'lint-kit.mjs')).href);
   result.lint = lintKit({ root });
+  // the health check of the installed kit, shown at the end (project tools included)
+  const doctorModule = await import(pathToFileURL(join(root, 'openspec', 'tooling', 'bin', 'doctor.mjs')).href);
+  result.doctor = doctorModule.doctor(root);
+  result.doctorText = doctorModule.formatDoctor(result.doctor);
   return result;
 }
 
@@ -370,8 +374,10 @@ function printHuman(r) {
   out.push(
     '\nNext steps:',
     '  1. make sure CLAUDE.md or the README says how to run the tests and quality checks (the kit uses the project\'s own commands)',
-    '  2. node openspec/tooling/bin/doctor.mjs',
+    '  2. fix what the health check below reports; run it again with: node openspec/tooling/bin/doctor.mjs',
     '  3. commit openspec/, .claude/settings.json, .claude/agents/, .claude/commands/, .claude/skills/openspec-* and .gitignore',
+    '\nHealth check (node openspec/tooling/bin/doctor.mjs):',
+    r.doctorText,
   );
   console.log(out.join('\n'));
 }

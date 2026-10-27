@@ -6,6 +6,7 @@
 //   ### Scenario: <exact scenario name>          one section per spec scenario
 //   #### Case: <case name>                       one or more cases per scenario
 //   Labels: automated, e2e                       automated | e2e | manual
+//   Manual reason: cannot be automated: <why>    a `manual` case only; or `dangerous: <why>`
 //   - **Given** / **When** / **Then** / **And** / **But** <step>
 //   > **Remark** [open|closed|reopened]: <text>  under a case, or under "## General remarks"
 //   > **Answer:** <how it was handled>
@@ -32,6 +33,7 @@ const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 const SCENARIO = /^Scenario:\s*(.+)$/i;
 const CASE = /^Case:\s*(.+)$/i;
 const LABELS_LINE = /^\s*Labels\s*:\s*(.*)$/i;
+const MANUAL_REASON_LINE = /^\s*Manual reason\s*:\s*(.*)$/i;
 const STEP = /^\s*[-*+]\s*\*\*(Given|When|Then|And|But)\*\*/i;
 const REMARK = /^\s*>\s*\*\*Remark\*\*\s*(?:\[([^\]]*)\])?\s*:?\s*(.*)$/i;
 const ANSWER = /^\s*\[Answer\]:\s*(.*)$/;
@@ -112,7 +114,7 @@ export function parseTestCases(content) {
           doc.problems.push({ line: n, message: `test case "${name}" is not inside a scenario section ("### Scenario: <name>")` });
           continue;
         }
-        kase = { name, line: n, labels: null, labelsLine: null, steps: { given: 0, when: 0, then: 0 }, remarks: [] };
+        kase = { name, line: n, labels: null, labelsLine: null, manualReason: null, manualReasonLine: null, steps: { given: 0, when: 0, then: 0 }, remarks: [] };
         lastStep = null;
         scenario.cases.push(kase);
         continue;
@@ -151,6 +153,12 @@ export function parseTestCases(content) {
       if (l) {
         kase.labels = l[1].split(',').map((x) => x.replace(/`/g, '').trim().toLowerCase()).filter(Boolean);
         kase.labelsLine = n;
+        continue;
+      }
+      const mr = line.match(MANUAL_REASON_LINE);
+      if (mr) {
+        kase.manualReason = mr[1].trim();
+        kase.manualReasonLine = n;
         continue;
       }
       const s = line.match(STEP);

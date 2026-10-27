@@ -7,6 +7,31 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+**Autonomous apply** (`openspec/protocols/apply.md`), for changes created with this kit version (the kit
+records `x-sdd-kit: <version>` in a new change's `.openspec.yaml`; older changes finish under their old rules):
+
+- After the planning rounds apply runs to the end without the developer: every task, the test review, the full
+  suite and the E2E stage. The agent stops only on a requirement gap, a test that still fails after two
+  attempts, a failed start check or a blocked environment, an action that needs consent, a situation the plan
+  does not cover, and the consent list at the end. It suggests options in a stop but carries out none until the
+  developer chooses, works around problems only inside the application, and never archives by itself.
+- Manual checks are no longer tasks: a `manual` plan row (new *Manual reason* column) or test case
+  (`Manual reason:` line) needs a reason starting with `cannot be automated:` or `dangerous:`; dangerous
+  functions are tested automatically and checked by hand in addition. A missing reason blocks `tasks.md` (on the
+  test-case schemas `design.md`). The Verification round no longer asks whether a check should stay manual.
+- New report `apply-report.md` ("Manual checks" for QA after the archive, "Not verified automatically",
+  "Weakened tests"), checked by the new `check-apply-report`; the archive gate accepts a missing test only as an
+  entry the developer agreed to (`Consent:`), and blocks on entries without consent. Weakening a test needs the
+  developer's consent.
+- New script `openspec/tooling/bin/start-check.mjs`: when the plan says `Running application: yes`, the agent
+  starts the application before the first task, requests one address and stops it (`start-check.json`); on
+  failure the developer chooses how to go on.
+- New hook `boundary-guard`: asks the developer before commands outside the project (`sudo`, system and global
+  installs, `kill`, Docker commands that stop or remove containers, volumes or networks).
+- Project tool list `openspec/project-tools`: doctor warns about a missing listed tool, and the installer prints
+  doctor's result at the end.
+- `start-check.mjs` and `check-apply-report.mjs` are allowed without a prompt.
+
 **Breaking:** on `clarify-ai-qa` and `clarify-qa` the archive now needs `e2e.md`, the E2E decision of the change.
 For a change without E2E write `e2e.md` with `# E2E Stage` and `Mode: skipped`; active changes on these schemas
 need it before they can be archived. `clarify` and `lean` changes without `e2e.md` archive as before.

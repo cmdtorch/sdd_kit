@@ -1,7 +1,8 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // Merges the kit's hooks into a project's .claude/settings.json without touching anything else (D10):
 // other hooks (e.g. graphify), plugins, permissions and unknown keys stay exactly as they are.
-// Kit hooks are recognised by their command pointing into `openspec/tooling/hooks/`, so a re-run
+// Kit hooks (answers-gate, archive-gate, boundary-guard, …) are recognised by their command pointing into
+// `openspec/tooling/hooks/`, so a re-run
 // replaces old kit entries instead of duplicating them, and `removeKitHooks` cleanly uninstalls.
 // Kit permissions (kit scripts in `permissions.allow`: the checks, review-input and the E2E runner e2e-run)
 // are recognised by `openspec/tooling/`; the

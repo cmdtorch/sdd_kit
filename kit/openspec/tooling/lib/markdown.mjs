@@ -162,6 +162,19 @@ export function taskCounts(content) {
   return { done, open };
 }
 
+const HAND = /\b(?:by hand|manually|hand[- ]check|manual (?:check|verification|test(?:ing)?)|ask (?:the )?(?:developer|user|QA) to (?:check|verify|test))\b/i;
+
+/** Task lines that ask a human to check something by hand: [{ line (1-based), text }]. */
+export function handTasks(content) {
+  const out = [];
+  toLines(content).forEach((line, i) => {
+    if (!TASK_LINE.test(line)) return;
+    const text = line.replace(TASK_LINE, '').trim();
+    if (HAND.test(text)) out.push({ line: i + 1, text });
+  });
+  return out;
+}
+
 /** Case/space-insensitive key for matching names written by people (table cells vs headers). */
 export function fold(s) {
   return String(s).replace(/`/g, '').trim().toLowerCase().replace(/\s+/g, ' ');

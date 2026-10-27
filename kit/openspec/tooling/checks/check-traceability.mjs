@@ -8,17 +8,24 @@
 // integration, and — with --markers — every `automated` case has a test carrying its case reference
 // (`@case <capability> :: <case name>`). A reference that names no case of an active or archived change
 // is a warning; one that names a case of an archived change only is silent.
+// On a change stamped with the kit version (x-sdd-kit in .openspec.yaml, the autonomous-apply rules) a
+// `manual` row needs a "Manual reason" that starts with `cannot be automated:` or `dangerous:`, and a
+// `dangerous:` scenario also needs a unit or integration row or an E2E test (a scenario listed in e2e.md, or
+// on a test-case schema an `e2e` case of it). These findings carry rule 'manual-reason': answers-gate blocks
+// tasks.md on them. The archive gate passes `covered`: keys ("<capability> :: <scenario or case>") agreed under
+// "Not verified automatically" in apply-report.md, which count as covered without a test.
 //
 // Markers are plain text in test files of any language (`@scenario <capability> :: <Scenario name>`,
 // openspec/protocols/testing.md §3); they are collected from the project files, no test is run.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadChangeDeltas, changeScenarios, parseMainSpec } from '../lib/spec-parser.mjs';
-import { parsePlan, LEVELS, CASE_LEVELS, key, isEmptyCell } from '../lib/plan.mjs';
+import { parsePlan, LEVELS, CASE_LEVELS, MANUAL_REASONS, key, isEmptyCell, manualReasonProblem, isDangerous } from '../lib/plan.mjs';
+import { parseE2eRecord, E2E_FILE } from '../lib/e2e-record.mjs';
 import { parseTestCases, TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { parseClarifications, isBlankAnswer } from '../lib/clarifications.mjs';
 import { collectMarkers, collectCaseRefs } from '../lib/markers.mjs';
-import { changeDir, changeSchema, isKitSchema, isClarifyFamily, hasTestCases, listChanges, readChangeFile } from '../lib/project.mjs';
+import { changeDir, changeSchema, isKitSchema, isClarifyFamily, hasTestCases, listChanges, readChangeFile, isStamped } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-traceability';
@@ -30,6 +37,36 @@ covered by a test that carries its scenario marker. On the test-case schemas it 
 its case reference.`;
 
 const TAG = /\[(Q\d+|D\d+|desc)\]/g;
+const RULE = 'manual-reason';
+
+/** Scenario keys proven by an E2E test: listed in e2e.md, or (test-case schemas) with an `e2e` case. */
+function e2eScenarios(root, change, schema) {
+  const out = new Set();
+  const rec = readChangeFile(root, change, E2E_FILE);
+  if (rec !== null) for (const s of parseE2eRecord(rec).scenarios) out.add(key(s.capability, s.scenario));
+  if (hasTestCases(schema)) for (const c of casesOf(readChangeFile(root, change, TEST_CASES_FILE))) if (c.labels.includes('e2e')) out.add(key(c.capability, c.scenario));
+  return out;
+}
+
+/** Manual reasons and dangerous scenarios of a stamped change (rule 'manual-reason'). */
+function checkManualReasons({ root, change, schema, f, planPath, planned }) {
+  let e2e = null;
+  for (const [k, rows] of planned) {
+    for (const r of rows.filter((x) => x.level === 'manual')) {
+      const problem = manualReasonProblem(r.manualReason);
+      if (problem === 'missing') {
+        f.error(planPath, r.line, `manual row of "${r.scenario}" (${r.capability}) has no Manual reason`, `add a "Manual reason" column and start the reason with ${MANUAL_REASONS.map((p) => `"${p}"`).join(' or ')} (openspec/protocols/testing.md §1); effort is not a reason`, RULE);
+      } else if (problem) {
+        f.error(planPath, r.line, `Manual reason of "${r.scenario}" (${r.capability}) must start with ${MANUAL_REASONS.map((p) => `"${p}"`).join(' or ')}`, 'effort or difficulty is not a reason: automate the check instead (openspec/protocols/testing.md §1)', RULE);
+      }
+    }
+    const dangerous = rows.find((x) => x.level === 'manual' && isDangerous(x.manualReason));
+    if (!dangerous || rows.some((x) => x.level === 'unit' || x.level === 'integration')) continue;
+    e2e = e2e || e2eScenarios(root, change, schema);
+    if (e2e.has(k)) continue;
+    f.error(planPath, dangerous.line, `dangerous scenario "${dangerous.scenario}" (${dangerous.capability}) also needs a unit or integration row or an E2E test`, 'a dangerous function is tested automatically and gets a manual check in addition (openspec/protocols/testing.md §1)', RULE);
+  }
+}
 
 /** Test cases of a test-cases.md: [{capability, scenario, name, labels}]. */
 function casesOf(content) {
@@ -55,7 +92,7 @@ function knownCaseKeys(root) {
 }
 
 /** "Test case coverage" rows and case references of a test-case-schema change; returns the coverage summary. */
-function checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs }) {
+function checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs, covered }) {
   const content = readChangeFile(root, change, TEST_CASES_FILE);
   const cases = casesOf(content); // a missing or malformed test-cases.md is check-test-cases' finding
   const table = plan.testCases;
@@ -97,7 +134,7 @@ function checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs }) {
     if (!files.get(k).includes(m.file)) files.get(k).push(m.file);
   }
   for (const c of cases) {
-    if (c.labels.includes('automated') && !files.has(key(c.capability, c.name))) {
+    if (c.labels.includes('automated') && !files.has(key(c.capability, c.name)) && !covered.has(key(c.capability, c.name))) {
       const r = listed.get(key(c.capability, c.name));
       f.error(planPath, r ? r.line : null, `no test references the automated test case "${c.name}" (${c.capability})`, `add "@case ${c.capability} :: ${c.name}" above the test (openspec/protocols/testing.md)`);
     }
@@ -116,7 +153,7 @@ function checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs }) {
   return cases.map((c) => ({ capability: c.capability, scenario: c.scenario, case: c.name, labels: c.labels, files: files.get(key(c.capability, c.name)) || [] }));
 }
 
-export function checkTraceability({ root, change, markers, cases }) {
+export function checkTraceability({ root, change, markers, cases, covered = new Set() }) {
   if (!change) throw new UsageError('--change is required');
   const dir = changeDir(root, change);
   if (!existsSync(dir)) throw new UsageError(`change "${change}" not found at ${dir}`);
@@ -154,6 +191,7 @@ export function checkTraceability({ root, change, markers, cases }) {
     if (planned.get(k).some((x) => x.level === r.level)) f.warning(planPath, r.line, `"${r.scenario}" is planned twice at level ${r.level}`);
     planned.get(k).push(r);
   }
+  if (isStamped(root, change)) checkManualReasons({ root, change, schema, f, planPath, planned });
   const excluded = new Set();
   for (const r of plan.exclusions.rows) {
     const k = key(r.capability, r.scenario);
@@ -215,7 +253,7 @@ export function checkTraceability({ root, change, markers, cases }) {
     const have = new Set(markers.map((m) => key(m.capability, m.scenario)));
     for (const [k, rows] of planned) {
       const r = rows.find((x) => x.level !== 'manual' && LEVELS.includes(x.level));
-      if (r && !have.has(k)) {
+      if (r && !have.has(k) && !covered.has(k)) {
         f.error(planPath, r.line, `no test carries the marker for "${r.scenario}" (${r.capability})`, `add "@scenario ${r.capability} :: ${r.scenario}" above the test (openspec/protocols/testing.md §3)`);
       }
     }
@@ -236,7 +274,7 @@ export function checkTraceability({ root, change, markers, cases }) {
   if (hasTestCases(schema)) {
     // with markers, case references are collected too unless the caller passed them
     const caseRefs = markers ? cases ?? collectCaseRefs(root) : null;
-    const caseCoverage = checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs });
+    const caseCoverage = checkTestCaseCoverage({ root, change, f, plan, planPath, caseRefs, covered });
     if (caseCoverage) return makeReport(CHECK, f.list, { change, scenarios: scenarios.length, markersChecked: true, caseCoverage });
   }
   return makeReport(CHECK, f.list, { change, scenarios: scenarios.length, markersChecked: Boolean(markers) });

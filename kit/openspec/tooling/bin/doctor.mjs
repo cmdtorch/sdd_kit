@@ -3,6 +3,9 @@
 // One command that tells a developer whether this machine and this repository are ready for sdd-kit work,
 // and how to fix what is not. Read-only.
 //   node openspec/tooling/bin/doctor.mjs [--json]
+// Project tools: `openspec/project-tools` (a project file the kit never overwrites; openspec/protocols/apply.md)
+// lists the commands the project's checks need, one per line: `<command> — <checks it is needed for>`, or the
+// single line `none`. A listed command that is not on the path is a warning, never an error.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -11,7 +14,47 @@ import { findRoot } from '../lib/project.mjs';
 import { parseArgs, isMain } from '../lib/report.mjs';
 
 const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', timeout: 15000, ...opts, env: { ...process.env, OPENSPEC_TELEMETRY: '0', ...(opts.env || {}) } });
-const has = (cmd) => run('sh', ['-c', `command -v ${cmd}`]).status === 0;
+const has = (cmd) => run('sh', ['-c', `command -v '${cmd.replace(/'/g, '')}'`]).status === 0;
+
+export const PROJECT_TOOLS = 'openspec/project-tools';
+
+/** Lines of openspec/project-tools: [{ command, checks }]; [] for `none`, blank lines and `#` comments. */
+export function parseProjectTools(content) {
+  const out = [];
+  for (const raw of String(content).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || /^none\.?$/i.test(line)) continue;
+    const m = line.match(/^(\S+)\s*(?:[—–:]|\s-\s)\s*(.*)$/);
+    out.push({ command: (m ? m[1] : line.split(/\s+/)[0]).replace(/`/g, ''), checks: m ? m[2].trim() : '' });
+  }
+  return out;
+}
+
+/** Doctor items about the project tools (none when the list is missing or `none`). */
+function projectTools(root, add) {
+  const file = join(root, PROJECT_TOOLS);
+  if (!existsSync(file)) return;
+  const tools = parseProjectTools(readFileSync(file, 'utf8'));
+  if (!tools.length) return;
+  const missing = tools.filter((t) => !has(t.command));
+  for (const t of missing) {
+    add('warning', 'project tools', `${t.command} is not on the path — needed for: ${t.checks || 'the project\'s checks'}`, `install ${t.command}, or tell the agent how the project runs without it; the agent does not install programs into the system on its own`);
+  }
+  if (!missing.length) add('ok', 'project tools', `${tools.map((t) => t.command).join(', ')} found`);
+}
+
+/** Human-readable doctor result: one line per item, the fixes, and "Ready." or the problem count. */
+export function formatDoctor(items) {
+  const mark = { ok: '✓', warning: '!', error: '✗' };
+  const out = [];
+  for (const i of items) {
+    out.push(`${mark[i.level]} ${i.check}: ${i.message}`);
+    if (i.fix) out.push(`    fix: ${i.fix}`);
+  }
+  const errors = items.filter((i) => i.level === 'error').length;
+  out.push(errors ? `\n${errors} problem(s) to fix before working with sdd-kit.` : '\nReady.');
+  return out.join('\n');
+}
 
 export function doctor(root) {
   const items = []; // {level: ok|warning|error, check, message, fix?}
@@ -49,7 +92,7 @@ export function doctor(root) {
 
   const settings = join(root, '.claude', 'settings.json');
   const st = existsSync(settings) ? readFileSync(settings, 'utf8') : '';
-  const hooks = ['session-start', 'answers-gate', 'archive-gate', 'artifact-feedback', 'schema-starter', 'test-cases-run-limit'].filter((h) => !st.includes(`openspec/tooling/hooks/${h}.mjs`));
+  const hooks = ['session-start', 'answers-gate', 'archive-gate', 'boundary-guard', 'artifact-feedback', 'schema-starter', 'test-cases-run-limit'].filter((h) => !st.includes(`openspec/tooling/hooks/${h}.mjs`));
   if (hooks.length) add('error', 'hooks', `kit hooks missing in .claude/settings.json: ${hooks.join(', ')}`, `npx github:cmdtorch/sdd_kit#v${kit.kitVersion} update`);
   else add('ok', 'hooks', 'kit hooks registered in .claude/settings.json');
 
@@ -59,6 +102,7 @@ export function doctor(root) {
     add('warning', 'skills', 'OpenSpec skills differ from the kit profile (propose installed or continue missing)', 'node openspec/tooling/bin/openspec.mjs update');
   } else add('ok', 'skills', 'OpenSpec skills follow the kit profile');
 
+  projectTools(root, add);
   return items;
 }
 
@@ -76,13 +120,6 @@ if (isMain(import.meta.url)) {
   const items = doctor(root);
   const errors = items.filter((i) => i.level === 'error').length;
   if (args.json) console.log(JSON.stringify({ ok: !errors, items }, null, 2));
-  else {
-    const mark = { ok: '✓', warning: '!', error: '✗' };
-    for (const i of items) {
-      console.log(`${mark[i.level]} ${i.check}: ${i.message}`);
-      if (i.fix) console.log(`    fix: ${i.fix}`);
-    }
-    console.log(errors ? `\n${errors} problem(s) to fix before working with sdd-kit.` : '\nReady.');
-  }
+  else console.log(formatDoctor(items));
   process.exit(errors ? 1 : 0);
 }

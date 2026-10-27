@@ -7,7 +7,9 @@
 //   unique within a capability, every case has Given/When/Then steps and verification labels
 //   (automated, e2e, manual), every remark has the status open, closed or reopened. In UI mode
 //   (openspec/protocols/ui-inventory.md) every case under a scenario named by an `in scope` or `mock`
-//   element of ui-inventory.md carries the `e2e` label.
+//   element of ui-inventory.md carries the `e2e` label. On a change stamped with the kit version (x-sdd-kit),
+//   a case labelled `manual` needs a "Manual reason:" line starting with `cannot be automated:` or
+//   `dangerous:` (rule 'manual-reason'; --stage makes it block design.md).
 // --stage: also the completion of the test-cases stage (gate before writing design.md):
 //   clarify-ai-qa — the latest AI QA review is READY, or every blocker and major finding of it is listed in
 //                   "Stage result" as accepted or fixed by hand; the stage confirmation is "Looks correct"
@@ -18,7 +20,8 @@ import { join } from 'node:path';
 import { loadChangeDeltas, changeScenarios } from '../lib/spec-parser.mjs';
 import { parseTestCases, parseCaseReview, openRemarks, isListed, TEST_CASES_FILE, CASE_REVIEW, LABELS, REMARK_STATUSES, HANDED_OVER } from '../lib/test-cases.mjs';
 import { scanUiFolder, isUiMode, parseInventory, allElements, INVENTORY_FILE, BUILT_DECISIONS } from '../lib/ui-inventory.mjs';
-import { changeDir, changeSchema, readChangeFile, hasTestCases, TEST_CASE_SCHEMAS } from '../lib/project.mjs';
+import { changeDir, changeSchema, readChangeFile, hasTestCases, isStamped, TEST_CASE_SCHEMAS } from '../lib/project.mjs';
+import { manualReasonProblem, MANUAL_REASONS } from '../lib/plan.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-test-cases';
@@ -82,6 +85,8 @@ export function checkTestCases({ root, change, stage = false }) {
 
   // --- cases: names, labels, steps ---------------------------------------------------------------
   const uiElements = uiElementsByScenario(root, change, dir);
+  const stamped = isStamped(root, change);
+  const starts = MANUAL_REASONS.map((p) => `"${p}"`).join(' or ');
   for (const cap of doc.capabilities) {
     const seen = new Map();
     for (const sc of cap.scenarios) {
@@ -97,6 +102,14 @@ export function checkTestCases({ root, change, stage = false }) {
           }
           if (elements && !c.labels.includes('e2e')) {
             f.error(file, c.labelsLine, `test case "${c.name}" (${cap.name}) is under the scenario "${sc.name}", which covers the UI element${elements.length > 1 ? 's' : ''} ${elements.map((e) => `"${e}"`).join(', ')}; the \`e2e\` label is required`, `write "Labels: ${[...c.labels.filter((l) => l !== 'e2e'), 'e2e'].join(', ')}"`);
+          }
+        }
+        if (stamped && c.labels && c.labels.includes('manual')) {
+          const problem = manualReasonProblem(c.manualReason);
+          if (problem === 'missing') {
+            f.error(file, c.labelsLine || c.line, `test case "${c.name}" (${cap.name}) is labelled manual but has no "Manual reason:" line`, `add "Manual reason: <reason>" under the labels, starting with ${starts} (openspec/protocols/test-cases.md); effort is not a reason`, 'manual-reason');
+          } else if (problem) {
+            f.error(file, c.manualReasonLine, `Manual reason of test case "${c.name}" (${cap.name}) must start with ${starts}`, 'effort or difficulty is not a reason: label the case automated instead', 'manual-reason');
           }
         }
         for (const kind of ['given', 'when', 'then']) {

@@ -11,17 +11,22 @@
 // left out, so it can always be fixed. A clarifications.md write that adds a `### Q` heading is blocked while
 // sources/ui/ holds screenshots and ui-inventory.md does not exist. No other UI rule touches
 // clarifications.md or ui-inventory.md. Lean gets only the UI check (it has no question rounds).
+// Manual reasons, on all four kit schemas, for a change stamped with the kit version (x-sdd-kit): tasks.md is
+// blocked while check-traceability reports a `manual` plan row without a valid reason or a dangerous scenario
+// without an automated row (openspec/protocols/testing.md §1); on the test-case schemas design.md is blocked
+// by the same rule for test cases through check-test-cases --stage.
 // Bash: a command that writes to such an artifact (redirect, tee, cp, mv, sed -i, ...) is gated too;
 // this is a heuristic — CI (check-answers) is the backstop.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runHook, hookRoot, touchedFiles, block, absPath } from '../lib/hook-io.mjs';
-import { locateInChange, changeSchema, changeDir, isClarifyFamily, isKitSchema, hasTestCases } from '../lib/project.mjs';
+import { locateInChange, changeSchema, changeDir, isClarifyFamily, isKitSchema, hasTestCases, isStamped } from '../lib/project.mjs';
 import { checkUi, uiStageFor } from '../checks/check-ui.mjs';
 import { scanUiFolder, isUiMode, INVENTORY_FILE, UI_DIR } from '../lib/ui-inventory.mjs';
 import { ROUND_FOR_ARTIFACT } from '../lib/clarifications.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
 import { checkTestCases } from '../checks/check-test-cases.mjs';
+import { checkTraceability } from '../checks/check-traceability.mjs';
 import { TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { isMain } from '../lib/report.mjs';
 
@@ -65,6 +70,22 @@ function explainTestCases(change, report) {
     ...listErrors(report),
     'Continue the test-cases stage (openspec/protocols/test-cases.md): fix the test cases, settle every blocker and major finding of the AI QA review, and get an explicit "Looks correct" in "Stage result" of test-cases.md. Do not write design.md any other way.',
   ].join('\n');
+}
+
+function explainManual(change, report) {
+  return [
+    `sdd-kit answers-gate: tasks of change "${change}" cannot be written yet — the verification plan has manual checks without a valid reason.`,
+    ...listErrors(report),
+    'A check is manual only when it cannot be automated or the function is dangerous (openspec/protocols/testing.md §1): give each manual row a "Manual reason" starting with "cannot be automated:" or "dangerous:", or plan it as unit / integration. A dangerous scenario also needs an automated row. Do not write tasks.md any other way.',
+  ].join('\n');
+}
+
+/** tasks.md of a stamped change waits for valid manual reasons in the plan. */
+function manualGate(root, change) {
+  if (!isStamped(root, change)) return null;
+  const report = checkTraceability({ root, change, markers: null });
+  const findings = report.findings.filter((f) => f.rule === 'manual-reason');
+  return findings.length ? explainManual(change, { ...report, findings }) : null;
 }
 
 function explainUi(change, artifact, report) {
@@ -143,6 +164,10 @@ export function gate(input) {
         const stage = checkTestCases({ root, change: loc.change, stage: true });
         if (!stage.ok) return explainTestCases(loc.change, stage);
       }
+    }
+    if (loc.artifact === 'tasks') {
+      const manual = manualGate(root, loc.change);
+      if (manual) return manual;
     }
     const ui = uiGate(root, loc.change, schema, loc.artifact, abs);
     if (ui) return ui;
