@@ -22,7 +22,6 @@
 - [ ] **Parallel subagents.** Tests and code are written by separate subagents in parallel to speed up apply.
 - [ ] **Tests for the kit itself.** Decide how to test sdd-kit end to end.
 - [ ] **Stage indicator.** A Claude Code plugin that shows the current stage.
-- [ ] **"Looks good" menu.** Find out why the menu does not offer "Looks good" and the move to the next stage.
 - [ ] **`/opsx:continue` from the menu.** Offer continuing to the next artifact as a Claude Code menu choice.
 
 ## Raw ideas
