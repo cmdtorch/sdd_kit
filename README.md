@@ -116,7 +116,7 @@ The installer keeps a hash manifest: updates never overwrite files you edited, a
 - [Install, update, uninstall, onboarding](docs/guide/install.md)
 - [Daily workflow](docs/guide/workflow.md)
 - [Decisions](docs/decisions.md), [verified OpenSpec and Claude Code facts](docs/openspec-facts.md),
-  [changelog](CHANGELOG.md)
+  [changelog](CHANGELOG.md), [roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md), [security](SECURITY.md)
 
 ## License
