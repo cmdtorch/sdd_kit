@@ -9,13 +9,16 @@
 //   ui-inventory.md → check-ui, stage base (openspec/protocols/ui-inventory.md)
 //   tasks.md → check-ui, stage archive, only the findings in tasks.md (screenshot links of UI tasks,
 //              [U<n>] citations); the other stages are judged by answers-gate before the write;
-//              on a stamped change also a warning for tasks that ask a human to check by hand
+//              on a stamped change also a warning for tasks that ask a human to check by hand;
+//              check-tasks (the repository of every task group of a meta-repository change)
 //   e2e.md → check-e2e, format mode (the E2E stage record; runs and coverage are judged at archive)
 //   apply-report.md → check-apply-report (the implementation report, openspec/protocols/apply.md)
 // check-ui finds nothing outside UI mode except format errors of sources/ui/.
 // When the last task in tasks.md is checked off it reminds Claude of the end-of-apply steps.
 // The first kit artifact of a change stamps the kit version into its .openspec.yaml (`x-sdd-kit`): stamped
-// changes follow the autonomous-apply rules (openspec/protocols/apply.md), older ones keep theirs.
+// changes follow the autonomous-apply rules (openspec/protocols/apply.md), older ones keep theirs. In a
+// meta-repository (openspec/clones exists) the same write also marks the change `x-sdd-kit-metarepo: true`: it
+// follows the meta-repository rules (openspec/protocols/metarepo.md).
 import { basename } from 'node:path';
 import { runHook, hookRoot, touchedFiles, addContext } from '../lib/hook-io.mjs';
 import { locateInChange, changeSchema, isKitSchema, isClarifyFamily, readChangeFile, stampChange, isStamped } from '../lib/project.mjs';
@@ -28,9 +31,11 @@ import { checkTraceability } from '../checks/check-traceability.mjs';
 import { checkUi } from '../checks/check-ui.mjs';
 import { checkE2e } from '../checks/check-e2e.mjs';
 import { checkApplyReport } from '../checks/check-apply-report.mjs';
+import { checkTasks } from '../checks/check-tasks.mjs';
 import { APPLY_REPORT } from '../lib/apply-report.mjs';
 import { E2E_FILE } from '../lib/e2e-record.mjs';
 import { INVENTORY_FILE } from '../lib/ui-inventory.mjs';
+import { markChange } from '../lib/clones.mjs';
 
 const MAX_LISTED = 10;
 
@@ -53,7 +58,7 @@ function checksFor(artifact, schema, root, change, rel) {
       return [checkApplyReport({ root, change })];
     case 'tasks': {
       const report = checkUi({ root, change, stage: 'archive' });
-      return [{ ...report, findings: report.findings.filter((f) => f.file && basename(f.file) === 'tasks.md') }];
+      return [{ ...report, findings: report.findings.filter((f) => f.file && basename(f.file) === 'tasks.md') }, checkTasks({ root, change })];
     }
     default:
       return [];
@@ -94,7 +99,7 @@ export function feedback(input) {
     if (!artifact) continue;
     const schema = changeSchema(root, loc.change);
     if (!isKitSchema(schema)) continue;
-    if (loc.artifact) stampChange(root, loc.change, loc.rel);
+    if (loc.artifact && stampChange(root, loc.change, loc.rel)) markChange(root, loc.change);
     if (artifact === 'tasks') {
       const hand = handTasksNote(root, loc.change);
       if (hand) out.push(hand);

@@ -15,10 +15,19 @@
 // blocked while check-traceability reports a `manual` plan row without a valid reason or a dangerous scenario
 // without an automated row (openspec/protocols/testing.md §1); on the test-case schemas design.md is blocked
 // by the same rule for test cases through check-test-cases --stage.
+// Meta-repository changes (x-sdd-kit-metarepo: true; openspec/protocols/metarepo.md): tasks.md is blocked while
+// check-tasks reports a task group without exactly one known repository, judged on the content about to be
+// written (Write: `content`; Edit / MultiEdit: the current file with the replacements applied; when they cannot
+// be applied the write passes and artifact-feedback reports the result).
+// Meta-repository guard (openspec/clones exists; openspec/protocols/metarepo.md): a write into a declared clone's
+// own `openspec/` folder is blocked with a message naming the clone, whatever the change: Write / Edit /
+// MultiEdit, and shell writes (redirects, tee, sed -i / perl -i, cp / mv / install / rsync / ln targets, mv
+// sources, rm, rmdir, truncate, touch, dd of=), with a relative or absolute path. Reading is not guarded, nor a
+// path reached after `cd` in the same command (it resolves against the session folder).
 // Bash: a command that writes to such an artifact (redirect, tee, cp, mv, sed -i, ...) is gated too;
 // this is a heuristic — CI (check-answers) is the backstop.
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, relative, isAbsolute } from 'node:path';
 import { runHook, hookRoot, touchedFiles, block, absPath } from '../lib/hook-io.mjs';
 import { locateInChange, changeSchema, changeDir, isClarifyFamily, isKitSchema, hasTestCases, isStamped } from '../lib/project.mjs';
 import { checkUi, uiStageFor } from '../checks/check-ui.mjs';
@@ -27,8 +36,10 @@ import { ROUND_FOR_ARTIFACT } from '../lib/clarifications.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
 import { checkTestCases } from '../checks/check-test-cases.mjs';
 import { checkTraceability } from '../checks/check-traceability.mjs';
+import { checkTasks } from '../checks/check-tasks.mjs';
 import { TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { isMain } from '../lib/report.mjs';
+import { isMetarepo, readClones } from '../lib/clones.mjs';
 
 const MAX_LISTED = 8;
 const GATED_PATH = /(?:^|[\s'"=(])((?:\.\/)?(?:[^\s'"]*\/)?openspec\/changes\/[^\s'"/]+\/(?:proposal\.md|design\.md|verification-plan\.md|specs\/[^\s'"]+\.md))/g;
@@ -88,6 +99,42 @@ function manualGate(root, change) {
   return findings.length ? explainManual(change, { ...report, findings }) : null;
 }
 
+/**
+ * The file a Write / Edit / MultiEdit call would leave at `path`; null when it cannot be computed (an
+ * old_string that is not in the file, or a Bash call).
+ */
+export function contentAfter(input, path) {
+  const ti = input.tool_input || {};
+  if (input.tool_name === 'Bash') return null;
+  if (typeof ti.content === 'string') return ti.content;
+  const edits = Array.isArray(ti.edits) ? ti.edits.filter((e) => !e.file_path || absPath(input, e.file_path) === path) : [ti];
+  let text = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  for (const e of edits) {
+    if (typeof e.old_string !== 'string' || typeof e.new_string !== 'string') return null;
+    if (e.old_string === '') {
+      if (text !== '') return null;
+      text = e.new_string;
+      continue;
+    }
+    if (!text.includes(e.old_string)) return null;
+    text = e.replace_all ? text.split(e.old_string).join(e.new_string) : text.replace(e.old_string, () => e.new_string);
+  }
+  return text;
+}
+
+/** tasks.md of a meta-repository change: every task group names its repository (check-tasks). */
+function tasksGate(root, change, input, path) {
+  const content = contentAfter(input, path);
+  if (content === null) return null;
+  const report = checkTasks({ root, change, content });
+  if (!report.findings.some((f) => f.level === 'error')) return null;
+  return [
+    `sdd-kit answers-gate: tasks of change "${change}" cannot be written yet — every task group names the repository it runs in (openspec/protocols/metarepo.md).`,
+    ...listErrors(report),
+    'Start each group heading with one repository, "## 2. [backend] Order API": a clone name of openspec/clones or root; only the last of two or more groups (the final checks) may name none. Split a group that touches two repositories. Do not write tasks.md any other way.',
+  ].join('\n');
+}
+
 function explainUi(change, artifact, report) {
   return [
     `sdd-kit answers-gate: ${artifact} of change "${change}" cannot be written yet — the UI check (check-ui) reports errors in the change's screenshots or UI inventory.`,
@@ -132,9 +179,133 @@ function uiGate(root, change, schema, artifact, path) {
   return explainUi(change, artifact, { ...report, findings });
 }
 
+// --- Guard of a clone's own OpenSpec (meta-repository) -------------------------------------------------------
+
+/** Words of one shell command line, split into simple commands: [[word, ...], ...]; quotes are removed. */
+function shellCommands(command) {
+  const commands = [];
+  let words = [];
+  let word = '';
+  let has = false;
+  const endWord = () => {
+    if (has) words.push(word);
+    word = '';
+    has = false;
+  };
+  const endCommand = () => {
+    endWord();
+    if (words.length) commands.push(words);
+    words = [];
+  };
+  const s = String(command);
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "'" || ch === '"') {
+      const close = s.indexOf(ch, i + 1);
+      const end = close === -1 ? s.length : close;
+      word += s.slice(i + 1, end);
+      has = true;
+      i = end;
+    } else if (ch === '\\' && i + 1 < s.length) {
+      word += s[++i];
+      has = true;
+    } else if (/\s/.test(ch) && ch !== '\n') {
+      endWord();
+    } else if (ch === '\n' || ch === ';' || ch === '|' || ch === '&' || ch === '(' || ch === ')') {
+      // `2>&1` and `&>` stay redirects
+      if (ch === '&' && (s[i - 1] === '>' || s[i + 1] === '>')) {
+        word += ch;
+        has = true;
+        continue;
+      }
+      endCommand();
+    } else if (ch === '>' || ch === '<') {
+      // a redirect is a word of its own: `>`, `>>`, `2>`, `&>`, followed by its target
+      const fd = /^[0-9&]?$/.test(word) ? word : null;
+      if (fd === null) endWord();
+      let op = (fd ?? '') + ch;
+      if (s[i + 1] === ch) op += s[++i];
+      word = '';
+      has = false;
+      words.push(op);
+    } else {
+      word += ch;
+      has = true;
+    }
+  }
+  endCommand();
+  return commands;
+}
+
+const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit']);
+const FILE_ARGS = new Set(['tee', 'rm', 'rmdir', 'unlink', 'truncate', 'touch', 'shred']);
+const TARGET_LAST = new Set(['cp', 'install', 'rsync', 'ln']);
+
+/** Paths a shell command line writes, moves or removes (a heuristic: CI is the backstop). */
+export function shellWriteTargets(command) {
+  const targets = [];
+  for (const words of shellCommands(command)) {
+    const plain = [];
+    for (let k = 0; k < words.length; k++) {
+      const w = words[k];
+      if (/^[0-9&]?>>?$/.test(w)) {
+        const t = words[++k];
+        if (t && !t.startsWith('&')) targets.push(t);
+      } else if (/^[0-9]?<<?$/.test(w)) k++;
+      else plain.push(w);
+    }
+    let i = 0;
+    while (i < plain.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(plain[i]) || ['sudo', 'command', 'env', 'nohup', 'time'].includes(plain[i]))) i++;
+    const cmd = (plain[i] || '').split('/').pop();
+    const args = plain.slice(i + 1);
+    const operands = args.filter((a) => !a.startsWith('-'));
+    if (FILE_ARGS.has(cmd)) targets.push(...operands);
+    else if ((cmd === 'sed' || cmd === 'perl') && args.some((a) => /^-[a-zA-Z]*i/.test(a) || a.startsWith('--in-place'))) targets.push(...operands);
+    else if (cmd === 'mv') targets.push(...operands);
+    else if (TARGET_LAST.has(cmd)) {
+      const t = args.findIndex((a) => a === '-t' || a === '--target-directory');
+      if (t !== -1 && args[t + 1]) targets.push(args[t + 1]);
+      else if (operands.length) targets.push(operands[operands.length - 1]);
+    } else if (cmd === 'dd') targets.push(...args.filter((a) => a.startsWith('of=')).map((a) => a.slice(3)));
+  }
+  return targets.filter(Boolean);
+}
+
+/** The declared clone whose own `openspec/` folder holds the absolute path `abs`, or null. */
+function cloneOpenspecOf(root, clones, abs) {
+  const rel = relative(root, abs).split('\\').join('/');
+  if (!rel || rel.startsWith('../') || isAbsolute(rel)) return null;
+  return clones.find((c) => rel === `${c.path}/openspec` || rel.startsWith(`${c.path}/openspec/`)) || null;
+}
+
+/** Blocks a write into a declared clone's own OpenSpec from a session started in the root. */
+export function cloneGuard(root, input) {
+  if (!isMetarepo(root)) return null;
+  const { clones } = readClones(root);
+  if (!clones.length) return null;
+  const base = input.cwd || root;
+  const paths =
+    input.tool_name === 'Bash'
+      ? shellWriteTargets(String(input.tool_input?.command || '')).map((p) => resolve(base, p))
+      : WRITE_TOOLS.has(input.tool_name)
+        ? touchedFiles(input)
+        : [];
+  for (const abs of paths) {
+    const clone = cloneOpenspecOf(root, clones, abs);
+    if (!clone) continue;
+    return [
+      `sdd-kit answers-gate: ${relative(root, abs)} belongs to the OpenSpec of the clone \`${clone.name}\` (${clone.path}), not to this meta-repository.`,
+      `A clone's own OpenSpec is not edited from the meta-repository root (openspec/protocols/metarepo.md): work on it from a session started in ${clone.path}. Reading it from here is fine. Do not write it any other way.`,
+    ].join('\n');
+  }
+  return null;
+}
+
 export function gate(input) {
   const root = hookRoot(input);
   if (!root) return null;
+  const guarded = cloneGuard(root, input);
+  if (guarded) return guarded;
   let targets = [];
   if (input.tool_name === 'Bash') {
     const cmd = String(input.tool_input?.command || '');
@@ -168,6 +339,8 @@ export function gate(input) {
     if (loc.artifact === 'tasks') {
       const manual = manualGate(root, loc.change);
       if (manual) return manual;
+      const repos = tasksGate(root, loc.change, input, abs);
+      if (repos) return repos;
     }
     const ui = uiGate(root, loc.change, schema, loc.artifact, abs);
     if (ui) return ui;

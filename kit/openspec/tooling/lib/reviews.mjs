@@ -1,7 +1,7 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // Review inputs and review status (openspec/protocols/review-tests.md, review-specs.md).
 import { loadChangeDeltas } from './spec-parser.mjs';
-import { parsePlan, key } from './plan.mjs';
+import { parsePlan, key, E2E_LEVEL } from './plan.mjs';
 import { collectMarkers } from './markers.mjs';
 import { readIn } from './project.mjs';
 
@@ -31,7 +31,8 @@ export function testReviewInput(root, dir) {
     s.planned = [...new Set(plan.coverage.rows.filter((r) => key(r.capability, r.scenario) === k).map((r) => r.level))];
     s.excluded = plan.exclusions.rows.some((r) => key(r.capability, r.scenario) === k);
     s.tests = markers.filter((m) => key(m.capability, m.scenario) === k).map((m) => ({ file: m.file, line: m.line }));
-    s.missing = s.planned.some((lvl) => lvl !== 'manual') && !s.tests.length;
+    // an `e2e` row (meta-repository) is proven by the E2E stage, not by a marked test
+    s.missing = s.planned.some((lvl) => lvl !== 'manual' && lvl !== E2E_LEVEL) && !s.tests.length;
   }
   return { scenarios };
 }

@@ -6,12 +6,17 @@
 // (`Reason: dangerous: …`) first and marked "required before release", a change and the developer's consent
 // on every weakened test. An entry of "Not verified automatically" without a `Consent:` line is a warning
 // (the consent list at the end of apply asks for it); the report lists them in `unconsented`, and the
-// archive gate blocks on them. Skipped for schemas that are not kit schemas.
+// archive gate blocks on them. On a meta-repository change (x-sdd-kit-metarepo: true;
+// openspec/protocols/metarepo.md) every repository named by a task group has one section
+// `## Repository: <name>` with at least one `Command:` and one `Result:` line; a section for another
+// repository is allowed (its lines are checked too) and the result is not judged. Skipped for schemas that are not kit schemas.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseApplyReport, entryKey, APPLY_REPORT, REQUIRED_MARK, SECTION_TITLES } from '../lib/apply-report.mjs';
 import { isDangerous } from '../lib/plan.mjs';
 import { changeDir, changeSchema, isKitSchema, readChangeFile } from '../lib/project.mjs';
+import { followsMetarepo } from '../lib/clones.mjs';
+import { taskRepositories } from './check-tasks.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-apply-report';
@@ -24,6 +29,23 @@ expected outcome of manual checks, dangerous checks first, consent on weakened t
 /** Fields every entry of a section needs. */
 const REQUIRED = { manual: ['reason', 'steps', 'expected'], unverified: ['reason'], weakened: ['change', 'reason', 'consent'] };
 const label = (field) => `"${field[0].toUpperCase()}${field.slice(1)}:"`;
+
+/** Meta-repository change: a complete `## Repository: <name>` section per repository of the task groups. */
+function checkRepositories({ root, change, doc, file, f }) {
+  const seen = new Set();
+  for (const r of doc.repositories) {
+    if (seen.has(r.name)) {
+      f.error(file, r.line, `\`${r.name}\` has two sections "## Repository: ${r.name}"`, 'merge them into one section');
+      continue;
+    }
+    seen.add(r.name);
+    if (!r.commands.length) f.error(file, r.line, `the section for \`${r.name}\` names no command (no "Command:" line)`, 'write the full-suite and quality-check commands you ran in that repository, or "Command: none" when it has no tests');
+    if (!r.results.length) f.error(file, r.line, `the section for \`${r.name}\` has no result (no "Result:" line)`, 'write what the commands reported, or "Result: no tests"');
+  }
+  for (const name of taskRepositories(root, change)) {
+    if (!seen.has(name)) f.error(file, null, `section "## Repository: ${name}" is missing: a task group names \`${name}\``, `run the full suite and quality checks of ${name} with its own commands and write "Command:" and "Result:" lines under "## Repository: ${name}" (openspec/protocols/metarepo.md)`);
+  }
+}
 
 /** Runs the check. Options: { root, change }. */
 export function checkApplyReport({ root, change }) {
@@ -67,6 +89,8 @@ export function checkApplyReport({ root, change }) {
     if (!e.required) f.error(file, e.line, `dangerous check "${e.name}" (${e.capability}) is not marked "${REQUIRED_MARK}"`, `write "### ${entryKey(e)} — ${REQUIRED_MARK}"`);
     if (seenOther) f.error(file, e.line, `dangerous check "${e.name}" (${e.capability}) must come before the other manual checks`);
   }
+
+  if (followsMetarepo(root, change)) checkRepositories({ root, change, doc, file, f });
 
   const unconsented = doc.entries.unverified.filter((e) => !e.consent);
   for (const e of unconsented) {

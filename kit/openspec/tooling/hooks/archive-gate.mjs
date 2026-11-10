@@ -15,13 +15,16 @@
 //     E2E; unless E2E is skipped, every e2e case or listed scenario has an E2E test with a valid passed (or
 //     accepted) result recorded by e2e-run.mjs, and in UI mode every screenshot is compared with no open
 //     difference
+//   - check-tasks passes: on a meta-repository change every task group names one known repository and no
+//     clone a group names is missing (openspec/protocols/metarepo.md)
 //   - the test review exists: Verdict READY, or NOT-READY with a recorded human decision
 //   - on a change stamped with the kit version (x-sdd-kit; openspec/protocols/apply.md): apply-report.md
 //     passes check-apply-report and every entry of "Not verified automatically" carries a `Consent:` line;
 //     a scenario or `automated` case without a test counts as covered only when it is agreed there; every
 //     manual plan row and `manual` case is under "Manual checks"; with E2E skipped (e2e.md `Mode: skipped`)
-//     every `e2e` case and listed scenario is agreed there; when the plan's Environment says
-//     `Running application: yes`, the start-check record start-check.json exists (start-check.mjs).
+//     every `e2e` case and listed scenario (on a meta-repository change also every `e2e` plan row) is agreed
+//     there; when the plan's Environment says `Running application: yes`, the start-check record
+//     start-check.json exists (start-check.mjs).
 //     Unstamped changes keep the gate above.
 // The kit does not run the project's tests (it knows no stack); the apply instructions make the agent run
 // them, and the project's own CI is the backstop.
@@ -37,15 +40,16 @@ import { checkGrounding } from '../checks/check-grounding.mjs';
 import { checkTraceability } from '../checks/check-traceability.mjs';
 import { checkTestCases } from '../checks/check-test-cases.mjs';
 import { checkUi } from '../checks/check-ui.mjs';
-import { checkE2e } from '../checks/check-e2e.mjs';
+import { checkE2e, e2ePlanRows } from '../checks/check-e2e.mjs';
 import { checkApplyReport } from '../checks/check-apply-report.mjs';
+import { checkTasks } from '../checks/check-tasks.mjs';
 import { entryKey, APPLY_REPORT } from '../lib/apply-report.mjs';
 import { parsePlan, key } from '../lib/plan.mjs';
 import { parseTestCases, TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { parseE2eRecord, E2E_FILE, SKIPPED } from '../lib/e2e-record.mjs';
 import { START_CHECK_FILE } from '../lib/start-check.mjs';
 import { collectMarkers, collectCaseRefs } from '../lib/markers.mjs';
-import { taskCounts } from '../lib/markdown.mjs';
+import { taskCounts, openTasks } from '../lib/markdown.mjs';
 import { testReviewProblems } from '../lib/reviews.mjs';
 
 const ARCHIVE = /(?:^|[\s;&|(])(?:npx\s+(?:--yes\s+|-y\s+)?(?:@fission-ai\/)?)?(?:openspec|\S*openspec\.mjs)\s+archive\b([^;&|\n]*)/g;
@@ -102,6 +106,10 @@ function autonomousProblems(root, change, schema) {
     const items = [
       ...cases.filter((c) => c.labels.includes('e2e')).map((c) => ['case', c.capability, c.name]),
       ...record.scenarios.map((s) => ['scenario', s.capability, s.scenario]),
+      // meta-repository: `e2e` plan rows, like listed scenarios
+      ...e2ePlanRows(root, change)
+        .filter((r) => !record.scenarios.some((s) => s.capability === r.capability && s.scenario === r.scenario))
+        .map((r) => ['scenario', r.capability, r.scenario]),
     ];
     for (const [kind, capability, name] of items) {
       if (!covered.has(key(capability, name))) problems.push(`E2E is skipped: the e2e ${kind} "${name}" (${capability}) is not agreed under "Not verified automatically" in ${APPLY_REPORT}`);
@@ -116,12 +124,17 @@ function autonomousProblems(root, change, schema) {
 /** Problems that block archiving a change (empty = allowed). */
 export function archiveProblems(root, change) {
   const problems = [];
-  const { open } = taskCounts(readChangeFile(root, change, 'tasks.md') || '');
-  if (open) problems.push(`${open} task(s) in tasks.md are not done`);
+  const taskText = readChangeFile(root, change, 'tasks.md') || '';
+  const { open } = taskCounts(taskText);
+  if (open) {
+    const names = openTasks(taskText);
+    const listed = names.slice(0, 5).join('; ') + (names.length > 5 ? `; ... and ${names.length - 5} more` : '');
+    problems.push(`${open} task(s) in tasks.md are not done${listed ? `: ${listed}` : ''}`);
+  }
   const schema = changeSchema(root, change);
   const stamped = isStamped(root, change) ? autonomousProblems(root, change, schema) : null;
   const covered = stamped ? stamped.covered : new Set();
-  const reports = [checkSpecs({ root, change }), checkTraceability({ root, change, markers: collectMarkers(root), cases: hasTestCases(schema) ? collectCaseRefs(root) : null, covered })];
+  const reports = [checkSpecs({ root, change }), checkTasks({ root, change }), checkTraceability({ root, change, markers: collectMarkers(root), cases: hasTestCases(schema) ? collectCaseRefs(root) : null, covered })];
   if (isClarifyFamily(schema)) reports.unshift(checkAnswers({ root, change }), checkGrounding({ root, change }));
   if (hasTestCases(schema)) reports.push(checkTestCases({ root, change }));
   reports.push(checkUi({ root, change, stage: 'archive' }), checkE2e({ root, change, mode: 'archive' }));

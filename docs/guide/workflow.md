@@ -255,6 +255,35 @@ The flow is proposal → specs → verification-plan → tasks → apply, with n
 guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates are the same. Before the first task
 the agent asks whether the change needs E2E (section 3a).
 
+## Meta-repositories
+
+When `openspec/clones` exists ([install](install.md#meta-repositories)), the project is a meta-repository. Start
+Claude Code in the root. Changes started there follow `openspec/protocols/metarepo.md` in addition to the
+steps above; changes started before the list existed finish under the old rules.
+
+- **Verification plan.** Each row names its repositories in a last *Repository* column (`backend`,
+  `backend, frontend`, `root`). A `unit` / `integration` row needs a marked test in each named repository. A
+  scenario seen only in the browser can use the level `e2e`, proven by an E2E test of the stage.
+- **Tasks.** Each task group names one repository: `## 2. [backend] Order API`. Only the last group (the final
+  checks) names none. The agent does a group's tasks in that repository with its own commands, from `AGENTS.md`
+  and the mise tasks; when it cannot find them, it asks you once and suggests adding them to `AGENTS.md`.
+- **Report.** `apply-report.md` gets a section per repository of the task groups:
+
+  ```markdown
+  ## Repository: backend
+
+  Command: mise run test:backend
+  Result: 214 passed
+  ```
+
+- **E2E.** The clones count as one web application. The E2E question comes only for a change that touches the
+  web interface; the E2E tests live in a root folder (e.g. `e2e/`), and one command from the root starts the
+  application.
+- **Archive.** On top of the usual gate: the clone list has no error, every task group names a known
+  repository, every named repository has its tests and its report section, and no clone the change names is
+  missing.
+- A clone's own `openspec/` is read only from the root; work on it from a session started in the clone.
+
 ## What runs where
 
 | When | What |

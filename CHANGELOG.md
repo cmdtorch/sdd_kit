@@ -7,6 +7,27 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+**Meta-repositories** (`openspec/protocols/metarepo.md`): a root with the kit and application clones in
+sub-folders, each with its own git, listed in the new project file `openspec/clones` (`repos/backend` or
+`name=path` per line). Projects without the file, and changes started before it existed, work as before.
+
+- Marked tests and `@case` references are found inside the clones, read by each clone's own git rules (without
+  its `openspec/` and `.claude/`); the review input, the archive gate and the E2E run fingerprints see them too.
+- Changes started in a meta-repository are marked `x-sdd-kit-metarepo: true` and follow its rules: a
+  *Repository* column in the verification plan (a marked test is needed in each named repository) and the new
+  level `e2e`; every task group names one repository, `## 2. [backend] Order API` (new check `check-tasks`;
+  `tasks.md` is blocked otherwise); `apply-report.md` gets one `## Repository: <name>` section with `Command:`
+  and `Result:` per repository of the task groups; a missing clone the change names blocks its archive.
+- E2E: the clones count as one web application; the E2E question is asked only for changes that touch the web
+  interface; E2E tests live in a root folder outside every clone.
+- answers-gate blocks writes into a declared clone's own `openspec/` from a session started in the root.
+- Installer: in a terminal `install` asks "meta-repository or single repository" and the clone paths; new option
+  `--metarepo [<entries>]` (comma-separated) for unattended installs and to add clones on `update`. Uninstall
+  keeps `openspec/clones`; nothing is written inside a clone.
+- Doctor reports clone list errors, warns about missing clones and offers undeclared nested repositories (asking
+  in a terminal, printing the line otherwise).
+- The archive gate names the open tasks instead of only counting them.
+
 **Autonomous apply** (`openspec/protocols/apply.md`), for changes created with this kit version (the kit
 records `x-sdd-kit: <version>` in a new change's `.openspec.yaml`; older changes finish under their old rules):
 

@@ -162,6 +162,17 @@ export function taskCounts(content) {
   return { done, open };
 }
 
+/** Open task lines in a tasks file, as their text after the checkbox: ['1.2 Add the order filter']. */
+export function openTasks(content) {
+  const out = [];
+  for (const line of toLines(content)) {
+    const m = line.match(TASK_LINE);
+    if (!m || (m[1] ?? '').toLowerCase() === 'x') continue;
+    out.push(line.slice(m[0].length).trim());
+  }
+  return out;
+}
+
 const HAND = /\b(?:by hand|manually|hand[- ]check|manual (?:check|verification|test(?:ing)?)|ask (?:the )?(?:developer|user|QA) to (?:check|verify|test))\b/i;
 
 /** Task lines that ask a human to check something by hand: [{ line (1-based), text }]. */
@@ -178,4 +189,32 @@ export function handTasks(content) {
 /** Case/space-insensitive key for matching names written by people (table cells vs headers). */
 export function fold(s) {
   return String(s).replace(/`/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+const TASK_GROUP = /^(\d+)\.\s+(.*)$/;
+const GROUP_TAG = /^\[([^\]]*)\]\s*(.*)$/;
+
+/**
+ * Task groups of a tasks file: every `## <n>. <title>` heading outside fences and comments, with the
+ * repositories of a leading tag `## <n>. [<name>] <title>` (meta-repository changes,
+ * openspec/protocols/metarepo.md): [{ number, title, repositories: [names] | null (no tag), line (1-based) }].
+ */
+export function taskGroups(content) {
+  const raw = toLines(content);
+  const fences = fenceMask(raw);
+  const lines = stripComments(raw, fences);
+  const out = [];
+  for (const h of headings(lines, fences)) {
+    if (h.level !== 2) continue;
+    const m = h.title.match(TASK_GROUP);
+    if (!m) continue;
+    const tag = m[2].match(GROUP_TAG);
+    out.push({
+      number: Number(m[1]),
+      title: (tag ? tag[2] : m[2]).trim(),
+      repositories: tag ? tag[1].split(',').map((n) => n.trim()).filter(Boolean) : null,
+      line: h.line + 1,
+    });
+  }
+  return out;
 }

@@ -24,6 +24,11 @@
 //   screens — in UI mode (a screenshot in sources/ui/), every screenshot has a "## Screens" row, and no row
 //     has the result `differences` (an open difference); `accepted` with a reason passes. Without
 //     screenshots there is no visual check.
+// Meta-repository changes (x-sdd-kit-metarepo: true; openspec/protocols/metarepo.md), both modes: the E2E test
+//   folder is a folder of the root outside every clone of openspec/clones. Archive mode: every plan row with
+//   the level `e2e` counts like a scenario listed under "## Scenarios" (on every kit schema, the test-case
+//   schemas included), and such a row in a change without e2e.md is an error. With `Mode: skipped` the archive
+//   gate asks for an agreed entry of "Not verified automatically" for each of them (e2ePlanRows).
 // Skipped for schemas outside the kit.
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,6 +39,8 @@ import { parseTestCases, TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { loadChangeDeltas, changeScenarios } from '../lib/spec-parser.mjs';
 import { scanUiFolder, isUiMode, UI_DIR } from '../lib/ui-inventory.mjs';
 import { changeDir, changeSchema, readChangeFile, isKitSchema, hasTestCases, KIT_SCHEMAS } from '../lib/project.mjs';
+import { parsePlan, E2E_LEVEL } from '../lib/plan.mjs';
+import { readClones, followsMetarepo } from '../lib/clones.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
 const CHECK = 'check-e2e';
@@ -45,6 +52,30 @@ application is started, reasons of accepted cases and differences, results of th
 --mode archive runs the checks of the archive gate.`;
 
 const list = (values) => values.join(', ');
+
+/**
+ * The plan rows with the level `e2e` of a meta-repository change, one per scenario:
+ * [{capability, scenario, line}]; [] for any other change.
+ */
+export function e2ePlanRows(root, change) {
+  if (!followsMetarepo(root, change)) return [];
+  const out = new Map();
+  for (const r of parsePlan(readChangeFile(root, change, 'verification-plan.md') || '').coverage.rows) {
+    const k = `${r.capability}\0${r.scenario}`;
+    if (r.level === E2E_LEVEL && !out.has(k)) out.set(k, { capability: r.capability, scenario: r.scenario, line: r.line });
+  }
+  return [...out.values()];
+}
+
+/** Meta-repository change: the E2E test folder is a folder of the root, outside every clone. */
+function checkRootFolder({ root, change, file, record: r, f }) {
+  if (!r.tests || !followsMetarepo(root, change)) return;
+  const folder = normFolder(r.tests);
+  const clone = readClones(root).clones.find((c) => folder === c.path || folder.startsWith(`${c.path}/`) || c.path.startsWith(`${folder}/`));
+  if (!clone) return;
+  const where = folder === clone.path || folder.startsWith(`${clone.path}/`) ? `is inside the clone \`${clone.name}\`` : `holds the clone \`${clone.name}\``;
+  f.error(file, r.testsLine, `the E2E test folder "${r.tests}" ${where}: in a meta-repository it must be a folder of the root, outside every clone`, 'write the E2E tests in a root folder such as e2e/ and name it in "Tests:" (openspec/protocols/metarepo.md)');
+}
 
 /** Format of the stage record (design D4, "always"). `ctx`: { record, file, f }. */
 function checkFormat({ record: r, file, f }) {
@@ -107,7 +138,6 @@ function checkCoverage(ctx) {
     f.error(file, r.testsLine, `the E2E test folder "${r.tests}" does not exist`, 'write the E2E tests of the change in that folder, or fix "Tests:"');
   }
   const items = [];
-  let refs;
   if (hasTestCases(schema)) {
     const content = readChangeFile(root, change, TEST_CASES_FILE);
     if (content !== null) {
@@ -119,7 +149,6 @@ function checkCoverage(ctx) {
         }
       }
     }
-    refs = collectCaseRefs(root, { under: folder }).map((m) => ({ capability: m.capability, name: m.name }));
   } else {
     const known = new Set(changeScenarios(loadChangeDeltas(root, dir)).map((s) => `${s.capability}\0${s.scenario}`));
     for (const s of r.scenarios) {
@@ -129,12 +158,23 @@ function checkCoverage(ctx) {
       }
       items.push({ kind: 'scenario', capability: s.capability, name: s.scenario, label: `E2E scenario "${s.scenario}" (${s.capability})` });
     }
-    refs = collectMarkers(root, { under: folder }).map((m) => ({ capability: m.capability, name: m.scenario }));
   }
-  const referenced = new Set(refs.map((m) => `${m.capability}\0${m.name}`));
+  // meta-repository: `e2e` plan rows count like listed scenarios
+  for (const row of e2ePlanRows(root, change)) {
+    if (items.some((i) => i.kind === 'scenario' && i.capability === row.capability && i.name === row.scenario)) continue;
+    items.push({ kind: 'scenario', capability: row.capability, name: row.scenario, label: `E2E scenario "${row.scenario}" (${row.capability})` });
+  }
+  const refs = {};
+  const referenced = (item) => {
+    if (!refs[item.kind]) {
+      const found = item.kind === 'case' ? collectCaseRefs(root, { under: folder }).map((m) => [m.capability, m.name]) : collectMarkers(root, { under: folder }).map((m) => [m.capability, m.scenario]);
+      refs[item.kind] = new Set(found.map(([c, n]) => `${c}\0${n}`));
+    }
+    return refs[item.kind].has(`${item.capability}\0${item.name}`);
+  };
   const keyword = (kind) => (kind === 'case' ? '@case' : '@scenario');
   for (const item of items) {
-    if (referenced.has(`${item.capability}\0${item.name}`)) {
+    if (referenced(item)) {
       ctx.items.push(item);
       continue;
     }
@@ -244,7 +284,7 @@ function checkScreens(ctx) {
 }
 
 /** Steps of each check mode, in order; every step gets the same context. */
-const FORMAT_STEPS = [checkFormat];
+const FORMAT_STEPS = [checkFormat, checkRootFolder];
 const ARCHIVE_STEPS = [...FORMAT_STEPS, checkCoverage, checkRuns, checkScreens];
 const STEPS = { format: FORMAT_STEPS, archive: ARCHIVE_STEPS };
 
@@ -265,6 +305,10 @@ export function checkE2e({ root, change, mode = 'format' }) {
   if (content === null) {
     if (mode === 'archive' && hasTestCases(schema)) {
       f.error(file, null, `the E2E decision is missing: ${E2E_FILE} does not exist (schema "${schema}" records whether the change needs E2E)`, `write ${E2E_FILE} with "Mode: real backend", "Mode: stubbed backend" or "Mode: skipped" (openspec/protocols/e2e.md)`);
+    } else if (mode === 'archive') {
+      for (const row of e2ePlanRows(root, change)) {
+        f.error(join(dir, 'verification-plan.md'), row.line, `plan row of "${row.scenario}" (${row.capability}) has the level e2e, but the change has no ${E2E_FILE}`, `record the E2E stage in ${E2E_FILE} (openspec/protocols/e2e.md), or plan the scenario at another level`);
+      }
     }
     return makeReport(CHECK, f.list, { change, mode });
   }
