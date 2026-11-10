@@ -4,7 +4,7 @@
 # (tests/schemas.test.mjs checks this); only the test-cases artifact differs.
 name: clarify-qa
 version: 1
-description: sdd-kit feature workflow with test cases reviewed by the AI and a human QA - clarifications → proposal → specs → test-cases → design → verification-plan → tasks
+description: (beta) sdd-kit feature workflow with test cases reviewed by the AI and a human QA - clarifications → proposal → specs → test-cases → design → verification-plan → tasks
 artifacts:
   - id: clarifications
     generates: clarifications.md

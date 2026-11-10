@@ -7,6 +7,11 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+**Beta.** The new schemas `clarify-ai-qa` and `clarify-qa` (test-cases stage) are beta: the menu and their
+descriptions say so. UI screenshots, the E2E stage, autonomous apply and meta-repositories are new in this
+release too and have not finished a pilot either; their formats and gates may change. `clarify` and `lean`
+are stable.
+
 **Meta-repositories** (`openspec/protocols/metarepo.md`): a root with the kit and application clones in
 sub-folders, each with its own git, listed in the new project file `openspec/clones` (`repos/backend` or
 `name=path` per line). Projects without the file, and changes started before it existed, work as before.

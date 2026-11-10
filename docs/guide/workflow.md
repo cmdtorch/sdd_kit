@@ -6,6 +6,11 @@ the specs and before the design, reviewed by an AI QA reviewer (and, on `clarify
 **`lean`** is for small, clear changes, with no question rounds but the same tests and gates. When in doubt, use
 `clarify`: the questions are what catches gaps in a client's requirements.
 
+> **Beta.** `clarify-ai-qa` and `clarify-qa` (the test-cases stage) are in beta: they pass the kit's test suite
+> but have not finished a pilot on a real project, so their formats and gates may still change. The same holds
+> for UI screenshots (2b), autonomous apply, the E2E stage (3a) and meta-repositories. `clarify` and `lean` are
+> stable.
+
 ## Picking a schema
 
 When the agent creates a change without naming a schema (as `/opsx:new <name>` does), the **schema starter** hook
@@ -14,8 +19,8 @@ stops it and the agent asks you one question with three choices:
 | Choice | Schema |
 |---|---|
 | No test cases | `clarify` |
-| Test cases reviewed by the AI QA reviewer only | `clarify-ai-qa` |
-| Test cases reviewed by the AI QA reviewer, then a human QA | `clarify-qa` |
+| Test cases reviewed by the AI QA reviewer only | `clarify-ai-qa` (beta) |
+| Test cases reviewed by the AI QA reviewer, then a human QA | `clarify-qa` (beta) |
 
 The project's default schema does not count as a choice. If you dismiss the menu, no change is created; start
 again with `/opsx:new <name>`. To skip the menu, name the schema: `/opsx:new <name> --schema clarify-qa`.

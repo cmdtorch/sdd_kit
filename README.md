@@ -77,6 +77,9 @@ openspec archive <change>    when everything is done (the archive gate checks)
 
 The walkthrough, including small changes (`lean`), is in [docs/guide/workflow.md](docs/guide/workflow.md).
 
+The test-case schemas `clarify-ai-qa` and `clarify-qa`, UI screenshots, the E2E stage, autonomous apply and
+meta-repositories are **beta**: they may still change after the pilots. `clarify` and `lean` are stable.
+
 Useful commands in a project:
 
 | Command | What it does |
