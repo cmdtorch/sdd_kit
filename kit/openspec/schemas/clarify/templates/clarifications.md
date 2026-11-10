@@ -6,6 +6,7 @@ Depth: Comprehensive
 
 - [desc] Developer description: "<!-- the developer's request, verbatim -->"
 <!-- - [D1] <title> — `sources/<file>` (one line per requirement source: .md, .pdf or .txt) -->
+<!-- - [U1] Screenshot: <screen, variant> — `sources/ui/<file>` (one line per UI screenshot: PNG, JPG or WebP; see openspec/protocols/ui-inventory.md) -->
 
 ## Main round
 

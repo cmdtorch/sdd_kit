@@ -10,10 +10,13 @@ to something a human said or wrote. If it is not traceable, it is an assumption 
 |---|---|---|
 | `[desc]` | the developer's description in `## Sources` | always |
 | `[D<n>]` | a registered requirement source (document, tracker task, client message) | the statement is **explicitly** in that source, not inferred from it |
+| `[U<n>]` | a UI screenshot registered in `## Sources` (on `lean`: in `ui-inventory.md`) | its file is in `sources/ui/` and the statement is visible on it; cite one element as `[U<n>] <element-name>` (`openspec/protocols/ui-inventory.md`) |
 | `[Q<n>]` | an answer in `clarifications.md` | the question exists, its answer is not blank, and its round summary is `Looks correct` |
 | `[assumption]` | not confirmed by any source | **only** inside the `## Assumptions & Open Questions` section |
 
 - Combine tags when several sources back one statement: `[Q3][D1]`.
+- A screenshot shows what is drawn, not what the change builds: scope and behaviour need `[desc]`, `[D<n>]`
+  or `[Q<n>]` as well. In `design.md` each row of the `## Screens` table cites its screen's screenshots.
 - When a later answer narrows an earlier one, cite the later one. Mention the earlier one only if the
   difference matters, e.g. "accountants only [Q14] (narrows [Q3])".
 

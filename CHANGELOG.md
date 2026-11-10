@@ -7,6 +7,132 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
+## 0.4.0 — 2026-11-10
+
+Test cases, UI screenshots, an E2E stage, autonomous apply and meta-repositories.
+
+**Beta.** The test-case schemas `clarify-ai-qa` and `clarify-qa` are beta: the schema menu and their
+descriptions say so. UI screenshots, the E2E stage, autonomous apply and meta-repositories are new in this
+release and have had only partial pilots; their formats and gates may change in a later 0.x release.
+`clarify` and `lean` are stable.
+
+Upgrading:
+
+1. Team lead: `npx github:cmdtorch/sdd_kit#v0.4.0 update`, review the diff (new hooks in `.claude/settings.json`,
+   new protocols and checks), commit. For a meta-repository add `--metarepo <clone paths>`.
+2. Active changes finish under the rules they started with: autonomous apply and the meta-repository rules apply
+   only to changes created with 0.4.0 (stamped in `.openspec.yaml`).
+3. From 0.3.0: in Claude Code `openspec new change` without `--schema` now opens the schema menu (see 0.4.0-beta.1
+   below, which is part of this release). From 0.4.0-beta.1: active `clarify-ai-qa` / `clarify-qa` changes need
+   `e2e.md` before the archive (see **Breaking** below).
+
+**Meta-repositories** (`openspec/protocols/metarepo.md`): a root with the kit and application clones in
+sub-folders, each with its own git, listed in the new project file `openspec/clones` (`repos/backend` or
+`name=path` per line). Projects without the file, and changes started before it existed, work as before.
+
+- Marked tests and `@case` references are found inside the clones, read by each clone's own git rules (without
+  its `openspec/` and `.claude/`); the review input, the archive gate and the E2E run fingerprints see them too.
+- Changes started in a meta-repository are marked `x-sdd-kit-metarepo: true` and follow its rules: a
+  *Repository* column in the verification plan (a marked test is needed in each named repository) and the new
+  level `e2e`; every task group names one repository, `## 2. [backend] Order API` (new check `check-tasks`;
+  `tasks.md` is blocked otherwise); `apply-report.md` gets one `## Repository: <name>` section with `Command:`
+  and `Result:` per repository of the task groups; a missing clone the change names blocks its archive.
+- E2E: the clones count as one web application; the E2E question is asked only for changes that touch the web
+  interface; E2E tests live in a root folder outside every clone.
+- answers-gate blocks writes into a declared clone's own `openspec/` from a session started in the root.
+- Installer: in a terminal `install` asks "meta-repository or single repository" and the clone paths; new option
+  `--metarepo [<entries>]` (comma-separated) for unattended installs and to add clones on `update`. Uninstall
+  keeps `openspec/clones`; nothing is written inside a clone.
+- Doctor reports clone list errors, warns about missing clones and offers undeclared nested repositories (asking
+  in a terminal, printing the line otherwise).
+- The archive gate names the open tasks instead of only counting them.
+
+**Autonomous apply** (`openspec/protocols/apply.md`), for changes created with this kit version (the kit
+records `x-sdd-kit: <version>` in a new change's `.openspec.yaml`; older changes finish under their old rules):
+
+- After the planning rounds apply runs to the end without the developer: every task, the test review, the full
+  suite and the E2E stage. The agent stops only on a requirement gap, a test that still fails after two
+  attempts, a failed start check or a blocked environment, an action that needs consent, a situation the plan
+  does not cover, and the consent list at the end. It suggests options in a stop but carries out none until the
+  developer chooses, works around problems only inside the application, and never archives by itself.
+- Manual checks are no longer tasks: a `manual` plan row (new *Manual reason* column) or test case
+  (`Manual reason:` line) needs a reason starting with `cannot be automated:` or `dangerous:`; dangerous
+  functions are tested automatically and checked by hand in addition. A missing reason blocks `tasks.md` (on the
+  test-case schemas `design.md`). The Verification round no longer asks whether a check should stay manual.
+- New report `apply-report.md` ("Manual checks" for QA after the archive, "Not verified automatically",
+  "Weakened tests"), checked by the new `check-apply-report`; the archive gate accepts a missing test only as an
+  entry the developer agreed to (`Consent:`), and blocks on entries without consent. Weakening a test needs the
+  developer's consent.
+- New script `openspec/tooling/bin/start-check.mjs`: when the plan says `Running application: yes`, the agent
+  starts the application before the first task, requests one address and stops it (`start-check.json`); on
+  failure the developer chooses how to go on.
+- New hook `boundary-guard`: asks the developer before commands outside the project (`sudo`, system and global
+  installs, `kill`, Docker commands that stop or remove containers, volumes or networks).
+- Project tool list `openspec/project-tools`: doctor warns about a missing listed tool, and the installer prints
+  doctor's result at the end.
+- `start-check.mjs` and `check-apply-report.mjs` are allowed without a prompt.
+
+**Breaking:** on `clarify-ai-qa` and `clarify-qa` the archive now needs `e2e.md`, the E2E decision of the change.
+For a change without E2E write `e2e.md` with `# E2E Stage` and `Mode: skipped`; active changes on these schemas
+need it before they can be archived. `clarify` and `lean` changes without `e2e.md` archive as before.
+
+- E2E stage (`openspec/protocols/e2e.md`), on all four schemas, for web applications in a monorepo: the last step
+  of apply. The Main round asks whether the change needs E2E and against which backend (real, on an empty test
+  database, or stubbed); on `lean` the agent asks before the first task. The agent records the stage in `e2e.md`,
+  installs Playwright (JavaScript, its own folder, Chromium only, `retries: 0`) only with permission, asks once
+  who starts the application, writes a Playwright test for every `e2e` test case (on `clarify` and `lean`: for
+  the spec scenarios it lists), fixes a failing test in at most three attempts, and lets the developer accept a
+  case with a reason. In UI mode it compares every screenshot with the built screen. Skipped E2E lists the `e2e`
+  cases for QA. New script `openspec/tooling/bin/e2e-run.mjs` runs Playwright and records every run in the
+  change's `e2e-runs.json` (the only results the archive trusts; results go stale when the application or the
+  test changes); new check `check-e2e`, run by the archive gate and, in format mode, after `e2e.md` is written.
+  The script and the check are allowed without a prompt.
+- UI screenshots as requirement sources, on all four schemas: PNG, JPG or WebP files in a change's `sources/ui/`
+  switch it into UI mode (`openspec/protocols/ui-inventory.md`). The agent writes `ui-inventory.md` (screens,
+  interactive elements, states, SHA-256 fingerprints) before the Main round questions and asks about the gaps
+  between the screens and the requirements; every element gets a decision (`in scope`, `mock`, `out of scope`,
+  `decoration`, `existing`) and every built element a scenario. New check `check-ui`, run by the answers gate
+  and the archive gate; `[U<n>]` source tags; `e2e` labels on UI test cases; a `## Screens` table in the design
+  and screenshot links in UI tasks. Changes without screenshots get only the mockups question below. The artifact feedback hook
+  shows `check-ui` errors right after `ui-inventory.md` or `tasks.md` is written; hidden files such as
+  `.DS_Store` in `sources/ui/` are ignored; `sha256sum` and `shasum -a 256` are allowed without a prompt.
+  Without screenshots the agent first asks whether the change has mockups (`(UI mockups)`, the first Main round
+  question; on `lean` in chat); on "yes" it creates `sources/ui/` and waits for `/opsx:continue`.
+- E2E runs record each test file by its project path also when the project is reached through a symlink (the
+  macOS temp folder, a symlinked home folder); before, such a file was recorded as `../…` and never matched its case.
+- Test-cases stage, after an automated pilot: a repeated AI QA review re-checks its previous findings and looks
+  for new ones only in what changed, so the loop converges; cases changed after the last review run are listed
+  under "Stage result" as not reviewed by the AI; the answers gate says when a follow-up question reopened the
+  Specs round; follow-up questions are written without asking permission first.
+
+## 0.4.0-beta.1 — 2026-10-25
+
+**Pre-release for a pilot**, included in 0.4.0. The test-cases stage is experimental: it has passed the kit's test suite but not yet
+a pilot on a real project. Formats and gates may change before 0.4.0.
+
+**Breaking:** in Claude Code, `openspec new change` without `--schema` is now blocked until the developer picks a
+schema from the starter menu (a terminal is not affected).
+
+Upgrading from 0.3.0:
+
+1. Team lead: `npx github:cmdtorch/sdd_kit#v0.4.0-beta.1 update`, review the diff (two new hooks in
+   `.claude/settings.json`), commit.
+2. Active `clarify` changes keep working as before; nothing to migrate.
+
+Changes:
+
+- Test-cases stage (optional): two new schemas, `clarify-ai-qa` and `clarify-qa`, are `clarify` plus a
+  `test-cases` artifact. Gherkin test cases are written after the specs and before the design, one or more per
+  spec scenario, each labelled `automated`, `e2e` and/or `manual`. Protocol: `openspec/protocols/test-cases.md`.
+- AI QA reviewer: the `test-cases-reviewer` subagent (`openspec/protocols/review-test-cases.md`) reviews the test
+  cases; a hook limits it to three runs per loop, then the developer decides. On `clarify-qa` a human QA reviews
+  next, with remarks (`open` / `closed` / `reopened`) in `test-cases.md` until none is open.
+- `check-test-cases.mjs`: structure, scenario coverage, labels, Given/When/Then and remark statuses; with
+  `--stage`, completion of the stage. The design and the archive are blocked until it passes.
+- `@case <capability-path> :: <case name>` markers and a "Test case coverage" table in the verification plan;
+  `check-traceability --markers` requires a marked test for every `automated` case.
+- Schema starter: a hook makes the agent ask which schema to use (`clarify`, `clarify-ai-qa`, `clarify-qa`) when
+  a change is created without one.
 - `docs/how-it-works.md`: what the kit adds to OpenSpec, part by part, with the file behind each part. A test
   keeps it complete.
 

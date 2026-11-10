@@ -4,6 +4,24 @@ import { toLines, fenceMask, stripComments, sectionRange, firstTable, fold } fro
 import { normName } from './spec-parser.mjs';
 
 export const LEVELS = ['unit', 'integration', 'manual'];
+/** The level of a row proven only by the E2E stage: meta-repository changes only (openspec/protocols/metarepo.md). */
+export const E2E_LEVEL = 'e2e';
+export const METAREPO_LEVELS = [...LEVELS, E2E_LEVEL];
+/** Levels a test case labelled `automated` may name in "Test case coverage" (test-case schemas). */
+export const CASE_LEVELS = ['unit', 'integration'];
+/** Allowed starts of a manual reason (plan column "Manual reason", test case line "Manual reason:"). */
+export const MANUAL_REASONS = ['cannot be automated:', 'dangerous:'];
+export const DANGEROUS = 'dangerous:';
+
+/** '' for a reason with an allowed start, 'missing' or 'malformed' otherwise. */
+export function manualReasonProblem(reason) {
+  const r = String(reason ?? '').replace(/`/g, '').trim();
+  if (EMPTY.test(r)) return 'missing';
+  const lower = r.toLowerCase();
+  const prefix = MANUAL_REASONS.find((p) => lower.startsWith(p));
+  return prefix && r.slice(prefix.length).trim() ? '' : 'malformed';
+}
+export const isDangerous = (reason) => String(reason ?? '').replace(/`/g, '').trim().toLowerCase().startsWith(DANGEROUS);
 
 const EMPTY = /^(|—|–|-|none\.?|n\/a)$/i;
 
@@ -36,13 +54,42 @@ const col = (row, ...names) => {
   return '';
 };
 
+// "automated, e2e" / "unit + integration" / "—" -> lower-case items, placeholders dropped
+const list = (v) =>
+  String(v)
+    .replace(/`/g, '')
+    .split(/[,;/+]|\s+and\s+|\s+/)
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => x && !EMPTY.test(x));
+
+// "backend, root" -> ['backend', 'root']; names keep their case (clone names are case-sensitive)
+const repositories = (v) =>
+  String(v)
+    .replace(/`/g, '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter((x) => x && !EMPTY.test(x));
+
+/** `Running application: yes|no` in the Environment section: true, false, or null when the line is absent. */
+function runningApplication(lines, fences) {
+  const range = sectionRange(lines, (h) => h.level === 2 && fold(h.title) === 'environment', fences);
+  if (!range) return null;
+  for (let i = range.start; i < range.end; i++) {
+    const m = lines[i].replace(/[`*]/g, '').match(/Running application\s*:\s*(yes|no)\b/i);
+    if (m) return m[1].toLowerCase() === 'yes';
+  }
+  return null;
+}
+
 /** Parses verification-plan.md. */
 export function parsePlan(content) {
   const { lines, fences } = prepare(content);
   const coverage = tableUnder(lines, fences, 'Scenario coverage');
   const exclusions = tableUnder(lines, fences, 'Exclusions');
   const trace = tableUnder(lines, fences, 'Requirement trace');
+  const testCases = tableUnder(lines, fences, 'Test case coverage');
   return {
+    runningApplication: runningApplication(lines, fences),
     coverage: {
       ...coverage,
       rows: coverage.rows.map((r) => ({
@@ -52,11 +99,26 @@ export function parsePlan(content) {
         scenario: normName(col(r, 'scenario')),
         level: col(r, 'level').trim().toLowerCase(),
         critical: col(r, 'critical'),
+        manualReason: col(r, 'manual reason'),
+        repositories: repositories(col(r, 'repository', 'repositories')),
       })),
     },
     exclusions: {
       ...exclusions,
       rows: exclusions.rows.map((r) => ({ line: r.line, capability: normName(col(r, 'capability')), scenario: normName(col(r, 'scenario')), reason: col(r, 'reason') })),
+    },
+    // test-case schemas only: one row per test case of test-cases.md
+    testCases: {
+      ...testCases,
+      rows: testCases.rows.map((r) => ({
+        line: r.line,
+        capability: normName(col(r, 'capability')),
+        scenario: normName(col(r, 'scenario')),
+        name: normName(col(r, 'case', 'test case')),
+        labels: list(col(r, 'labels')),
+        levels: list(col(r, 'level', 'levels')),
+        repositories: repositories(col(r, 'repository', 'repositories')),
+      })),
     },
     trace: {
       ...trace,
@@ -64,6 +126,9 @@ export function parsePlan(content) {
     },
   };
 }
+
+/** True when a parsed table (coverage or testCases) has a Repository column. */
+export const hasRepositoryColumn = (table) => Boolean(table.columns && (table.columns.includes('repository') || table.columns.includes('repositories')));
 
 export const key = (capability, scenario) => `${capability} :: ${scenario}`;
 export const isEmptyCell = (v) => EMPTY.test(String(v).trim());

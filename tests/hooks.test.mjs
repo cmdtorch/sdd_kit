@@ -225,10 +225,11 @@ describe('settings merge (D10)', () => {
   });
 
   test('keeps permissions, plugins and unknown keys; removeKitHooks restores the original', () => {
-    const settings = { permissions: { allow: ['Bash(make test)'] }, enabledPlugins: { 'tdd-guard@tdd-guard': true }, custom: 1, ...pilot };
+    const settings = { permissions: { allow: ['Bash(make test)', 'Bash(sha256sum *)'] }, enabledPlugins: { 'tdd-guard@tdd-guard': true }, custom: 1, ...pilot };
     const merged = mergeSettings(settings, FRAGMENT);
     assert.equal(merged.permissions.allow[0], 'Bash(make test)', 'project permissions first, untouched');
     assert.ok(merged.permissions.allow.includes('Bash(node openspec/tooling/bin/review-input.mjs *)'));
+    assert.ok(merged.permissions.allow.includes('Bash(sha256sum openspec/changes/*)'));
     assert.deepEqual(mergeSettings(merged, FRAGMENT), merged, 'no duplicate permissions on re-run');
     assert.deepEqual(merged.enabledPlugins, settings.enabledPlugins);
     assert.equal(merged.custom, 1);

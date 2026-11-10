@@ -2,7 +2,8 @@
 // Shared result format and CLI runner for the kit checks.
 //
 // Every check returns a report:
-//   { check, ok, skipped?, reason?, findings: [{ level: 'error'|'warning', file?, line?, message, hint? }] }
+//   { check, ok, skipped?, reason?, findings: [{ level: 'error'|'warning', file?, line?, message, hint?, rule? }] }
+// `rule` names a group of findings that a hook acts on (e.g. 'manual-reason' for answers-gate).
 // `ok` is false only when there is at least one error. Warnings never fail a check.
 // CLI: human-readable text by default, `--json` for machines; exit code 0 (ok) or 1 (errors or usage problem).
 import { relative } from 'node:path';
@@ -21,17 +22,18 @@ export function skippedReport(check, reason) {
 /** Collector that keeps file paths relative to the project root. */
 export function findingsFor(root) {
   const list = [];
-  const add = (level, file, line, message, hint) => {
+  const add = (level, file, line, message, hint, rule) => {
     const f = { level, message };
     if (file) f.file = relative(root, file) || file;
     if (line) f.line = line;
     if (hint) f.hint = hint;
+    if (rule) f.rule = rule;
     list.push(f);
   };
   return {
     list,
-    error: (file, line, message, hint) => add('error', file, line, message, hint),
-    warning: (file, line, message, hint) => add('warning', file, line, message, hint),
+    error: (file, line, message, hint, rule) => add('error', file, line, message, hint, rule),
+    warning: (file, line, message, hint, rule) => add('warning', file, line, message, hint, rule),
   };
 }
 

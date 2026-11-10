@@ -16,20 +16,31 @@ That means bugs for manual QA and rework. sdd-kit puts a structured, checked pro
 2. **Grounded artifacts.** Every statement in the proposal and design cites the answer or source it comes from.
    Assumptions are labelled.
 3. **Tests that prove scenarios.** Every spec scenario is planned at a verification level (`unit`,
-   `integration` or `manual`) and tested by a test that carries its marker — a plain comment, in any language.
+   `integration`, `e2e` or `manual`) and tested by a test that carries its marker — a plain comment, in any language.
    A test reviewer asks of every test: "would this fail if the feature broke?". Apply uses TDD.
 4. **Hard guarantees.** Claude Code hooks enforce the rules while you work: no artifact before its answers are
    confirmed, no archive before tasks, markers and the test review are done.
+
+New in 0.4 (**beta**, see [the changelog](CHANGELOG.md)):
+
+- **Test cases before code** (`clarify-ai-qa`, `clarify-qa`): Gherkin test cases after the specs, reviewed by an AI
+  QA reviewer and, on `clarify-qa`, by a human QA.
+- **UI screenshots as sources:** mockups in `sources/ui/` become requirements; the agent asks about every gap
+  between the screens and the text.
+- **E2E stage:** Playwright tests for web applications, run and recorded by the kit.
+- **Autonomous apply:** after the planning rounds the agent implements, reviews and tests to the end, stopping
+  only for decisions that belong to you.
+- **Meta-repositories:** one root with the kit and the application clones in sub-folders, each with its own git.
 
 The kit knows nothing about your stack: it never runs your tests and has no presets. The agent uses the
 project's own commands.
 
 ```mermaid
 flowchart LR
-  Q[clarifications.md<br/>questions → answers → Looks correct] --> P[proposal] --> S[specs] --> D[design] --> V[verification-plan] --> T[tasks]
+  Q[clarifications.md<br/>questions → answers → Looks correct] --> P[proposal] --> S[specs] --> C[test cases<br/>QA schemas only] --> D[design] --> V[verification-plan] --> T[tasks]
   T --> A[apply: TDD]
-  A --> R[test review] --> F[full test suite]
-  F --> X[archive]
+  A --> R[test review] --> F[full test suite] --> E[E2E stage<br/>web apps]
+  E --> X[archive]
   S -. spec review .-> S
 ```
 
@@ -51,9 +62,9 @@ No other dependencies: the kit is plain Node.js.
 
 ```bash
 npm i -g @fission-ai/openspec@1.15.0
-npx github:cmdtorch/sdd_kit#v0.3.0 install --dry-run   # show the plan, write nothing
-npx github:cmdtorch/sdd_kit#v0.3.0 install             # asks for the questions language, nothing else
-git add -A && git commit -m "chore: install sdd-kit 0.3.0"
+npx github:cmdtorch/sdd_kit#v0.4.0 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.4.0 install             # asks for the questions language, nothing else
+git add -A && git commit -m "chore: install sdd-kit 0.4.0"
 ```
 
 Make sure `CLAUDE.md` or the README of your project says how to run the tests and quality checks. Details:
@@ -77,6 +88,10 @@ openspec archive <change>    when everything is done (the archive gate checks)
 
 The walkthrough, including small changes (`lean`), is in [docs/guide/workflow.md](docs/guide/workflow.md).
 
+Schemas: `clarify` (default, features), `lean` (small, clear changes), and the **beta** test-case schemas
+`clarify-ai-qa` and `clarify-qa`; when a change names none, the agent asks. UI screenshots, the E2E stage,
+autonomous apply and meta-repositories are **beta** too: they may still change after the pilots.
+
 Useful commands in a project:
 
 | Command | What it does |
@@ -90,12 +105,12 @@ Useful commands in a project:
 
 | Path | What |
 |---|---|
-| `openspec/protocols/` | the rules the agent follows: questions, grounding, testing, reviews |
-| `openspec/schemas/clarify/`, `openspec/schemas/lean/` | the kit workflows, forked from OpenSpec's `spec-driven` |
+| `openspec/protocols/` | the rules the agent follows: questions, grounding, testing, reviews, test cases, UI screenshots, E2E, apply, meta-repositories |
+| `openspec/schemas/` | the kit workflows `clarify`, `clarify-ai-qa`, `clarify-qa`, `lean`, forked from OpenSpec's `spec-driven` |
 | `openspec/tooling/` | checks, hooks and tools (Node.js scripts, no dependencies) |
 | `openspec/config.yaml` | a marked kit block in `context`; `clarify` becomes the default schema |
 | `.claude/settings.json` | the kit hooks and read-only permissions, merged with yours |
-| `.claude/agents/`, `.claude/commands/sdd/` | the spec and test reviewers, `/sdd:clarify` |
+| `.claude/agents/`, `.claude/commands/sdd/` | the spec, test and test-case reviewers, `/sdd:clarify` |
 
 The installer keeps a hash manifest: updates never overwrite files you edited, and `uninstall` restores
 `config.yaml`, `settings.json` and `.gitignore`.
@@ -105,8 +120,11 @@ The installer keeps a hash manifest: updates never overwrite files you edited, a
 - **Claude Code only.** Other agents (Cursor, Codex, …) are not supported.
 - **OpenSpec is pinned.** Each kit version supports exactly one OpenSpec version; doctor and session start
   warn on a mismatch.
-- **No browser E2E** and no backend → frontend contract step yet ([decisions](docs/decisions.md) R3, R7).
-- The kit never runs your tests. It relies on the agent using the commands your project documents.
+- **Browser E2E only for web applications in one repository or a meta-repository** (the clones count as one
+  application), with Playwright for JavaScript and Chromium only;
+  no backend → frontend contract step yet ([decisions](docs/decisions.md) R7, R26).
+- The kit runs only the E2E tests, through its own script; for every other test it relies on the agent
+  using the commands your project documents.
 
 ## Documentation
 
@@ -114,7 +132,7 @@ The installer keeps a hash manifest: updates never overwrite files you edited, a
 - [Install, update, uninstall, onboarding](docs/guide/install.md)
 - [Daily workflow](docs/guide/workflow.md)
 - [Decisions](docs/decisions.md), [verified OpenSpec and Claude Code facts](docs/openspec-facts.md),
-  [changelog](CHANGELOG.md)
+  [changelog](CHANGELOG.md), [roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md), [security](SECURITY.md)
 
 ## License

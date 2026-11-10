@@ -29,6 +29,7 @@ Depth: Comprehensive
 
 - [desc] Developer description: "<the developer's request, verbatim>"
 - [D1] <title of a requirement source> — `sources/<file>`
+- [U1] Screenshot: <screen, variant> — `sources/ui/<file>`
 
 ## Main round
 
@@ -76,6 +77,9 @@ Depth: Comprehensive
   - Text pasted into the conversation is saved by you as `sources/D<n>.md`.
   - For a `.docx` or another format you cannot read, ask the developer to export it to PDF or
     Markdown, or to paste the text.
+- `[U<n>]` is a UI screenshot in `sources/ui/` (PNG, JPG or WebP). Screenshots switch the change into UI
+  mode: follow `openspec/protocols/ui-inventory.md` — register each one, write `ui-inventory.md` **before**
+  the Main round questions, and ask about the gaps between the screens and the requirements.
 - The register is the complete list of permitted sources. Your background knowledge and common
   practice are not sources.
 
@@ -130,11 +134,22 @@ Why this is asked: the requirement says "users can export" but the report contai
 
 | Round | Asked before writing | Topics (guidance, not a script) |
 |---|---|---|
-| Main | `proposal.md` | the problem and goal; who uses it (roles); what is in scope; **one explicit scope-boundary question** (what is deliberately left out); success criteria; constraints (deadlines, legal, integrations); existing behaviour or data that changes; permissions |
+| Main | `proposal.md` | the problem and goal; who uses it (roles); what is in scope; **one explicit scope-boundary question** (what is deliberately left out); success criteria; constraints (deadlines, legal, integrations); existing behaviour or data that changes; permissions; on a web application in a monorepo, whether the change needs E2E and against which backend |
 | Specs | spec files | completeness in six dimensions: **functional** behaviour; **non-functional** (performance, security, limits); **user scenarios** incl. error cases, empty states, edge cases, concurrency; **business rules** (calculations, statuses, validations, messages); **technical context** (integrations, existing APIs, data migration); **quality attributes** (accessibility, auditability, localisation) |
 | Design | `design.md` | architectural forks only: choices that would change the specs, the approach or the task breakdown (data model options, sync vs async, migration strategy, new dependencies). Deferrable details stay out |
-| Verification | `verification-plan.md` | which scenarios are critical; which need an integration test rather than a unit test; test data the scenarios need; environments; checks that can only be done manually |
+| Verification | `verification-plan.md` | which scenarios are critical; which need an integration test rather than a unit test; test data the scenarios need; environments, and whether the checks need the application running. Never ask whether a check should be automated or stay manual: the agent decides by `openspec/protocols/testing.md` §1 |
 | Apply | — (during implementation) | only real gaps found while coding. Append `## Apply round` and follow the same flow |
+
+Without screenshots in `sources/ui/`, the first Main round question asks whether the change has UI mockups,
+marked `(UI mockups)` (`openspec/protocols/ui-inventory.md` §1). In UI mode the Main round also asks about every element on a screenshot that no source names, every
+requirement with no element or state on the screenshots, and every missing screen state (empty, error,
+loading); a screenshot added or replaced later gets its questions in the current round
+(`openspec/protocols/ui-inventory.md` §5, §7).
+
+On a web application in a monorepo the Main round also asks whether the change needs E2E tests through the web
+interface and against which backend (the real one started locally, or stubbed responses); a mobile application,
+a backend-only change and a frontend whose backend lives in another repository get no E2E and no question
+(`openspec/protocols/e2e.md` §1).
 
 ### How many questions
 

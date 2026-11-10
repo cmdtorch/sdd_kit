@@ -11,7 +11,7 @@ import { install, status, uninstall } from '../installer/sdd-kit.mjs';
 import { patchGitignore, unpatchGitignore } from '../installer/lib/gitignore.mjs';
 import { upsertKitBlock, removeKitBlock, kitBlock } from '../installer/lib/config-edit.mjs';
 import { parseYaml } from '../kit/openspec/tooling/lib/yaml.mjs';
-import { cliSkipReason } from './helpers/openspec.mjs';
+import { cliSkipReason, openspecJson } from './helpers/openspec.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PILOT = join(REPO, 'fixtures', 'projects', 'pilot-like');
@@ -307,5 +307,126 @@ describe('install with the real OpenSpec CLI', { skip: cliSkipReason() }, () => 
     assert.ok(!existsSync(join(root, '.claude/skills/openspec-propose')));
     assert.ok(existsSync(join(root, '.claude/skills/openspec-continue-change')));
     assert.ok(existsSync(join(root, '.claude/skills/django-tdd/SKILL.md')), 'project skills are untouched');
+  });
+});
+
+describe('UI sources after install', () => {
+  test('the UI protocol, check and parser are installed, tracked and removed again; the check is allowed', async () => {
+    const UI_FILES = ['openspec/protocols/ui-inventory.md', 'openspec/tooling/checks/check-ui.mjs', 'openspec/tooling/lib/ui-inventory.mjs'];
+    const root = pilot();
+    await install(opts(root));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of UI_FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    assert.ok(settings.permissions.allow.includes('Bash(node openspec/tooling/checks/check-ui.mjs *)'));
+    for (const p of ['Bash(sha256sum openspec/changes/*)', 'Bash(shasum -a 256 openspec/changes/*)']) assert.ok(settings.permissions.allow.includes(p), `${p} lets the AI compute fingerprints without a prompt`);
+    assert.match(read(root, 'openspec/config.yaml'), /sources\/ui\/[\s\S]*openspec\/protocols\/ui-inventory\.md/);
+    uninstall({ target: root });
+    for (const f of UI_FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+  });
+});
+
+describe('E2E stage after install', () => {
+  test('the E2E protocol, runner, check and libraries are installed, tracked and removed again; runner and check are allowed', async () => {
+    const E2E_FILES = [
+      'openspec/protocols/e2e.md',
+      'openspec/tooling/bin/e2e-run.mjs',
+      'openspec/tooling/checks/check-e2e.mjs',
+      'openspec/tooling/lib/e2e-record.mjs',
+      'openspec/tooling/lib/e2e-runs.mjs',
+    ];
+    const root = pilot();
+    await install(opts(root));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of E2E_FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    for (const p of ['Bash(node openspec/tooling/bin/e2e-run.mjs *)', 'Bash(node openspec/tooling/checks/check-e2e.mjs *)']) {
+      assert.ok(settings.permissions.allow.includes(p), `${p} is allowed`);
+    }
+    assert.match(read(root, 'openspec/config.yaml'), /E2E[^\n]*openspec\/protocols\/e2e\.md/);
+    uninstall({ target: root });
+    for (const f of E2E_FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+    const after = existsSync(join(root, '.claude/settings.json')) ? JSON.parse(read(root, '.claude/settings.json')) : {};
+    assert.ok(!(after.permissions?.allow || []).some((p) => /e2e/.test(p)), 'uninstall removes the E2E permissions');
+  });
+});
+
+describe('test-case schemas after install', { skip: cliSkipReason() }, () => {
+  const QA_FILES = [
+    '.claude/agents/test-cases-reviewer.md',
+    'openspec/protocols/test-cases.md',
+    'openspec/protocols/review-test-cases.md',
+    'openspec/tooling/hooks/schema-starter.mjs',
+    'openspec/tooling/hooks/test-cases-run-limit.mjs',
+    'openspec/tooling/checks/check-test-cases.mjs',
+    'openspec/tooling/lib/test-cases.mjs',
+    'openspec/schemas/clarify-ai-qa/templates/test-cases.md',
+    'openspec/schemas/clarify-qa/templates/test-cases.md',
+  ];
+  const hookGroup = (settings, hook) => settings.hooks.PreToolUse.find((g) => g.hooks.some((h) => h.command.includes(`openspec/tooling/hooks/${hook}.mjs`)));
+
+  // @scenario workflow/test-case-schemas :: Both schemas are available after install
+  test('the real CLI lists both test-case schemas; agent, protocols and hooks are installed, registered and removed again', async () => {
+    const root = pilot();
+    const r = await install(opts(root));
+    assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
+
+    const names = openspecJson(root, ['schemas']).map((s) => s.name);
+    for (const s of ['clarify', 'lean', 'clarify-ai-qa', 'clarify-qa']) assert.ok(names.includes(s), `${s} missing in ${names.join(', ')}`);
+
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of QA_FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    assert.equal(hookGroup(settings, 'schema-starter')?.matcher, 'Bash');
+    assert.equal(hookGroup(settings, 'test-cases-run-limit')?.matcher, 'Agent|Task');
+    assert.ok(settings.permissions.allow.includes('Bash(node openspec/tooling/checks/check-test-cases.mjs *)'));
+    assert.deepEqual(status({ target: root }).files, [], 'status: every kit file is present and unedited');
+
+    // update from a kit without the stage: the files, manifest entries and hook groups come back
+    const old = { ...settings, hooks: { ...settings.hooks, PreToolUse: settings.hooks.PreToolUse.filter((g) => !/schema-starter|test-cases-run-limit/.test(JSON.stringify(g))) } };
+    writeFileSync(join(root, '.claude/settings.json'), JSON.stringify(old, null, 2) + '\n');
+    for (const f of QA_FILES) {
+      rmSync(join(root, f));
+      delete manifest.files[f];
+    }
+    writeFileSync(join(root, 'openspec/tooling/kit-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    await install(opts(root));
+    const updated = JSON.parse(read(root, '.claude/settings.json'));
+    assert.ok(hookGroup(updated, 'schema-starter') && hookGroup(updated, 'test-cases-run-limit'), 'update registers both hooks');
+    const manifest2 = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of QA_FILES) assert.ok(existsSync(join(root, f)) && f in manifest2.files, `${f} is restored by update`);
+
+    uninstall({ target: root });
+    for (const f of QA_FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+    const after = read(root, '.claude/settings.json');
+    assert.doesNotMatch(after, /schema-starter|test-cases-run-limit|check-test-cases/);
+  });
+});
+
+describe('autonomous apply after install', () => {
+  test('the apply protocol, the start check, the report check and the command guard are installed, registered and allowed', async () => {
+    const root = pilot();
+    const r = await install(opts(root));
+    assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of ['openspec/protocols/apply.md', 'openspec/tooling/bin/start-check.mjs', 'openspec/tooling/checks/check-apply-report.mjs', 'openspec/tooling/hooks/boundary-guard.mjs', 'openspec/tooling/lib/apply-report.mjs', 'openspec/tooling/lib/start-check.mjs']) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    assert.ok(!existsSync(join(root, 'openspec/project-tools')), 'the project tool list is a project file, not installed');
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    const guard = settings.hooks.PreToolUse.find((g) => g.hooks.some((h) => h.command.includes('openspec/tooling/hooks/boundary-guard.mjs')));
+    assert.equal(guard?.matcher, 'Bash');
+    for (const p of ['Bash(node openspec/tooling/bin/start-check.mjs *)', 'Bash(node openspec/tooling/checks/check-apply-report.mjs *)']) assert.ok(settings.permissions.allow.includes(p), p);
+    assert.ok(r.doctor.some((i) => i.check === 'hooks' && i.level === 'ok'), JSON.stringify(r.doctor));
   });
 });

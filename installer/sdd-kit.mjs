@@ -2,7 +2,7 @@
 // sdd-kit installer. Zero dependencies (D3).
 //
 //   sdd-kit install   [--target <dir>] [--questions-language <lang>] [--keep-default-schema]
-//                     [--skip-openspec] [--force] [--dry-run] [--yes] [--json]
+//                     [--metarepo [<entries>]] [--skip-openspec] [--force] [--dry-run] [--yes] [--json]
 //   sdd-kit update    (same as install; safe to re-run)
 //   sdd-kit status    [--target <dir>] [--json]
 //   sdd-kit uninstall [--target <dir>] [--force] [--dry-run] [--json]
@@ -16,6 +16,9 @@
 //      agents and commands into .claude/
 //   5. patches .gitignore (openspec/ and the shared parts of .claude/ are versioned)
 //   6. runs `openspec update` through the kit wrapper, then lint-kit as a self-check
+//   7. meta-repository (openspec/protocols/metarepo.md): `--metarepo [<entries>]`, or the answers in a terminal
+//      (install only, never update), merge clone entries into `openspec/clones`. That list is a project file
+//      outside the kit manifest: update and uninstall never change it, and nothing is written inside a clone.
 // Everything is planned and validated first; nothing is written when a step cannot be done safely.
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync, rmdirSync, statSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -27,6 +30,8 @@ import { patchGitignore, unpatchGitignore } from './lib/gitignore.mjs';
 import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, ConfigEditError } from './lib/config-edit.mjs';
 import { mergeSettings, removeKitHooks, formatSettings } from '../kit/openspec/tooling/lib/settings-merge.mjs';
 import { parseArgs } from '../kit/openspec/tooling/lib/report.mjs';
+import { KIT_SCHEMAS } from '../kit/openspec/tooling/lib/project.mjs';
+import { CLONES_FILE, mergeEntries } from '../kit/openspec/tooling/lib/clones.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const USAGE = `sdd-kit — Spec-Driven Development kit for OpenSpec + Claude Code
@@ -41,6 +46,9 @@ Options:
   --target <dir>               project root (default: current directory)
   --questions-language <lang>  language of clarifying questions (default: keep current, else English)
   --keep-default-schema        do not make "clarify" the default schema for new changes
+  --metarepo [<entries>]       a meta-repository: application clones in sub-folders, each with its own git;
+                               entries are comma-separated, "<path>" or "<name>=<path>" (repos/backend,
+                               web=repos/frontend), merged into openspec/clones; alone it creates the list
   --skip-openspec              do not run the openspec CLI (no init/update of skills)
   --allow-version-mismatch     accept an openspec CLI other than the pinned version (not recommended)
   --force                      replace locally edited kit files (a .sdd-kit-backup copy is kept);
@@ -53,7 +61,6 @@ Options:
 
 class InstallError extends Error {}
 
-const KIT_SCHEMAS = ['clarify', 'lean'];
 
 function kitPaths(kitDir) {
   return {
@@ -98,11 +105,50 @@ function checkOpenspec(bin, pinned, allowMismatch) {
   return v;
 }
 
-async function askLanguage(defaultLang) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const a = (await rl.question(`Language of the clarifying questions [${defaultLang}]: `)).trim();
-  rl.close();
+/** Terminal questions: { ask(question) → answer, say(text) }; tests inject their own answers. */
+export function terminalIo() {
+  return {
+    async ask(question) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      try {
+        return await rl.question(question);
+      } finally {
+        rl.close();
+      }
+    },
+    say: (text) => console.log(text),
+  };
+}
+
+async function askLanguage(io, defaultLang) {
+  const a = String(await io.ask(`Language of the clarifying questions [${defaultLang}]: `)).trim();
   return a || defaultLang;
+}
+
+/** Comma-separated `--metarepo` entries ('' or true: the flag alone, no entry). */
+export function splitEntries(value) {
+  if (value === true || value === undefined || value === null) return [];
+  return String(value).split(',').map((e) => e.trim()).filter(Boolean);
+}
+
+/** "meta-repository or single repository"; then clone paths until an empty answer (install in a terminal). */
+async function askRepositoryKind(io, current) {
+  const kind = String(await io.ask('Is this project a meta-repository (application clones in sub-folders, each with its own git) or a single repository? [m]eta-repository / [s]ingle repository [single]: ')).trim().toLowerCase();
+  if (!kind.startsWith('m')) return null;
+  const entries = [];
+  let content = current;
+  for (;;) {
+    const answer = String(await io.ask('Clone path relative to the root (repos/backend, or name=path); empty to finish: ')).trim();
+    if (!answer) return entries;
+    const m = mergeEntries(content, [answer]);
+    if (m.errors.length) {
+      io.say(`  ${m.errors.join('; ')} — enter the path again`);
+      continue;
+    }
+    if (!m.added.length) io.say(`  ${answer} is already declared`);
+    entries.push(answer);
+    content = m.content;
+  }
 }
 
 /** Builds the full install plan without writing anything. */
@@ -209,16 +255,32 @@ export async function install(opts) {
   if (!opts.skipOpenspec) result.openspecCli = checkOpenspec(bin, kit.openspecVersion, opts.allowVersionMismatch);
   const willInit = !opts.skipOpenspec && !existsSync(join(root, 'openspec'));
 
+  const interactive = !opts.yes && !opts.dryRun && !opts.json && (opts.interactive ?? process.stdin.isTTY);
+  const io = opts.io || terminalIo();
   let lang = opts.questionsLanguage || null;
-  if (!lang && !opts.yes && !opts.dryRun && !opts.json && process.stdin.isTTY) {
+  if (!lang && interactive) {
     const current = currentQuestionsLanguage(readText(join(root, 'openspec', 'config.yaml')) || '');
-    if (!current) lang = await askLanguage('English');
+    if (!current) lang = await askLanguage(io, 'English');
+  }
+
+  // meta-repository: the flag, or the questions of an install in a terminal; validated before anything is written
+  const clonesPath = join(root, CLONES_FILE);
+  const clonesOld = readText(clonesPath);
+  let entries = null;
+  if (opts.metarepo !== undefined && opts.metarepo !== null && opts.metarepo !== false) entries = splitEntries(opts.metarepo);
+  else if (opts.command !== 'update' && interactive && clonesOld === null) entries = await askRepositoryKind(io, clonesOld);
+  let clones = null;
+  if (entries) {
+    const m = mergeEntries(clonesOld, entries);
+    if (m.errors.length) throw new InstallError(`${m.errors.map((e) => `--metarepo ${e}`).join('\n')}\nNothing was changed.`);
+    clones = { path: clonesPath, old: clonesOld, new: m.content, added: m.added.map((c) => c.name) };
   }
 
   // validate everything before writing (init changes config, so the plan is rebuilt after it)
   let plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang, willInitOpenspec: willInit });
   if (opts.dryRun) {
     result.plan = summarise(plan, willInit, !opts.skipOpenspec);
+    if (clones) result.plan.clones = clones.old === null ? 'create' : changed(clones) ? 'update' : 'unchanged';
     return result;
   }
   if (willInit) {
@@ -232,6 +294,10 @@ export async function install(opts) {
     if (changed(s)) writeFileEnsured(s.path, s.new);
     result.actions.push({ step: name, op: s.old === null ? 'create' : changed(s) ? 'update' : 'unchanged' });
   }
+  if (clones) {
+    if (changed(clones)) writeFileEnsured(clones.path, clones.new);
+    result.actions.push({ step: `${CLONES_FILE}${clones.added.length ? ` (added: ${clones.added.join(', ')})` : ''}`, op: clones.old === null ? 'create' : changed(clones) ? 'update' : 'unchanged' });
+  }
   result.questionsLanguage = plan.config.questionsLanguage;
   result.warnings.push(...plan.warnings);
   if (!opts.skipOpenspec) {
@@ -242,6 +308,10 @@ export async function install(opts) {
   // self-check with the freshly installed tooling
   const { lintKit } = await import(pathToFileURL(join(root, 'openspec', 'tooling', 'checks', 'lint-kit.mjs')).href);
   result.lint = lintKit({ root });
+  // the health check of the installed kit, shown at the end (project tools included)
+  const doctorModule = await import(pathToFileURL(join(root, 'openspec', 'tooling', 'bin', 'doctor.mjs')).href);
+  result.doctor = doctorModule.doctor(root);
+  result.doctorText = doctorModule.formatDoctor(result.doctor);
   return result;
 }
 
@@ -282,7 +352,7 @@ export function uninstall(opts) {
   if (!manifest) throw new InstallError(`sdd-kit is not installed in ${root} (no ${MANIFEST})`);
   const changesDir = join(root, 'openspec', 'changes');
   const users = existsSync(changesDir)
-    ? readdirSync(changesDir).filter((n) => n !== 'archive' && existsSync(join(changesDir, n, '.openspec.yaml')) && /^schema:\s*(clarify|lean)\s*$/m.test(readFileSync(join(changesDir, n, '.openspec.yaml'), 'utf8')))
+    ? readdirSync(changesDir).filter((n) => n !== 'archive' && existsSync(join(changesDir, n, '.openspec.yaml')) && KIT_SCHEMAS.includes(readFileSync(join(changesDir, n, '.openspec.yaml'), 'utf8').match(/^schema:\s*(\S+)\s*$/m)?.[1]))
     : [];
   if (users.length && !opts.force) {
     throw new InstallError(`active changes still use kit schemas: ${users.join(', ')}. Archive them first, or pass --force (their schema will be missing).`);
@@ -370,14 +440,18 @@ function printHuman(r) {
   out.push(
     '\nNext steps:',
     '  1. make sure CLAUDE.md or the README says how to run the tests and quality checks (the kit uses the project\'s own commands)',
-    '  2. node openspec/tooling/bin/doctor.mjs',
+    '  2. fix what the health check below reports; run it again with: node openspec/tooling/bin/doctor.mjs',
     '  3. commit openspec/, .claude/settings.json, .claude/agents/, .claude/commands/, .claude/skills/openspec-* and .gitignore',
+    '\nHealth check (node openspec/tooling/bin/doctor.mjs):',
+    r.doctorText,
   );
   console.log(out.join('\n'));
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), ['json', 'help', 'version', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch']);
+  // `--metarepo` takes an optional value: alone (last, or before another option) it means "no entry"
+  const argv = process.argv.slice(2).map((a, i, all) => (a === '--metarepo' && (i === all.length - 1 || all[i + 1].startsWith('--')) ? '--metarepo=' : a));
+  const args = parseArgs(argv, ['json', 'help', 'version', 'force', 'dry-run', 'yes', 'skip-openspec', 'keep-default-schema', 'allow-version-mismatch']);
   const cmd = args._[0];
   if (args.version) {
     const kit = JSON.parse(readFileSync(kitPaths(join(HERE, '..', 'kit')).kitJson, 'utf8'));
@@ -400,6 +474,8 @@ async function main() {
     dryRun: args['dry-run'],
     yes: args.yes,
     json: args.json,
+    metarepo: args.metarepo,
+    command: cmd,
   };
   let result;
   try {
