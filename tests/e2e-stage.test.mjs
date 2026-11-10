@@ -3,7 +3,7 @@
 // Every test builds a small change in a temp project and writes its `e2e.md`.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, existsSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -351,6 +351,31 @@ describe('e2e-runs library', () => {
     assert.equal(parsePlaywrightReport(report, { root, cwd: '/p/e2e' }).retries, 2, 'the largest retries of the projects');
   });
 
+  // @scenario e2e/stage :: Project path through a symlink
+  test('parsePlaywrightReport: a project opened through a symlink still gets project-relative files', () => {
+    const real = realpathSync(mkdtempSync(join(tmpdir(), 'sdd-kit-e2e-real-')));
+    mkdirSync(join(real, 'e2e'));
+    writeFileSync(join(real, 'e2e', 'two-sales.spec.ts'), "test('a', () => {});\n");
+    const link = join(mkdtempSync(join(tmpdir(), 'sdd-kit-e2e-link-')), 'project');
+    symlinkSync(real, link, 'dir');
+    const report = { config: { projects: [{ retries: 0 }] }, suites: [{ title: 'two-sales.spec.ts', file: join(real, 'e2e', 'two-sales.spec.ts'), specs: [{ title: 'a', file: join(real, 'e2e', 'two-sales.spec.ts'), line: 1, tests: [{ status: 'expected' }] }] }] };
+    const { tests } = parsePlaywrightReport(report, { root: link, cwd: join(link, 'e2e') });
+    assert.deepEqual(tests.map((t) => t.file), ['e2e/two-sales.spec.ts']);
+    const reverse = parsePlaywrightReport({ ...report, suites: [{ ...report.suites[0], specs: [{ ...report.suites[0].specs[0], file: join(link, 'e2e', 'two-sales.spec.ts') }] }] }, { root: real, cwd: join(real, 'e2e') });
+    assert.deepEqual(reverse.tests.map((t) => t.file), ['e2e/two-sales.spec.ts'], 'the root by its real path, the file through the link');
+  });
+
+  // @scenario e2e/stage :: File outside the project keeps its relative path
+  test('parsePlaywrightReport: a test file outside the project keeps its ../ path', () => {
+    const base = realpathSync(mkdtempSync(join(tmpdir(), 'sdd-kit-e2e-out-')));
+    mkdirSync(join(base, 'project'));
+    mkdirSync(join(base, 'other'));
+    writeFileSync(join(base, 'other', 'x.spec.ts'), "test('x', () => {});\n");
+    const report = { config: { projects: [{ retries: 0 }] }, suites: [{ title: 'x.spec.ts', file: join(base, 'other', 'x.spec.ts'), specs: [{ title: 'x', file: join(base, 'other', 'x.spec.ts'), line: 1, tests: [{ status: 'expected' }] }] }] };
+    const { tests } = parsePlaywrightReport(report, { root: join(base, 'project'), cwd: join(base, 'project') });
+    assert.deepEqual(tests.map((t) => t.file), ['../other/x.spec.ts']);
+  });
+
   test('projectState: the app state leaves out the test folder; test files are fingerprinted one by one', () => {
     const root = e2eProject();
     const a = projectState(root, 'e2e');
@@ -376,7 +401,8 @@ describe('e2e-run.mjs (design D3)', () => {
     const r = e2eRun(root, pwReport(root, { two: 'expected', empty: 'unexpected' }), ['--', '--project', 'chromium']);
     assert.equal(r.code, 1, 'the exit code of Playwright passes through');
     assert.deepEqual(r.calls.map(({ cwd, args, baseUrl }) => ({ cwd, args, baseUrl })), [
-      { cwd: join(root, 'e2e'), args: ['playwright', 'test', '--reporter=json', '--project', 'chromium'], baseUrl: null },
+      // a child process reports its working folder by the real path (macOS: /var → /private/var)
+      { cwd: realpathSync(join(root, 'e2e')), args: ['playwright', 'test', '--reporter=json', '--project', 'chromium'], baseUrl: null },
     ]);
     const runs = runsOf(root);
     assert.equal(runs.length, 1);

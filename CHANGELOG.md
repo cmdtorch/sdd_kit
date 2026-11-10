@@ -98,6 +98,8 @@ need it before they can be archived. `clarify` and `lean` changes without `e2e.m
   `.DS_Store` in `sources/ui/` are ignored; `sha256sum` and `shasum -a 256` are allowed without a prompt.
   Without screenshots the agent first asks whether the change has mockups (`(UI mockups)`, the first Main round
   question; on `lean` in chat); on "yes" it creates `sources/ui/` and waits for `/opsx:continue`.
+- E2E runs record each test file by its project path also when the project is reached through a symlink (the
+  macOS temp folder, a symlinked home folder); before, such a file was recorded as `../…` and never matched its case.
 - Test-cases stage, after an automated pilot: a repeated AI QA review re-checks its previous findings and looks
   for new ones only in what changed, so the loop converges; cases changed after the last review run are listed
   under "Stage result" as not reviewed by the AI; the answers gate says when a follow-up question reopened the
