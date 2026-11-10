@@ -7,10 +7,24 @@ Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaki
 
 ## Unreleased
 
-**Beta.** The new schemas `clarify-ai-qa` and `clarify-qa` (test-cases stage) are beta: the menu and their
+## 0.4.0 — 2026-11-10
+
+Test cases, UI screenshots, an E2E stage, autonomous apply and meta-repositories.
+
+**Beta.** The test-case schemas `clarify-ai-qa` and `clarify-qa` are beta: the schema menu and their
 descriptions say so. UI screenshots, the E2E stage, autonomous apply and meta-repositories are new in this
-release too and have not finished a pilot either; their formats and gates may change. `clarify` and `lean`
-are stable.
+release and have had only partial pilots; their formats and gates may change in a later 0.x release.
+`clarify` and `lean` are stable.
+
+Upgrading:
+
+1. Team lead: `npx github:cmdtorch/sdd_kit#v0.4.0 update`, review the diff (new hooks in `.claude/settings.json`,
+   new protocols and checks), commit. For a meta-repository add `--metarepo <clone paths>`.
+2. Active changes finish under the rules they started with: autonomous apply and the meta-repository rules apply
+   only to changes created with 0.4.0 (stamped in `.openspec.yaml`).
+3. From 0.3.0: in Claude Code `openspec new change` without `--schema` now opens the schema menu (see 0.4.0-beta.1
+   below, which is part of this release). From 0.4.0-beta.1: active `clarify-ai-qa` / `clarify-qa` changes need
+   `e2e.md` before the archive (see **Breaking** below).
 
 **Meta-repositories** (`openspec/protocols/metarepo.md`): a root with the kit and application clones in
 sub-folders, each with its own git, listed in the new project file `openspec/clones` (`repos/backend` or
@@ -91,7 +105,7 @@ need it before they can be archived. `clarify` and `lean` changes without `e2e.m
 
 ## 0.4.0-beta.1 — 2026-10-25
 
-**Pre-release for a pilot.** The test-cases stage is experimental: it has passed the kit's test suite but not yet
+**Pre-release for a pilot**, included in 0.4.0. The test-cases stage is experimental: it has passed the kit's test suite but not yet
 a pilot on a real project. Formats and gates may change before 0.4.0.
 
 **Breaking:** in Claude Code, `openspec new change` without `--schema` is now blocked until the developer picks a

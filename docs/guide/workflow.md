@@ -7,7 +7,7 @@ the specs and before the design, reviewed by an AI QA reviewer (and, on `clarify
 `clarify`: the questions are what catches gaps in a client's requirements.
 
 > **Beta.** `clarify-ai-qa` and `clarify-qa` (the test-cases stage) are in beta: they pass the kit's test suite
-> but have not finished a pilot on a real project, so their formats and gates may still change. The same holds
+> but have had only a partial pilot on a real project, so their formats and gates may still change. The same holds
 > for UI screenshots (2b), autonomous apply, the E2E stage (3a) and meta-repositories. `clarify` and `lean` are
 > stable.
 
@@ -195,12 +195,13 @@ Requirement gaps found while coding go into the *Apply round*; the agent asks in
 5. The agent tells you the change is ready to archive and names `apply-report.md`. It does not archive by
    itself.
 
-### 3a. E2E stage (web applications in a monorepo)
+### 3a. E2E stage (web applications in one repository or a meta-repository)
 
-When the change touches a web application whose backend is in the same repository, the Main round asks whether
+When the change touches a web application whose backend is in the same repository (or in another clone of the
+same [meta-repository](#meta-repositories)), the Main round asks whether
 it needs E2E tests and against which backend: the real one, started locally on an empty test database, or stubbed
 responses. On `lean` the agent asks before the first task. A mobile app, a backend-only change or a frontend whose
-backend lives in another repository gets no E2E.
+backend lives in a repository outside the project gets no E2E.
 
 After the last task the agent runs the stage (`openspec/protocols/e2e.md`) and records it in `e2e.md`:
 

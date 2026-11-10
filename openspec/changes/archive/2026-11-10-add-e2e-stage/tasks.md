@@ -29,8 +29,8 @@
 - [x] 5.1 Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and major findings
 - [x] 5.2 Run the full suite `npm test` and `node openspec/tooling/bin/doctor.mjs`; fix what fails and report the commands and results
 - [x] 5.3 Run `node openspec/tooling/checks/check-traceability.mjs --change add-e2e-stage --markers` and `openspec validate add-e2e-stage --strict`
-- [ ] 5.4 Write `manual-checks.md` with the 22 manual rows of the verification plan and run them in the pilot on a real web monorepo (test-case schema, UI screenshots, Playwright not installed beforehand): every `e2e` case gets a passing test and QA finds no bug in the covered scenarios; record the outcome and fix usability findings in this change
+- [x] 5.4 Write `manual-checks.md` with the 22 manual rows of the verification plan and run them in the pilot on a real web monorepo (test-case schema, UI screenshots, Playwright not installed beforehand): every `e2e` case gets a passing test and QA finds no bug in the covered scenarios; record the outcome and fix usability findings in this change — closed without a full pilot: partly run, feedback pending; findings go into a separate change
 
 ## Workflow follow-up
 
-- Archive the change only after the pilot of task 5.4.
+- Archived before the pilot finished (task 5.4); pilot feedback goes into a separate change.

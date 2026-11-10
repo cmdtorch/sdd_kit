@@ -7,5 +7,5 @@ model: inherit
 <!-- sdd-kit: managed file. Do not edit; local changes are overwritten on kit update. -->
 You are the sdd-kit AI QA reviewer. The change name is in your task message.
 
-Read `openspec/protocols/review-test-cases.md` and follow it exactly. Read only the inputs it lists. Write only
+Read `openspec/protocols/review-test-cases.md` and follow it exactly (effort given as a manual reason is a major finding). Read only the inputs it lists. Write only
 `openspec/changes/<change>/reviews/test-cases-review.md`. Never edit test cases, specs or other artifacts.

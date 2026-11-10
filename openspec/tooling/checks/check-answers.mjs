@@ -8,17 +8,32 @@
 //   --round <name>    the named round must be complete and confirmed
 //   (default)         consistency: every round whose artifact already exists must be confirmed (used by CI)
 // Format problems in the file are always reported (errors for things that break gating, warnings otherwise).
+// Before the first proposal of a change without screenshots, the Main round must hold the question marked
+// "(UI mockups)" (openspec/protocols/ui-inventory.md §1).
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseClarifications, roundStatus, answerLetters, describe, ROUND_FOR_ARTIFACT, KNOWN_ROUNDS } from '../lib/clarifications.mjs';
 import { changeDir, changeSchema, readChangeFile, isClarifyFamily, CLARIFY_FAMILY } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
+import { scanUiFolder, isUiMode, INVENTORY_FILE } from '../lib/ui-inventory.mjs';
 
 const CHECK = 'check-answers';
 const USAGE = `Usage: check-answers --change <name> [--artifact <id> | --round <Main|Specs|Design|Verification|Apply>] [--root <dir>] [--json]
 
 Checks that clarifying questions in openspec/changes/<name>/clarifications.md are answered
 and that the round summary is confirmed with exactly "Looks correct".`;
+
+export const MOCKUPS_MARK = '(UI mockups)';
+
+/**
+ * The mockups question is required only before the first proposal, and only while the change shows no
+ * sign of mockups: no screenshot in sources/ui/ and no ui-inventory.md (left after deleting screenshots).
+ */
+function needsMockupsQuestion(dir, parsed) {
+  if (existsSync(join(dir, 'proposal.md'))) return false;
+  if (isUiMode(scanUiFolder(dir)) || existsSync(join(dir, INVENTORY_FILE))) return false;
+  return ![...parsed.questions.values()].some((q) => q.round === 'Main' && q.title.includes(MOCKUPS_MARK));
+}
 
 const WAY_OUT = /not yet defined|not applicable|\bnone\b|\bnothing\b|not identified/i;
 
@@ -111,6 +126,14 @@ export function checkAnswers({ root, change, artifact, round }) {
     } else if (st.summaryAnswer !== 'Looks correct') {
       f.error(file, st.round.summary.answerLine, `"${name}" round summary answer "${st.summaryAnswer}" must be exactly "Looks correct"${why}`, 'no letters, numbers or notes — store exactly "Looks correct" or "Request changes"');
     }
+  }
+  if (artifact === 'proposal' && needsMockupsQuestion(dir, parsed)) {
+    f.error(
+      file,
+      roundStatus(parsed, 'Main').round?.line ?? null,
+      `the Main round has no question marked "${MOCKUPS_MARK}" (needed before writing proposal)`,
+      `ask "Are there UI mockups for this change? ${MOCKUPS_MARK}" as the first Main round question (openspec/protocols/ui-inventory.md §1); on "yes" create sources/ui/ and wait for the screenshots`,
+    );
   }
   return makeReport(CHECK, f.list, { change, rounds: required });
 }

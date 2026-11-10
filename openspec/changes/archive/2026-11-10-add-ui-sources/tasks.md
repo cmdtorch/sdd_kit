@@ -31,7 +31,7 @@
 - [x] 5.1 Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and major findings
 - [x] 5.2 Run the full suite `npm test` and `node openspec/tooling/bin/doctor.mjs`; fix what fails and report the commands and results
 - [x] 5.3 Run `node openspec/tooling/checks/check-traceability.mjs --change add-ui-sources --markers` and `openspec validate add-ui-sources --strict`
-- [ ] 5.4 Write `manual-checks.md` with the manual rows of the verification plan ("Button not in the requirements gets a question", "Requirement without a UI element gets a question", "Missing screen state gets a question", "Mock scenario without a visible outcome is a review finding", "Screenshots are opened before the screen is built", "Yes without screenshots stops until continue", "Empty folder on continue is asked again", "Lean asks about mockups before the proposal") and run them in the pilot on a real frontend task (a separate test project with the kit installed and real screenshots), checking that QA finds no forgotten button; record the outcome and fix usability findings in this change
+- [x] 5.4 Write `manual-checks.md` with the manual rows of the verification plan ("Button not in the requirements gets a question", "Requirement without a UI element gets a question", "Missing screen state gets a question", "Mock scenario without a visible outcome is a review finding", "Screenshots are opened before the screen is built", "Yes without screenshots stops until continue", "Empty folder on continue is asked again", "Lean asks about mockups before the proposal") and run them in the pilot on a real frontend task (a separate test project with the kit installed and real screenshots), checking that QA finds no forgotten button; record the outcome and fix usability findings in this change — closed without a full pilot: partly run, feedback pending; findings go into a separate change
 
 ## 6. Review follow-ups
 
@@ -49,4 +49,4 @@
 
 ## Workflow follow-up
 
-- Archive the change only after the pilot of task 5.4.
+- Archived before the pilot finished (task 5.4); pilot feedback goes into a separate change.

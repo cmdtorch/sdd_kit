@@ -1,6 +1,6 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // Locating the project root, changes and their schema.
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseYaml } from './yaml.mjs';
 
@@ -88,7 +88,7 @@ export function isKitSchema(schema) {
 }
 
 /** Artifact ids of the kit schemas by file name inside a change dir (specs are matched separately). */
-const ARTIFACT_FILES = {
+export const ARTIFACT_FILES = {
   'clarifications.md': 'clarifications',
   'proposal.md': 'proposal',
   'test-cases.md': 'test-cases',
@@ -119,4 +119,47 @@ export function locateInChange(root, absPath) {
 export function readChangeFile(root, name, file) {
   const p = join(changeDir(root, name), file);
   return existsSync(p) ? readFileSync(p, 'utf8') : null;
+}
+
+/** Key of the kit version stamp in a change's `.openspec.yaml` (OpenSpec ignores `x-` keys). */
+export const STAMP_KEY = 'x-sdd-kit';
+
+/** Kit version recorded in a change's `.openspec.yaml`, or null for a change started before the stamp. */
+export function changeKitVersion(root, name) {
+  const meta = join(changeDir(root, name), '.openspec.yaml');
+  if (!existsSync(meta)) return null;
+  try {
+    const { value } = parseYaml(readFileSync(meta, 'utf8'));
+    const v = value && value[STAMP_KEY];
+    return v === undefined || v === null || v === '' ? null : String(v);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True for a change started under the autonomous-apply rules (manual reasons, apply-report.md, consent at
+ * archive). The stamp came with those rules, so any stamped change follows them; unstamped changes keep the
+ * rules they started with.
+ */
+export function isStamped(root, name) {
+  return changeKitVersion(root, name) !== null;
+}
+
+/**
+ * Stamps the kit version into the change's `.openspec.yaml` when its first kit artifact is written: the file
+ * `rel` is the only artifact of the change and the stamp is missing. A change that already has other
+ * artifacts started before the stamp and keeps the old rules. Returns the version written, or null.
+ */
+export function stampChange(root, name, rel) {
+  const dir = changeDir(root, name);
+  const meta = join(dir, '.openspec.yaml');
+  const kitFile = join(root, 'openspec', 'tooling', 'kit.json');
+  if (!existsSync(meta) || !existsSync(kitFile) || changeKitVersion(root, name) !== null) return null;
+  const others = Object.keys(ARTIFACT_FILES).filter((f) => f !== rel && existsSync(join(dir, f)));
+  if (others.length || (!rel.startsWith('specs/') && existsSync(join(dir, 'specs')))) return null;
+  const version = JSON.parse(readFileSync(kitFile, 'utf8')).kitVersion;
+  const text = readFileSync(meta, 'utf8');
+  writeFileSync(meta, `${text}${text && !text.endsWith('\n') ? '\n' : ''}${STAMP_KEY}: ${version}\n`);
+  return version;
 }

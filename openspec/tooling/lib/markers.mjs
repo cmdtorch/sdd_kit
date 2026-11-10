@@ -8,12 +8,14 @@
 // On the test-case schemas a test also names the test cases it proves, with the same placement rules:
 //   # @case inventory/sales-export :: Export of an empty period
 // The kit only reads files; it never runs tests. Files come from git (tracked + untracked, .gitignore
-// respected); outside git the tree is walked with the usual dependency/build directories skipped.
+// respected); outside git the tree is walked with the usual dependency/build directories skipped. In a
+// meta-repository the declared clones are read too (lib/clones.mjs), each by its own git rules.
 // Paths listed in openspec/markers-ignore (the project's file, one pattern per line) are not scanned.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { normName } from './spec-parser.mjs';
+import { readClones } from './clones.mjs';
 
 // indentation, then at most a short comment opener (#, //, /*, *, <!--, --, ;, %, {#, <%--, {{!--)
 const MARKER = /^\s*[^\w\s]{0,5}\s*@scenario\s+(\S+)\s+::\s+(.+)$/;
@@ -24,22 +26,43 @@ const SKIP_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', 't
 const MAX_BYTES = 1024 * 1024;
 export const IGNORE_FILE = 'openspec/markers-ignore';
 
-/** Project files to scan, relative to root. `openspec/` is excluded: it holds the plan, not tests. */
-export function listProjectFiles(root) {
-  let files = null;
+/** Files of one folder relative to it: git (tracked + untracked, its ignore rules respected), else a walk. */
+function filesOf(dir) {
   try {
     const out = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-      cwd: root,
+      cwd: dir,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       maxBuffer: 256 * 1024 * 1024,
     });
-    files = out.split('\0').filter(Boolean);
+    return out.split('\0').filter(Boolean);
   } catch {
-    files = walk(root, root);
+    return walk(dir, dir);
+  }
+}
+
+/**
+ * Project files to scan, relative to root. `openspec/` and `.claude/` are excluded: they hold the plan and the
+ * tooling, not tests. In a meta-repository (openspec/clones) the files of every existing declared clone are
+ * added with the clone folder in front, each clone read by its own git rules (a clone without its own `.git`
+ * is walked); the clone's own `openspec/` and `.claude/` are skipped too. openspec/markers-ignore applies to
+ * the root-relative paths.
+ */
+export function listProjectFiles(root) {
+  const clones = readClones(root).clones.filter((c) => c.exists);
+  const inClone = (f) => clones.some((c) => isUnder(f, c.path));
+  const tooling = (f) => f.startsWith('openspec/') || f.startsWith('.claude/');
+  const files = filesOf(root).filter((f) => !tooling(f) && !inClone(f));
+  const seen = new Set();
+  for (const c of clones) {
+    if (seen.has(c.path)) continue;
+    seen.add(c.path);
+    const dir = join(root, c.path);
+    const own = existsSync(join(dir, '.git')) ? filesOf(dir) : walk(dir, dir);
+    for (const f of own) if (!tooling(f)) files.push(`${c.path}/${f}`);
   }
   const ignored = ignoreMatcher(root);
-  return files.filter((f) => !f.startsWith('openspec/') && !f.startsWith('.claude/') && !ignored(f));
+  return files.filter((f) => !ignored(f));
 }
 
 // Patterns from openspec/markers-ignore, relative to the project root: `docs/`, `CHANGELOG.md`,
@@ -112,10 +135,17 @@ export function parseCaseRefs(content) {
   return parseRefs(content, CASE_REF);
 }
 
-/** Every reference of one keyword in the project: [{...parsed, file}]. */
-function collect(root, keyword, parse) {
+/** True when the project-relative `file` lies in the folder `under` (any file when `under` is empty). */
+export function isUnder(file, under) {
+  if (!under) return true;
+  return file === under || file.startsWith(`${under}/`);
+}
+
+/** Every reference of one keyword in the project, or only in the folder `under`: [{...parsed, file}]. */
+function collect(root, keyword, parse, under) {
   const out = [];
   for (const file of listProjectFiles(root)) {
+    if (!isUnder(file, under)) continue;
     const p = join(root, file);
     let content;
     try {
@@ -130,12 +160,35 @@ function collect(root, keyword, parse) {
   return out;
 }
 
-/** Every marker in the project: [{capability, scenario, file, line}]. */
-export function collectMarkers(root) {
-  return collect(root, '@scenario', parseMarkers);
+/** Every marker in the project (or in the folder `under`): [{capability, scenario, file, line}]. */
+export function collectMarkers(root, { under = '' } = {}) {
+  return collect(root, '@scenario', parseMarkers, under);
 }
 
-/** Every case reference in the project: [{capability, name, file, line}]. */
-export function collectCaseRefs(root) {
-  return collect(root, '@case', parseCaseRefs);
+/** Every case reference in the project (or in the folder `under`): [{capability, name, file, line}]. */
+export function collectCaseRefs(root, { under = '' } = {}) {
+  return collect(root, '@case', parseCaseRefs, under);
+}
+
+// a blank line or a line that is only a comment (or a decorator) between the markers and their test
+const BETWEEN = /^\s*($|\/\/|#|\/\*|\*|<!--|--|;|%|@)/;
+
+/**
+ * The references of the test that starts on `line` (1-based) of a file's content: the marker and case
+ * lines directly above it, read upwards over blank, comment and decorator lines until the first line of
+ * code. Returns { cases: [{capability, name}], scenarios: [{capability, scenario}] } in file order.
+ */
+export function refsAbove(content, line) {
+  const lines = content.split(/\r?\n/);
+  const cases = [];
+  const scenarios = [];
+  for (let i = Math.min(line, lines.length + 1) - 2; i >= 0; i--) {
+    const l = lines[i];
+    const c = parseCaseRefs(l)[0];
+    const s = parseMarkers(l)[0];
+    if (c) cases.unshift({ capability: c.capability, name: c.name });
+    else if (s) scenarios.unshift({ capability: s.capability, scenario: s.scenario });
+    else if (!BETWEEN.test(l)) break;
+  }
+  return { cases, scenarios };
 }

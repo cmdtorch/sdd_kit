@@ -12,6 +12,9 @@
   QA reviews and answers, and the AI reworks the test cases until no questions or remarks are left.
 - [x] **Loop guard.** The AI QA review loop stops after three rounds.
 - [x] **UI screenshots.** UI mockups and screenshots are clarify sources for frontend work.
+- [x] **Autonomous apply.** After the planning rounds apply runs to the end without the developer, stopping
+  only for decisions that belong to them.
+- [x] **Meta-repositories.** One root with the kit and application clones in sub-folders, each with its own git.
 
 ## Planned
 

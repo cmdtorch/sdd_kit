@@ -41,13 +41,17 @@ For **every test case**:
    properly" are not observable.
 7. **Grounded in a scenario.** The case sits under a scenario of the delta specs and checks that scenario.
    A case that checks behaviour no scenario describes is a finding; so is a scenario a case contradicts.
+8. **Manual reason.** A case labelled `manual` gives a `Manual reason:` that starts with `cannot be automated:` or
+   `dangerous:` and names a real reason: a person must judge the result, or the function is dangerous
+   (`openspec/protocols/testing.md` §1). Effort or difficulty given as the reason (e.g.
+   `cannot be automated: too much work`) is a `major` finding: the case should be `automated`.
 
 ## Severities and verdict
 
 - `blocker` — the cases would check the wrong behaviour, or a scenario cannot be tested as written.
 - `major` — a QA engineer would come back: a missing positive, error or boundary case, an unusual condition
   from the checklist left unsettled, a case without concrete data, a Then that cannot be observed, a case
-  without a spec scenario.
+  without a spec scenario, effort or difficulty given as a manual reason.
 - `minor` — wording, ordering, a nice-to-have case.
 
 **Verdict `READY`** = no `blocker` or `major` finding remains, not counting the findings accepted in "Stage
