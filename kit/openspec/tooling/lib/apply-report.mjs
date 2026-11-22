@@ -20,6 +20,8 @@
 //   ## Repository: <name>                       meta-repository changes: one per repository of the task groups
 //   Command: <the full-suite command>          (`Command: none` when the repository has no tests)
 //   Result: <its result>                       (not judged)
+//   ## Subagent runs                            optional: one line per subagent run, never judged
+//   - <group | fix: <what> | full suite> — <tasks> — <model> — <test result>
 // An empty section says "None.". Fenced code and HTML comments are ignored. The parser only reads;
 // check-apply-report judges the values.
 import { toLines, fenceMask, stripComments, fold } from './markdown.mjs';
@@ -36,6 +38,7 @@ const FIELD = /^\s*(?:[-*+]\s+)?\**(Reason|Steps|Expected|Consent|Change)\**\s*:
 const NONE = /^\(?\s*none\s*\.?\s*\)?$/i;
 const REF = /^(\S+)\s*::\s*(.+)$/;
 const REPOSITORY = /^repository\s*:\s*(.*)$/i;
+const SUBAGENT_RUNS = 'subagent runs';
 const REPO_FIELD = /^\s*(?:[-*+]\s+)?\**(Command|Result)\**\s*:\s*(.*)$/i;
 const MARK = new RegExp(`\\s*[—–-]\\s*${REQUIRED_MARK}\\s*$`, 'i');
 
@@ -45,16 +48,18 @@ const MARK = new RegExp(`\\s*[—–-]\\s*${REQUIRED_MARK}\\s*$`, 'i');
  *   entries: { manual: [entry], unverified: [entry], weakened: [entry] },
  *   problems: [{ line, message }],
  *   repositories: [{ name, line, commands: [text], results: [text] }]   (in order; a name may repeat)
+ *   subagentRuns: { line, lines: [text] } | null   (non-empty lines, list markers stripped; never judged)
  * }; entry = { capability, name, required, reason, steps, expected, consent, change, line } ('' when absent).
  */
 export function parseApplyReport(content) {
   const raw = toLines(content);
   const fences = fenceMask(raw);
   const lines = stripComments(raw, fences);
-  const doc = { sections: { manual: null, unverified: null, weakened: null }, entries: { manual: [], unverified: [], weakened: [] }, problems: [], repositories: [] };
+  const doc = { sections: { manual: null, unverified: null, weakened: null }, entries: { manual: [], unverified: [], weakened: [] }, problems: [], repositories: [], subagentRuns: null };
   let section = null;
   let entry = null;
   let repo = null;
+  let runs = null;
   for (let i = 0; i < lines.length; i++) {
     if (fences[i]) continue;
     const line = lines[i];
@@ -67,6 +72,12 @@ export function parseApplyReport(content) {
       if (level === 2) {
         entry = null;
         repo = null;
+        runs = null;
+        if (fold(title) === SUBAGENT_RUNS) {
+          section = null;
+          runs = doc.subagentRuns || (doc.subagentRuns = { line: n, lines: [] });
+          continue;
+        }
         const r = title.replace(/`/g, '').match(REPOSITORY);
         if (r) {
           section = null;
@@ -91,6 +102,10 @@ export function parseApplyReport(content) {
         entry = { capability: ref[1], name: normName(ref[2]), required, reason: '', steps: '', expected: '', consent: '', change: '', line: n };
         doc.entries[section].push(entry);
       }
+      continue;
+    }
+    if (runs) {
+      if (line.trim()) runs.lines.push(line.trim().replace(/^[-*+]\s+/, ''));
       continue;
     }
     if (repo) {

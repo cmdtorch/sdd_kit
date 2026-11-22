@@ -3,6 +3,7 @@
 // lint-kit — catches what OpenSpec 1.15.0 silently ignores (docs/openspec-facts.md S4, S6, C2, C7):
 //   - unknown or misspelled fields in openspec/schemas/*/schema.yaml, openspec/config.yaml and
 //     changes/*/.openspec.yaml (`x-*` extension keys of .openspec.yaml are allowed, facts C9)
+//     (config.yaml allows one kit key, `x-sdd-kit-subagent-model`: openspec/protocols/subagents.md)
 //   - schema `name` different from its directory, missing templates, broken `requires`, cycles
 //   - config `context` over 50 KB (OpenSpec drops it entirely), rules for unknown artifacts,
 //     malformed operations, a default schema that does not exist
@@ -22,7 +23,7 @@ OpenSpec ignores silently.`;
 export const SCHEMA_KEYS = ['name', 'version', 'description', 'artifacts', 'apply'];
 export const ARTIFACT_KEYS = ['id', 'generates', 'description', 'template', 'instruction', 'requires'];
 export const APPLY_KEYS = ['requires', 'tracks', 'instruction'];
-export const CONFIG_KEYS = ['schema', 'context', 'rules', 'operations', 'store', 'references', 'githubCopilot'];
+export const CONFIG_KEYS = ['schema', 'context', 'rules', 'operations', 'store', 'references', 'githubCopilot', 'x-sdd-kit-subagent-model'];
 export const CHANGE_KEYS = ['schema', 'created', 'goal', 'affected_areas', 'initiative', 'skip_specs', 'retire_capabilities'];
 // OpenSpec's extension keys (dist/utils/change-metadata.js EXTENSION_KEY_PATTERN): lowercase `x-` + a name
 const EXTENSION_KEY = /^x-\S+$/;

@@ -163,3 +163,64 @@ export function stampChange(root, name, rel) {
   writeFileSync(meta, `${text}${text && !text.endsWith('\n') ? '\n' : ''}${STAMP_KEY}: ${version}\n`);
   return version;
 }
+
+/** First kit version whose changes are implemented by subagents (openspec/protocols/subagents.md). */
+export const SUBAGENT_VERSION = '0.5.0';
+
+/**
+ * True when `version` is at least `min`, compared by major, minor and patch. A pre-release suffix counts as its
+ * base version (`0.5.0-beta.1` ≥ `0.5.0`), so a beta can pilot the new rules. A missing or malformed version is false.
+ */
+export function versionAtLeast(version, min) {
+  const parse = (v) => {
+    const m = String(v ?? '').trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
+    return m ? m.slice(1, 4).map(Number) : null;
+  };
+  const a = parse(version);
+  const b = parse(min);
+  if (!a || !b) return false;
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return true;
+}
+
+/**
+ * True for a change whose apply and verify run through subagents: stamped 0.5.0 or later. A missing stamp or an
+ * older one keeps the single-agent apply and verify the change started with.
+ */
+export function usesSubagents(root, name) {
+  return versionAtLeast(changeKitVersion(root, name), SUBAGENT_VERSION);
+}
+
+/** Top-level key of openspec/config.yaml (outside the kit block) with the model of the implementation subagents. */
+export const SUBAGENT_MODEL_KEY = 'x-sdd-kit-subagent-model';
+/** Short model names; `inherit` means the main chat's model. A full model ID starting with `claude-` is also allowed. */
+export const SUBAGENT_MODELS = ['opus', 'sonnet', 'haiku', 'fable', 'inherit'];
+
+export function isKnownSubagentModel(value) {
+  return typeof value === 'string' && (SUBAGENT_MODELS.includes(value) || /^claude-\S+$/.test(value));
+}
+
+/**
+ * The subagent model setting: { value: the configured value or null, model: what to pass (`inherit` = no override,
+ * the main chat's model), known: false for an unknown value, which falls back to `inherit` }.
+ */
+export function subagentModel(root) {
+  const cfg = join(root, 'openspec', 'config.yaml');
+  let raw;
+  if (existsSync(cfg)) {
+    try {
+      const { value } = parseYaml(readFileSync(cfg, 'utf8'));
+      raw = value && value[SUBAGENT_MODEL_KEY];
+    } catch {
+      /* an unreadable config is reported by lint-kit */
+    }
+  }
+  if (raw === undefined || raw === null || raw === '') return { value: null, model: 'inherit', known: true };
+  const value = String(raw);
+  return isKnownSubagentModel(value) ? { value, model: value, known: true } : { value, model: 'inherit', known: false };
+}
+
+/** Warning text for an unknown subagent model value. */
+export function subagentModelWarning(value) {
+  return `${SUBAGENT_MODEL_KEY} "${value}" in openspec/config.yaml is not a known model — allowed: ${SUBAGENT_MODELS.join(', ')}, or a full model ID starting with claude-`;
+}

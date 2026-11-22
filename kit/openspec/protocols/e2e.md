@@ -143,6 +143,9 @@ Note: —
 
 ## 6. Writing the tests
 
+On a change stamped 0.5.0 or later the E2E tests are written by a `task-implementer` subagent
+(`openspec/protocols/subagents.md` §8).
+
 - **What gets a test.**
   - Test-case schemas: every case labelled `e2e` (alone or with other labels) in `test-cases.md`.
   - `clarify` and `lean`: mark the spec scenarios that go through the interface, list them under
@@ -183,6 +186,9 @@ node openspec/tooling/bin/e2e-run.mjs --change <change> -- -g "two sales"    # b
 - A rerun of only the fixed test is enough when the fix touched only that test's file (§10).
 
 ## 8. Failing tests
+
+On a change stamped 0.5.0 or later each fix attempt is made by a new subagent, and you run the tests again
+(`openspec/protocols/subagents.md` §8).
 
 - **At most three fix attempts per test**, in the application code or in how the test performs its steps. A
   flaky test is fixed like any failing one; each attempt counts. After the third failed attempt stop and show

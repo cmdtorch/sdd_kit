@@ -161,6 +161,9 @@ it('exports the paid sales of the period', async () => { /* ... */ });
 
 ## 5. During apply
 
+On a change stamped 0.5.0 or later each task group is done by a subagent that follows this section
+(`openspec/protocols/subagents.md`).
+
 - **TDD per task group:** write the tests for the group's scenarios first and watch them fail for the
   right reason, then implement and watch them pass, then refactor.
 - **Run tests scoped** to what you are changing. The full suite runs at the end.
@@ -168,6 +171,9 @@ it('exports the paid sales of the period', async () => { /* ... */ });
   Do not guess.
 
 ## 6. End of apply
+
+On a change stamped 0.5.0 or later the fixes and the full suite run in subagents
+(`openspec/protocols/subagents.md` §8).
 
 1. Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and
    major findings.

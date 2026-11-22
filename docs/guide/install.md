@@ -18,11 +18,11 @@ suite, lint and type checks).
 ## Installing into a repository (once, by the team lead)
 
 ```bash
-npx github:cmdtorch/sdd_kit#v0.4.0 install --dry-run   # show the plan, write nothing
-npx github:cmdtorch/sdd_kit#v0.4.0 install
+npx github:cmdtorch/sdd_kit#v0.5.0 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.5.0 install
 ```
 
-Always name a release tag (`#v0.4.0`): without one, npx installs whatever is on `main`. Releases and their notes:
+Always name a release tag (`#v0.5.0`): without one, npx installs whatever is on `main`. Releases and their notes:
 https://github.com/cmdtorch/sdd_kit/releases.
 
 In a terminal `install` asks two questions: the language of the clarifying questions, and whether the project is

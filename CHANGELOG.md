@@ -5,7 +5,30 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
-## Unreleased
+## 0.5.0 — 2026-11-22
+
+Apply through subagents: one fresh subagent per task group, independent groups in parallel, verify in a
+read-only subagent.
+
+**Beta.** Subagent apply and the model setting have not finished a pilot; the plan lines, the protocol and the
+report section may still change. It applies only to changes started with 0.5.0 or later; changes started with an
+older kit keep the single-agent apply.
+
+- **Subagent model setting** (beta): `x-sdd-kit-subagent-model: <value>` at the top level of `openspec/config.yaml`
+  chooses the model of the implementation subagents (`opus`, `sonnet`, `haiku`, `fable`, `inherit` or a full model
+  ID starting with `claude-`); `node openspec/tooling/bin/subagent-model.mjs` prints the model to pass, doctor warns
+  about an unknown value, lint-kit accepts the key, and a kit update keeps the line.
+- **Version gate for subagent apply**: only changes stamped 0.5.0 or later (a pre-release such as `0.5.0-beta.1`
+  counts) are implemented and verified through subagents; older and unstamped changes keep the single-agent apply.
+- **Subagent apply** (beta, changes stamped 0.5.0 or later): new protocol `openspec/protocols/subagents.md`; the
+  main agent hands every task group before the final one to a new subagent, runs independent groups in parallel,
+  checks the changed files against `git status`, edits no project code itself and runs verify in a subagent.
+- **Agents `task-implementer` and `change-verifier`** in `.claude/agents/`: the implementation subagent of apply
+  and the read-only verify subagent.
+- **Plan lines in tasks**: the `tasks` instruction of all four schemas asks for `Depends on:` / `Area:` /
+  `Shared:` under every task group, at most 5 tasks per group and a final group depending on all others; no check
+  reads them. The `apply` instruction points to the subagents protocol.
+- **`## Subagent runs` in `apply-report.md`**: an optional section, one line per subagent run; never checked.
 
 ## 0.4.0 — 2026-11-10
 

@@ -9,7 +9,8 @@
 // archive gate blocks on them. On a meta-repository change (x-sdd-kit-metarepo: true;
 // openspec/protocols/metarepo.md) every repository named by a task group has one section
 // `## Repository: <name>` with at least one `Command:` and one `Result:` line; a section for another
-// repository is allowed (its lines are checked too) and the result is not judged. Skipped for schemas that are not kit schemas.
+// repository is allowed (its lines are checked too) and the result is not judged. The optional section
+// `## Subagent runs` is accepted and never reported on, present or not. Skipped for schemas that are not kit schemas.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseApplyReport, entryKey, APPLY_REPORT, REQUIRED_MARK, SECTION_TITLES } from '../lib/apply-report.mjs';

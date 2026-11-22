@@ -2,9 +2,12 @@
 // upstream `spec-driven` instructions and templates kept verbatim (kit text is only appended).
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync, mkdtempSync, cpSync, renameSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { metarepo, writeChange, hook, runKit, CHANGE, C as C_ORDERS } from './helpers/metarepo.mjs';
 import { cliSkipReason, makeProject, openspecJson } from './helpers/openspec.mjs';
 import { parseYaml } from '../kit/openspec/tooling/lib/yaml.mjs';
 
@@ -234,5 +237,220 @@ describe('test-case schemas against the pinned OpenSpec CLI', { skip: cliSkipRea
   test('a new lean change has the lean artifacts and no test-cases artifact', () => {
     openspecJson(project, ['new', 'change', 'plain-lean', '--schema', 'lean']);
     assert.deepEqual(ids('plain-lean'), ['proposal', 'specs', 'verification-plan', 'tasks']);
+  });
+});
+
+// --- Subagent apply (change add-subagent-execution): the plan lines in the tasks instruction, the subagent
+// rules in the apply instruction, and no check that reads the plan lines or the group size. -----------------
+
+const flatText = (s) => s.replace(/\s+/g, ' ');
+const tasksInstruction = (schema) => flatText(schemaDoc(schema).artifacts.find((a) => a.id === 'tasks').instruction);
+const applyInstruction = (schema) => flatText(schemaDoc(schema).apply.instruction);
+const KIT_SCHEMAS = Object.keys(EXPECTED_GRAPH);
+
+describe('tasks instruction: group plan lines (no CLI needed)', () => {
+  // @scenario workflow/task-groups :: Tasks instruction shows the plan lines
+  test('every kit schema tells the agent to write Depends on / Area / Shared under each group heading, with an example', () => {
+    for (const schema of KIT_SCHEMAS) {
+      const t = tasksInstruction(schema);
+      assert.match(t, /right under every `## <n>\.` group heading, before its tasks, write three lines: `Depends on:`/, schema);
+      assert.match(t, /`Area:` the files and folders it changes/, schema);
+      assert.match(t, /`Shared:` the shared resources it changes or its tests use, or `none`/, schema);
+      assert.match(t, /`openspec\/protocols\/subagents\.md`/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Group with its plan lines
+  test('the example group depends on group 1, names its folder and adds a library as dependencies', () => {
+    for (const schema of KIT_SCHEMAS) {
+      const raw = schemaDoc(schema).artifacts.find((a) => a.id === 'tasks').instruction;
+      assert.match(raw, /## 2\. Order API\n\s*\n\s*Depends on: 1\n\s*Area: src\/api\/orders\/\n\s*Shared: dependencies\n/, schema);
+      assert.match(tasksInstruction(schema), /`dependencies` \(dependency manifests and lock files: a group that adds a library\)/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Independent group
+  test('a group that needs nothing from the others has Depends on: none', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /`Depends on:` the numbers of the groups it needs, or `none`/, schema);
+      assert.match(tasksInstruction(schema), /a group that needs nothing from the others has `Depends on: none`/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Area of a frontend group
+  test('a group that changes only web/src/orders/ has that folder as its area', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /a group that changes only `web\/src\/orders\/` has `Area: web\/src\/orders\/`/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Rename across the project
+  test('an area that cannot be named in advance is unknown', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /or `unknown` when they cannot be named in advance \(a rename across the whole project\)/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Tasks instruction lists the shared resources
+  test('the seven shared resources are named, each with what it covers', () => {
+    for (const schema of KIT_SCHEMAS) {
+      const t = tasksInstruction(schema);
+      assert.match(t, /`dependencies` \(dependency manifests and lock files/, schema);
+      assert.match(t, /`migrations` \(database migrations and schema\)/, schema);
+      assert.match(t, /`settings` \(shared project settings: build, linter, test configuration, environment variables\)/, schema);
+      assert.match(t, /`assembly` \(shared assembly points: route files, module registration\)/, schema);
+      assert.match(t, /`database`, `ports`, `docker` \(its tests use the test database, fixed ports, Docker\)/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Group installs a library
+  test('adding a library is a dependencies change', () => {
+    for (const schema of KIT_SCHEMAS) assert.match(tasksInstruction(schema), /`dependencies` \([^)]*a group that adds a library\)/, schema);
+  });
+
+  // @scenario workflow/task-groups :: Group whose tests use the database
+  test('a group whose tests use the test database and that changes no shared file has Shared: database', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /A group whose tests use the test database and that changes no shared file has `Shared: database`/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Tasks instruction states the limit
+  test('a group has at most 5 tasks and about 10 touched files; larger work is split', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /a group has at most 5 tasks and about 10 touched files\. Split larger work into several groups/, schema);
+    }
+  });
+
+  // @scenario workflow/task-groups :: Large group is split
+  test('work of 9 tasks becomes two groups or more', () => {
+    for (const schema of KIT_SCHEMAS) assert.match(tasksInstruction(schema), /\(9 tasks become two groups or more\)/, schema);
+  });
+
+  // @scenario workflow/task-groups :: Final group depends on all
+  test('the final group depends on every other group', () => {
+    for (const schema of KIT_SCHEMAS) {
+      assert.match(tasksInstruction(schema), /The final group depends on every other group: in a `tasks\.md` with groups 1 to 4 it has `Depends on: 1, 2, 3`/, schema);
+    }
+  });
+});
+
+describe('apply instruction: subagent rules (no CLI needed)', () => {
+  // @scenario workflow/subagent-apply :: Change with three groups
+  test('on a change stamped 0.5.0 or later every group before the final one goes to task-implementer and the main agent edits no code', () => {
+    for (const schema of KIT_SCHEMAS) {
+      const a = applyInstruction(schema);
+      assert.match(a, /on a change stamped 0\.5\.0 or later \(`x-sdd-kit` in its `\.openspec\.yaml`\) follow `openspec\/protocols\/subagents\.md`/, schema);
+      assert.match(a, /Hand every task group before the final group to a new `task-implementer` subagent/, schema);
+      assert.match(a, /edit no project code or tests yourself/, schema);
+      assert.match(a, /check off a group's tasks only after you accept it/, schema);
+      assert.match(a, /On older or unstamped changes you implement and verify yourself, as before/, schema);
+    }
+  });
+
+  // @scenario workflow/subagent-delegation :: Developer runs verify
+  test('verify of a stamped change runs in the change-verifier subagent and its fixes in subagents', () => {
+    for (const schema of KIT_SCHEMAS) {
+      const a = applyInstruction(schema);
+      assert.match(a, /verify runs in the `change-verifier` subagent/, schema);
+      assert.match(a, /\(fixes go to subagents too\)/, schema);
+    }
+  });
+
+  test('the agents the apply instruction names are kit files', () => {
+    for (const name of ['task-implementer', 'change-verifier']) {
+      assert.ok(existsSync(join(REPO, 'kit', 'claude', 'agents', `${name}.md`)), name);
+    }
+  });
+
+  test('a temp install of the kit passes lint-kit with the new instructions', () => {
+    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-schemas-install-'));
+    cpSync(join(REPO, 'fixtures', 'projects', 'pilot-like'), root, { recursive: true });
+    renameSync(join(root, 'gitignore.txt'), join(root, '.gitignore'));
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    const inst = spawnSync(process.execPath, [join(REPO, 'installer', 'sdd-kit.mjs'), 'install', '--yes', '--skip-openspec', '--target', root], { cwd: root, encoding: 'utf8' });
+    assert.equal(inst.status, 0, inst.stdout + inst.stderr);
+    const lint = spawnSync(process.execPath, [join(root, 'openspec', 'tooling', 'checks', 'lint-kit.mjs')], { cwd: root, encoding: 'utf8' });
+    assert.equal(lint.status, 0, lint.stdout + lint.stderr);
+  });
+});
+
+describe('plan lines and group size are not checked (processes on temp projects)', () => {
+  const ROW = [['Order is created', 'unit', 'backend']];
+  /** tasks.md from groups [{ title, plan: [lines] | null, tasks: n }]; `tag` prefixes every group but the last. */
+  const tasksMd = (groups, tag = '') =>
+    [
+      '# Tasks',
+      '',
+      ...groups.flatMap((g, k) => [
+        `## ${k + 1}. ${tag && k < groups.length - 1 ? `[${tag}] ` : ''}${g.title}`,
+        '',
+        ...(g.plan ? [...g.plan, ''] : []),
+        ...Array.from({ length: g.tasks ?? 1 }, (_, i) => `- [ ] ${k + 1}.${i + 1} Write the code part ${i + 1} and verify its test passes`),
+        '',
+      ]),
+    ].join('\n');
+  /** A plain change and a meta-repository change, each with `groups` written through the tasks gate. */
+  function judge(groups) {
+    const out = [];
+    for (const meta of [false, true]) {
+      const root = meta ? metarepo() : metarepo({ clones: null, create: [] });
+      writeChange(root, ROW, { marked: meta, column: meta });
+      const path = join(root, C_ORDERS, 'tasks.md');
+      const content = tasksMd(groups, meta ? 'backend' : '');
+      const gate = hook(root, 'answers-gate.mjs', { hook_event_name: 'PreToolUse', tool_name: 'Write', tool_input: { file_path: path, content } });
+      writeFileSync(path, content);
+      const after = hook(root, 'artifact-feedback.mjs', { hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: { file_path: path, content } });
+      const check = runKit(root, 'checks/check-tasks.mjs', ['--change', CHANGE, '--json']);
+      out.push({ meta, gate, after, check, report: JSON.parse(check.out) });
+    }
+    return out;
+  }
+  const assertSilent = (results) => {
+    for (const { meta, gate, after, check, report } of results) {
+      const where = meta ? 'meta-repository change' : 'plain change';
+      assert.equal(gate.code, 0, `${where}: the tasks gate blocks: ${gate.err}`);
+      assert.equal(gate.err, '', where);
+      assert.doesNotMatch(after.out + after.err, /problem|warning|error|Depends on|Area:|Shared:|group size|tasks per group/i, where);
+      assert.equal(check.code, 0, `${where}: ${check.out}`);
+      assert.deepEqual(report.findings, [], where);
+    }
+  };
+  const PLAN = ['Depends on: none', 'Area: src/orders/', 'Shared: none'];
+
+  // @scenario workflow/task-groups :: Group above the limit is not blocked
+  test('a group of 7 tasks is written and no check reports its size', () => {
+    assertSilent(judge([{ title: 'Orders', plan: PLAN, tasks: 7 }, { title: 'Final checks', plan: ['Depends on: 1', 'Area: unknown', 'Shared: none'] }]));
+  });
+
+  // @scenario workflow/task-groups :: Group without plan lines
+  test('a group without plan lines is written, and the protocol runs it alone after the earlier groups', () => {
+    assertSilent(
+      judge([
+        { title: 'Orders', plan: PLAN },
+        { title: 'Order list' },
+        { title: 'Final checks', plan: ['Depends on: 1, 2', 'Area: unknown', 'Shared: none'] },
+      ]),
+    );
+    const proto = flatText(readFileSync(join(KIT_OPENSPEC, 'protocols', 'subagents.md'), 'utf8'));
+    assert.match(proto, /A group with a plan line missing or unreadable \(for example `Depends on: the API group`\) depends on every earlier group and has an unknown area\. No check reports such lines/);
+    assert.match(proto, /A group with `Area: unknown` runs alone: no other group's subagent runs at the same time/);
+    assert.match(proto, /Start a group only after every group in its `Depends on:` line is accepted/);
+  });
+
+  // @scenario workflow/task-groups :: Malformed plan line
+  test('a group with "Depends on: the API group" is written, and the protocol runs it alone after every earlier group', () => {
+    assertSilent(
+      judge([
+        { title: 'Order API', plan: PLAN },
+        { title: 'Order screen', plan: ['Depends on: none', 'Area: web/orders/', 'Shared: none'] },
+        { title: 'Order export', plan: ['Depends on: the API group', 'Area: src/export/', 'Shared: none'] },
+        { title: 'Final checks', plan: ['Depends on: 1, 2, 3', 'Area: unknown', 'Shared: none'] },
+      ]),
+    );
+    const proto = flatText(readFileSync(join(KIT_OPENSPEC, 'protocols', 'subagents.md'), 'utf8'));
+    assert.match(proto, /unreadable \(for example `Depends on: the API group`\) depends on every earlier group and has an unknown area/);
+    assert.match(proto, /A group with `Area: unknown` runs alone/);
   });
 });
