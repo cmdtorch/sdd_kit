@@ -12,12 +12,14 @@
 // own `.git` that the list does not declare is offered (hidden, dependency and build folders and declared clones
 // are skipped; a taken name becomes `<parent>-<folder>`). The offer never changes "Ready.". Without the list
 // nothing is said about clones. Nothing is ever written inside a clone.
+// Subagent model (`x-sdd-kit-subagent-model` in openspec/config.yaml): an unknown value is a warning; without the
+// key nothing is said.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { findRoot } from '../lib/project.mjs';
+import { findRoot, subagentModel, subagentModelWarning } from '../lib/project.mjs';
 import { parseArgs, isMain } from '../lib/report.mjs';
 import { CLONES_FILE, readClones, mergeEntries, cloneLine } from '../lib/clones.mjs';
 
@@ -168,6 +170,10 @@ export function doctor(root) {
   if (names.includes('openspec-propose') || !names.includes('openspec-continue-change')) {
     add('warning', 'skills', 'OpenSpec skills differ from the kit profile (propose installed or continue missing)', 'node openspec/tooling/bin/openspec.mjs update');
   } else add('ok', 'skills', 'OpenSpec skills follow the kit profile');
+
+  const model = subagentModel(root);
+  if (!model.known) add('warning', 'subagent model', subagentModelWarning(model.value), 'fix the value in openspec/config.yaml; until then implementation subagents run on the main chat\'s model');
+  else if (model.value) add('ok', 'subagent model', `${model.value} (x-sdd-kit-subagent-model)`);
 
   projectTools(root, add);
   clones(root, add);

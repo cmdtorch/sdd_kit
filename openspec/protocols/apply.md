@@ -20,6 +20,10 @@ the E2E stage: `openspec/protocols/e2e.md`.
 5. **`apply-report.md`** (§7), then the **consent list** (§8).
 6. **Ready message** (§9).
 
+On a change stamped 0.5.0 or later, every task group before the final group is handed to a new subagent, and this
+cannot be switched off; you orchestrate and edit no project code, and the full suite, every fix and verify run in
+subagents too. How: `openspec/protocols/subagents.md`.
+
 ## 2. Stops
 
 Stop and wait for the developer only in these cases:
@@ -40,6 +44,9 @@ Stop and wait for the developer only in these cases:
   for example a library version that the design relies on has been withdrawn from the package registry. Do not
   pick a replacement: report it and wait instead of choosing a way around it.
 - **Consent list** at the end (§8).
+
+On a change implemented through subagents, a subagent that reaches a stop ends and reports it, and the main agent
+asks the developer (`openspec/protocols/subagents.md` §7).
 
 Nothing else is a reason to ask: not "shall I go on", not a detail the design or the specs already settle, not
 which test level to use (the verification plan says it).
@@ -162,6 +169,12 @@ Consent: "skip live reload, QA will check it" (developer, 2026-10-28)
 ## Weakened tests
 
 None.
+
+## Subagent runs
+
+- 1. Order model — 1.1–1.3 — sonnet — 12 tests pass
+- 2. Order API — 2.1–2.4 — sonnet — 2 tests fail: create order, cancel order
+- full suite — — opus — every test passes
 ```
 
 - **Manual checks**: every `manual` row of the verification plan and every test case labelled `manual`, with
@@ -172,6 +185,10 @@ None.
   after the fix attempts, and, when E2E is skipped, every case labelled `e2e`. Each entry has its reason; the
   entries agreed by the developer carry `Consent:`.
 - **Weakened tests**: §6.
+- **Subagent runs**: on a change implemented through subagents, one line per subagent run, in the order they
+  finished: `- <group | fix: <what> | full suite> — <tasks> — <model> — <test result>`. The group is its number
+  and name; a replacement subagent gets its own line. The section is optional: it is never checked and never
+  blocks the archive.
 - An empty section says `None.`. Entries are `### <capability-path> :: <scenario or case name>` (for weakened
   tests `### <test file> :: <test name>` or `### <file> :: lint rule <rule>`) with the lines `Reason:`,
   `Steps:`, `Expected:`, `Change:` and `Consent:` as above.

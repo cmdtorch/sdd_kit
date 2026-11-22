@@ -17,7 +17,7 @@
 // test folder, Playwright's own output (test-results/, playwright-report/, blob-report/) and node_modules/
 // are not fingerprinted.
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, isAbsolute } from 'node:path';
 import { listProjectFiles, isUnder, refsAbove } from './markers.mjs';
 import { changeDir } from './project.mjs';
@@ -101,6 +101,22 @@ function specStatus(spec) {
   return 'passed';
 }
 
+/** The real path of `p`, or `p` itself when it cannot be resolved (a file that no longer exists). */
+function real(p) {
+  try { return realpathSync(p); } catch { return p; }
+}
+
+/**
+ * `abs` relative to `root`. When the plain relative path leaves the project, the real paths are compared too:
+ * Playwright reports real paths, while the root may be reached through a symlink (macOS `/var` → `/private/var`).
+ */
+function projectRelative(root, abs) {
+  const plain = relative(root, abs);
+  if (!plain.startsWith('..') && !isAbsolute(plain)) return plain;
+  const resolved = relative(real(root), real(abs));
+  return !resolved.startsWith('..') && !isAbsolute(resolved) ? resolved : plain;
+}
+
 /**
  * Reads a Playwright JSON report (`--reporter=json`). `cwd` is the folder Playwright ran in. Returns
  * { retries (null when the report names no project), tests: [{file (project-relative), title, line, status}] }.
@@ -116,7 +132,7 @@ export function parsePlaywrightReport(report, { root, cwd }) {
       const file = spec.file ?? suite.file ?? '';
       const abs = isAbsolute(file) ? file : resolve(base, file);
       tests.push({
-        file: posix(relative(root, abs)),
+        file: posix(projectRelative(root, abs)),
         title: [...titles, spec.title].filter(Boolean).join(' › '),
         line: Number(spec.line) || 0,
         status: specStatus(spec),

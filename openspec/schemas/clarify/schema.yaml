@@ -428,6 +428,38 @@ artifacts:
         `apply-report.md` (`openspec/protocols/apply.md` section 7), and run
         `node openspec/tooling/checks/check-traceability.mjs --change <name> --markers`
         (see `openspec/protocols/testing.md` section 6).
+      - Plan lines (apply hands each group to its own subagent,
+        `openspec/protocols/subagents.md`): right under every `## <n>.` group
+        heading, before its tasks, write three lines: `Depends on:` the numbers
+        of the groups it needs, or `none`; `Area:` the files and folders it
+        changes, or `unknown` when they cannot be named in advance (a rename
+        across the whole project); `Shared:` the shared resources it changes or
+        its tests use, or `none`. Example:
+        ```
+        ## 2. Order API
+
+        Depends on: 1
+        Area: src/api/orders/
+        Shared: dependencies
+
+        - [ ] 2.1 Write failing tests for "Create order" and verify they fail
+        ```
+        Likewise a group that needs nothing from the others has
+        `Depends on: none`, and a group that changes only `web/src/orders/` has
+        `Area: web/src/orders/`.
+      - Shared resources. Changed files: `dependencies` (dependency manifests
+        and lock files: a group that adds a library), `migrations` (database
+        migrations and schema), `settings` (shared project settings: build,
+        linter, test configuration, environment variables), `assembly` (shared
+        assembly points: route files, module registration). Test resources:
+        `database`, `ports`, `docker` (its tests use the test database, fixed
+        ports, Docker). A group whose tests use the test database and that
+        changes no shared file has `Shared: database`.
+      - Size: one subagent does a whole group, so a group has at most 5 tasks
+        and about 10 touched files. Split larger work into several groups (9
+        tasks become two groups or more).
+      - The final group depends on every other group: in a `tasks.md` with
+        groups 1 to 4 it has `Depends on: 1, 2, 3`.
       - UI mode: a task that builds or changes a screen names it in backticks (the
         screen name from `ui-inventory.md`) and links a screenshot of that screen,
         e.g. ``- [ ] 3.2 Build the `export-modal` dialog per sources/ui/04-export-modal.png ...``
@@ -446,6 +478,13 @@ apply:
 
     KIT RULES (sdd-kit): follow `openspec/protocols/apply.md` and
     `openspec/protocols/testing.md`.
+    - Subagents: on a change stamped 0.5.0 or later (`x-sdd-kit` in its
+      `.openspec.yaml`) follow `openspec/protocols/subagents.md`. Hand every
+      task group before the final group to a new `task-implementer` subagent;
+      edit no project code or tests yourself (fixes go to subagents too); check
+      off a group's tasks only after you accept it; verify runs in the
+      `change-verifier` subagent. On older or unstamped changes you implement
+      and verify yourself, as before.
     - Run to the end - every task, the test review, the full suite and the E2E
       stage - without a question to the developer, except at the stops of
       apply.md section 2. Change nothing outside the project without the
