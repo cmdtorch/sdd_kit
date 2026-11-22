@@ -3,10 +3,13 @@
 // kit texts and check that each rule is stated where the agent reads it.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, appendFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { parseYaml } from '../kit/openspec/tooling/lib/yaml.mjs';
+import { parseApplyReport } from '../kit/openspec/tooling/lib/apply-report.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const kit = (...p) => readFileSync(join(REPO, 'kit', ...p), 'utf8');
@@ -243,5 +246,57 @@ describe('the schema texts follow the protocol', () => {
       assert.match(tpl, /\| Capability \| Requirement \| Scenario \| Level \| Critical \| Test data \/ setup \| Manual reason \|/, s);
       assert.match(tpl, /Running application: /, s);
     }
+  });
+});
+
+describe('implementation report: the subagent runs', () => {
+  const KIT_VERSION = JSON.parse(kit('openspec', 'tooling', 'kit.json')).kitVersion;
+  const REPORT = '# Apply Report\n\n## Manual checks\n\nNone.\n\n## Not verified automatically\n\nNone.\n\n## Weakened tests\n\nNone.\n';
+  const RUNS = '\n## Subagent runs\n\n- 1. Order model — 1.1–1.3 — sonnet — 12 tests pass\n- 2. Order API — 2.1–2.2 — sonnet — broke off at 2.3\n'
+    + '- 2. Order API — 2.3–2.4 — sonnet — 2 tests fail: create order, cancel order\n- full suite — — opus — every test passes\n';
+  /** Stamped copy of a fixture project with the given apply-report.md; runs check-apply-report as a process. */
+  function checkReport(content, stamp = KIT_VERSION) {
+    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-runs-'));
+    cpSync(join(REPO, 'fixtures', 'projects', 'checks-good'), root, { recursive: true });
+    cpSync(join(REPO, 'kit', 'openspec'), join(root, 'openspec'), { recursive: true });
+    const C = join(root, 'openspec', 'changes', 'add-sales-export');
+    appendFileSync(join(C, '.openspec.yaml'), `x-sdd-kit: ${stamp}\n`);
+    writeFileSync(join(C, 'apply-report.md'), content);
+    const r = spawnSync('node', ['openspec/tooling/checks/check-apply-report.mjs', '--change', 'add-sales-export', '--json'], { cwd: root, encoding: 'utf8' });
+    return { code: r.status, report: JSON.parse(r.stdout), stderr: r.stderr };
+  }
+
+  // @scenario workflow/manual-checks :: Missing subagent record does not block
+  test('check-apply-report reports nothing about subagent runs, with or without the section', () => {
+    // stamped 0.5.0 (a subagent change) and at the current kit version
+    for (const stamp of ['0.5.0', KIT_VERSION]) {
+      const without = checkReport(REPORT, stamp);
+      assert.equal(without.code, 0, without.stderr);
+      assert.deepEqual(without.report.findings, [], stamp);
+      const withRuns = checkReport(REPORT + RUNS, stamp);
+      assert.equal(withRuns.code, 0, withRuns.stderr);
+      assert.deepEqual(withRuns.report.findings, [], stamp);
+      // a section that is not in the line format is not judged either
+      const odd = checkReport(`${REPORT}\n## Subagent runs\n\n### group 1\nsome free text\n`, stamp);
+      assert.equal(odd.code, 0, odd.stderr);
+      assert.deepEqual(odd.report.findings, [], stamp);
+    }
+    // the parser reads the section as plain lines and keeps it out of the three judged sections
+    const doc = parseApplyReport(REPORT + RUNS);
+    assert.equal(doc.subagentRuns.lines.length, 4);
+    assert.match(doc.subagentRuns.lines[2], /^2\. Order API — 2\.3–2\.4 — sonnet — 2 tests fail/);
+    assert.deepEqual(doc.problems, []);
+    assert.equal(parseApplyReport(REPORT).subagentRuns, null);
+  });
+
+  // @scenario workflow/manual-checks :: Report records the subagent runs
+  test('apply.md §7 names the "Subagent runs" section and its line format', () => {
+    // §7 holds a fenced example with `## ` headings, so read it up to `## 8.`
+    const s = flat(protocol('apply.md').split('\n## 7. ')[1].split('\n## 8. ')[0]);
+    assert.match(s, /## Subagent runs - 1\. Order model — 1\.1–1\.3 — sonnet — 12 tests pass/);
+    assert.match(s, /\*\*Subagent runs\*\*: on a change implemented through subagents, one line per subagent run/);
+    assert.match(s, /`- <group \| fix: <what> \| full suite> — <tasks> — <model> — <test result>`/);
+    assert.match(s, /a replacement subagent gets its own line/);
+    assert.match(s, /never checked and never blocks the archive/);
   });
 });

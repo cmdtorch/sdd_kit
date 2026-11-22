@@ -49,9 +49,15 @@ clarifications → proposal → specs → design → verification-plan → tasks
     `spec-reviewer` subagent.
   - design: Design round first; always written; grounded like the proposal.
   - tasks: every task group starts with its failing tests (TDD) and every test carries a scenario marker; the
-    final group runs the test review, the full test suite and the manual checks.
+    final group runs the test review, the full test suite and the manual checks. Under each group heading the
+    plan lines `Depends on:` / `Area:` / `Shared:` (with an example and the seven shared resources), at most 5
+    tasks and about 10 touched files per group, and the final group depends on every other group. No check
+    reads the plan lines or the group size.
   - apply: tests first and seen failing; requirement gaps go to an Apply round instead of guesses; the test
-    review and the full suite at the end.
+    review and the full suite at the end. On a change stamped 0.5.0 or later: follow
+    `openspec/protocols/subagents.md`, every group before the final one to `task-implementer`, no code edits by
+    the main agent, verify through `change-verifier` (the verify skill reads this instruction too).
+  - The tasks and apply rules above are the same on all four schemas.
 
 **`openspec/schemas/lean/schema.yaml`**, for small and clear changes: proposal → specs → verification-plan →
 tasks → apply. No question rounds; tests, markers and gates are the same. If the agent would have to guess
@@ -112,11 +118,12 @@ Rules the agent reads while it works, in `openspec/protocols/`:
 | `openspec/protocols/questions.md` | the question format (options, `Why this is asked`, `Not yet defined`); the rounds Main, Specs, Design, Verification and Apply; answer modes; mandatory analysis of the answers for vagueness and contradictions; the summary confirmed with exactly `Looks correct` |
 | `openspec/protocols/grounding.md` | source tags `[Q<n>]`, `[D<n>]`, `[U<n>]` (screenshots), `[desc]`, `[assumption]` and the register of source documents |
 | `openspec/protocols/testing.md` | verification levels `unit`, `integration`, `manual`; a `manual` check only with a reason (`cannot be automated:` / `dangerous:`); dangerous functions (money, many users or records, irreversible changes) tested automatically and checked by hand in addition; the verification plan format, incl. the *Manual reason* column, `Running application:` and *Test case coverage*; scenario markers and `@case` references; what a good test asserts; the end of apply with `apply-report.md` |
-| `openspec/protocols/apply.md` | autonomous apply on changes with the kit version stamp: the order of work; the only stops (requirement gap, a test failing after two attempts, a failed start check, the environment, consent, a situation outside the plan, the consent list); independent work first; options suggested, not carried out; a single check that cannot run is recorded; the start check and the ways after a failed start; the project boundary and workarounds inside the application only; weakening a test only with consent; the `apply-report.md` format; the consent list; the ready message (the developer archives); the project tool list `openspec/project-tools` |
+| `openspec/protocols/apply.md` | autonomous apply on changes with the kit version stamp: the order of work; the only stops (requirement gap, a test failing after two attempts, a failed start check, the environment, consent, a situation outside the plan, the consent list); independent work first; options suggested, not carried out; a single check that cannot run is recorded; the start check and the ways after a failed start; the project boundary and workarounds inside the application only; weakening a test only with consent; the `apply-report.md` format, incl. the optional `## Subagent runs` section (one line per subagent run: group or `fix: <what>` / `full suite`, tasks, model, test result; never checked); the consent list; the ready message (the developer archives); the project tool list `openspec/project-tools` |
 | `openspec/protocols/test-cases.md` | the test-case document: format, labels (a `manual` case with a `Manual reason:` line), unique case names; the AI review loop; when the stage may change a spec; QA remarks and their statuses `open` / `closed` / `reopened`; "Stage result" (accepted findings, `Handed over to QA`, the `Looks correct` confirmation); late scenarios; switching between the two test-case schemas |
 | `openspec/protocols/ui-inventory.md` | UI mode: screenshots in `sources/ui/` and their `[U<n>]` tags; the `ui-inventory.md` format (screenshots with SHA-256 fingerprints, screens, variants, elements); the five decisions `in scope`, `mock`, `out of scope`, `decoration`, `existing` and their sources; the Main round UI questions; late, replaced and deleted screenshots; scenario links and mock scenarios; the `## Screens` design table; screenshot links in tasks; the `lean` variant |
 | `openspec/protocols/e2e.md` | the E2E stage: when a change needs E2E and the Main round question; the `e2e.md` record (mode, test folder, start, scenarios, accepted cases, screens, no new run needed); Playwright for JavaScript in its own folder with `retries: 0`, Chromium only, installed with permission; starting the application; test data on an empty test database or in stubs, credentials out of git; a test follows its case; running only through `e2e-run.mjs`; three fix attempts; accepted cases kept as skipped tests; the visual check with temporary snapshots; result validity and changes after the stage; skipping, and skipped and accepted cases in `apply-report.md` for QA |
 | `openspec/protocols/metarepo.md` | meta-repositories (followed while `openspec/clones` exists, on changes marked `x-sdd-kit-metarepo: true`): the clone list format; the *Repository* column of the plan and the `e2e` level; the repository tag of task groups `## 2. [backend] Order API`; the group's tasks done in its repository with that repository's own commands from the meta-repository's instructions and mise tasks; missing commands suggested for `AGENTS.md`, never `CLAUDE.md`; one `## Repository: <name>` report section per repository of the task groups (`Command: none` / `Result: no tests` without tests); the E2E question only for changes that touch the web interface, E2E tests in a root folder outside every clone, one start command from the root; a clone's own OpenSpec is read only from the root |
+| `openspec/protocols/subagents.md` | apply through subagents on changes stamped 0.5.0 or later (older changes keep the single agent): every task group before the final group goes to a new subagent, whatever the size, no setting turns it off; the main agent edits no project code; the plan lines `Depends on:` / `Area:` / `Shared:` and an unreadable line read as depending on every earlier group with an unknown area; scheduling (dependencies; parallel only for independent groups with known, disjoint areas that share none of `dependencies`, `migrations`, `settings`, `assembly`; `Area: unknown` runs alone; meta-repository groups of different repositories in order); test runs on `database` / `ports` / `docker` never overlap unless the project creates a database per run, and the kit adds no such isolation; one working folder, no commits, branches or worktrees; the changed-files check (the subagent's `Changed files:` list reconciled with `git status --porcelain`; collisions with an accepted, running or not-started group; two fix attempts); only the main agent checks off tasks; one replacement for an unfinished subagent; stops relayed by the main agent (gap, consent, outside the plan: no new subagent, running ones finish; failing test, environment: independent groups first; a failed start check before any subagent); the final group (the main agent runs the test reviewer and writes `apply-report.md`; the full suite, review fixes, E2E tests and fixes in subagents; the main agent writes only the change's own files); every implementation subagent is `task-implementer`; the model from `subagent-model.mjs` only for task groups, replacements and collision fixes; one progress line per subagent, the same as in `## Subagent runs`; verify through `change-verifier`, fixes through `task-implementer`; outside apply only code reading through `Explore`, with the reason in the chat, never decisions or planning artifacts. `apply.md` §1–§2, `testing.md` §5–§6 and `e2e.md` §6 and §8 point to it |
 | `openspec/protocols/review-specs.md` | what the spec reviewer checks and how it reports; in UI mode also the inventory and mock scenarios |
 | `openspec/protocols/review-tests.md` | what the test reviewer checks and how it reports |
 | `openspec/protocols/review-test-cases.md` | what the AI QA reviewer checks (positive, error and boundary cases; a closed checklist of unusual conditions; concrete data; observable outcomes; a real manual reason — effort is a major finding), severities, the READY rule and accepted findings |
@@ -124,7 +131,8 @@ Rules the agent reads while it works, in `openspec/protocols/`:
 The installer also adds a marked block to `context` in `openspec/config.yaml` (from `kit/config-fragment.yaml`),
 so every OpenSpec instruction points the agent at these protocols and states the questions language. One line
 of it says to follow `openspec/protocols/metarepo.md` when `openspec/clones` exists, so a single-repository project
-reads nothing new.
+reads nothing new. Another points to `openspec/protocols/subagents.md` for apply and verify of changes stamped
+0.5.0 or later.
 
 ## 3. Claude Code hooks
 
@@ -155,9 +163,9 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
 | `openspec/tooling/checks/check-test-cases.mjs` | test-case schemas: every scenario has a test case and every case sits under a scenario of the delta specs; unique case names per capability; Given / When / Then; labels (in UI mode `e2e` on every case under a scenario of a built inventory element; on a stamped change a `Manual reason:` on every `manual` case); remark statuses. With `--stage`: the stage is complete (latest AI review READY or its blocker / major findings accepted, `Looks correct`; on `clarify-qa` also `Handed over to QA` and no open remark) |
 | `openspec/tooling/checks/check-ui.mjs` | UI mode, all four schemas, in stages by the artifact being written: only PNG / JPG / WebP and `screens.md` in `sources/ui/` (also when the mode is off; hidden files such as `.DS_Store` are ignored); `ui-inventory.md` exists; every screenshot registered and listed with a matching SHA-256 fingerprint, no deleted one; variants; a known decision for every element, backed by its source (clarify family); `[U<n>] <element>` citations; on `lean` the proposal names every element. From the design (`lean`: the verification plan) on: every `in scope` / `mock` element names existing scenarios. Before the verification plan and tasks: a `## Screens` row in the design for every screen with a built element. Archive: tasks naming a screen link its screenshot |
 | `openspec/tooling/checks/check-e2e.mjs` | all four schemas, the E2E stage record `e2e.md`. Format mode (after `e2e.md` is written): a known mode; unless skipped, the test folder and the start (`command <cmd>` or `developer at <url>`); a reason for every accepted case and accepted difference; known screen results. Archive mode: the decision exists on the test-case schemas; unless skipped, every `e2e` case (or scenario listed under `## Scenarios`, which must exist in the delta specs) has a test in the test folder that references it, and a valid passed result recorded by `e2e-run.mjs` or an accepted case; runs made with `retries: 0`; no project file changed after the latest run unless its state is under `## No new run needed`; in UI mode every screenshot compared with no open difference. On a meta-repository change the test folder is a root folder outside every clone, and every `e2e` plan row counts like a listed scenario (with E2E skipped the archive gate asks for its agreed entry) |
-| `openspec/tooling/checks/check-apply-report.mjs` | the implementation report `apply-report.md`: the sections "Manual checks", "Not verified automatically" and "Weakened tests" (`None.` when empty); a reason on every entry; steps and the expected outcome on manual checks; dangerous checks first and marked "required before release"; a change and the developer's consent on weakened tests; entries of "Not verified automatically" without `Consent:` are warnings (the archive gate blocks on them); on a meta-repository change one `## Repository: <name>` section per repository of the task groups, each with a `Command:` and a `Result:` line (the result is not judged) |
+| `openspec/tooling/checks/check-apply-report.mjs` | the implementation report `apply-report.md`: the sections "Manual checks", "Not verified automatically" and "Weakened tests" (`None.` when empty); a reason on every entry; steps and the expected outcome on manual checks; dangerous checks first and marked "required before release"; a change and the developer's consent on weakened tests; entries of "Not verified automatically" without `Consent:` are warnings (the archive gate blocks on them); on a meta-repository change one `## Repository: <name>` section per repository of the task groups, each with a `Command:` and a `Result:` line (the result is not judged); the optional `## Subagent runs` section is accepted and never reported on |
 | `openspec/tooling/checks/check-tasks.mjs` | meta-repository changes: every task group heading names exactly one repository, `## 2. [backend] Order API` (a clone of `openspec/clones` or `root`), except the last of two or more groups; a clone a group names must exist. answers-gate runs it on the `tasks.md` about to be written, artifact-feedback after it is written, the archive gate before the archive |
-| `openspec/tooling/checks/lint-kit.mjs` | misspelled fields in `schema.yaml`, `config.yaml` and `.openspec.yaml`, which OpenSpec ignores silently; a `context` over 50 KB, which OpenSpec drops whole |
+| `openspec/tooling/checks/lint-kit.mjs` | misspelled fields in `schema.yaml`, `config.yaml` and `.openspec.yaml`, which OpenSpec ignores silently (the kit's own top-level key `x-sdd-kit-subagent-model` of `config.yaml` is accepted); a `context` over 50 KB, which OpenSpec drops whole |
 
 ## 5. Tests linked to scenarios
 
@@ -183,17 +191,27 @@ command line (`--change <name>`, `--json`) and is called by the hooks.
   process group, and writes `start-check.json` in the change (result, status or error, the last output lines).
 - **Review input.** `openspec/tooling/bin/review-input.mjs` prints every scenario with its THEN clauses, planned
   levels and marked tests: what the test reviewer reads.
+- **Subagent model.** `openspec/tooling/bin/subagent-model.mjs` prints the model the main agent passes to an
+  implementation subagent of a task group, its replacement or a collision fix, from the optional project setting
+  `x-sdd-kit-subagent-model: <value>` at the top level of `openspec/config.yaml` (outside the kit block, so an
+  update never touches it). Allowed: `opus`, `sonnet`, `haiku`, `fable`, `inherit`, or a full model ID starting
+  with `claude-`. Without the key, with `inherit` or with an unknown value it prints `inherit`: the main chat's
+  model, no override; an unknown value also prints a warning, which the agent repeats in the chat. The full-suite,
+  E2E-fix and verify subagents always use the main model.
 
 ## 6. Subagents and command
 
 | File | What |
 |---|---|
+| `.claude/agents/change-verifier.md` | verify of a change stamped 0.5.0 or later, on the main model: checks the implementation against the change's artifacts (the `openspec-verify-change` skill) and reports its findings to the main agent; tools without Edit and Write, it changes no file (`openspec/protocols/subagents.md` §10) |
 | `.claude/agents/spec-reviewer.md` | after the specs: can a developer and QA start without asking anything? Writes `reviews/spec-review.md` |
 | `.claude/agents/test-cases-reviewer.md` | the AI QA reviewer, on the test-case schemas after the test cases are written: would a QA engineer accept them? Writes `reviews/test-cases-review.md` (`openspec/protocols/review-test-cases.md`) |
 | `.claude/agents/test-reviewer.md` | before apply ends: would each test fail if the feature broke? Every THEN asserted, specific assertions, errors asserted. Writes `reviews/test-review.md` |
+| `.claude/agents/task-implementer.md` | every code edit during apply of a change stamped 0.5.0 or later: a task group, its replacement, a collision fix, a review fix, the full suite, writing the E2E tests, an E2E fix. Follows `openspec/protocols/testing.md`; starts no other subagent, asks the developer nothing, edits no planning artifact and no `tasks.md`; ends with a stop report or its tasks done, test result and `Changed files:` list (`openspec/protocols/subagents.md` §9). `model: inherit`, the main agent passes the model per call |
 | `.claude/commands/sdd/clarify.md` | `/sdd:clarify`: run or continue the question round for the current stage of a change |
 
-The reviewers only report; the main agent fixes, and the developer decides what remains.
+The reviewers and the change verifier only report; on changes stamped 0.5.0 or later a `task-implementer`
+subagent fixes, on older ones the main agent, and the developer decides what remains.
 
 ## 7. Working around OpenSpec
 
@@ -238,7 +256,8 @@ The reviewers only report; the main agent fixes, and the developer decides what 
   (hidden, dependency and build folders and declared clones are skipped; a taken name is offered as
   `<parent>-<folder>=<path>`): in a terminal without `--yes` / `--json` it asks whether to add each and appends
   the line on "yes" (`runDoctor`), otherwise it prints the line. The offer never changes "Ready."; without
-  `openspec/clones` doctor says nothing about clones.
+  `openspec/clones` doctor says nothing about clones. An unknown `x-sdd-kit-subagent-model` value is a warning
+  that lists the allowed values; without the key doctor says nothing about it.
 
 ## Internals
 
@@ -256,11 +275,11 @@ Shared libraries in `openspec/tooling/lib/`, used by the checks and hooks:
 | `openspec/tooling/lib/e2e-record.mjs` | parser for the E2E stage record `e2e.md` |
 | `openspec/tooling/lib/e2e-runs.mjs` | `e2e-runs.json`: the Playwright JSON report of a run, the fingerprints of the application and the test folder, the state id |
 | `openspec/tooling/lib/reviews.mjs` | review input and review status |
-| `openspec/tooling/lib/apply-report.mjs` | parser for the implementation report `apply-report.md`, incl. its `## Repository: <name>` sections with `Command:` / `Result:` lines |
+| `openspec/tooling/lib/apply-report.mjs` | parser for the implementation report `apply-report.md`, incl. its `## Repository: <name>` sections with `Command:` / `Result:` lines and the optional `## Subagent runs` lines |
 | `openspec/tooling/lib/start-check.mjs` | the name of the start-check record `start-check.json` |
 | `openspec/tooling/lib/markdown.mjs` | fences, tables, task counting and the open tasks, task group headings with their repository tag (`## <n>. [<name>] <title>`), tasks that ask a human to check by hand |
 | `openspec/tooling/lib/yaml.mjs` | minimal YAML reader (no dependencies) |
-| `openspec/tooling/lib/project.mjs` | finds the project root, changes and their schema; the kit schemas, the clarify family and the test-case schemas; reads and writes the kit version stamp `x-sdd-kit` |
+| `openspec/tooling/lib/project.mjs` | finds the project root, changes and their schema; the kit schemas, the clarify family and the test-case schemas; reads and writes the kit version stamp `x-sdd-kit`; the version gate of subagent apply (`usesSubagents`: stamped 0.5.0 or later, a pre-release counting as its base version, so `0.5.0-beta.1` qualifies; no stamp or an older one keeps the single-agent apply and verify); reads and validates `x-sdd-kit-subagent-model` (`subagentModel`, shared by `subagent-model.mjs` and doctor) |
 | `openspec/tooling/lib/report.mjs` | shared result format and command-line runner of the checks |
 | `openspec/tooling/lib/hook-io.mjs` | Claude Code hook input and output (block, ask, context) |
 | `openspec/tooling/lib/settings-merge.mjs` | `.claude/settings.json` merge (see §8) |
