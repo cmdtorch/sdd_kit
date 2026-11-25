@@ -54,6 +54,8 @@ screenshot; then go straight to §2.
 - **"Yes":** create `openspec/changes/<change>/sources/ui/`, tell the developer to export every screen and state
   as PNG, JPG or WebP into it (no `.fig`, SVG or PDF; optional notes in `screens.md`; names that sort in screen
   order), and to run `/opsx:continue` when all are there. Then stop: write no other question and no artifact.
+  On a change on `clarify` or `lean` stamped with kit version 0.6.0 or later, the developer says when the screenshots
+  are in place instead of running `/opsx:continue` (`openspec/protocols/planning.md` §8).
 - **Continued with an empty folder:** ask once more — wait for the screenshots, or continue without mockups.
   Record the reply as a follow-up question in the same round.
 - **"No"** (or "continue without mockups"): go on with the other questions; nothing else here applies.
@@ -181,7 +183,9 @@ next artifact.
    right of the orders list").
 4. Record every decision in the inventory with the answer's tag as the answers come in.
 5. The round summary lists every element with its decision, so the developer reviews the inventory together
-   with the summary; there is no separate confirmation.
+   with the summary; there is no separate confirmation. The developer sees the decisions there; on a `clarify`
+   change stamped 0.6.0 or later, which has no round summary, in a short message before the proposal
+   (`openspec/protocols/planning.md` §8).
 
 The proposal is blocked until every element has a decision backed as §4 says. Cite the screenshots where they
 ground a statement, e.g. "Export button on the orders list [Q3][U1]".

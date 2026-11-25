@@ -3,8 +3,9 @@
 // schema-starter — PreToolUse hook (Bash).
 // Blocks `openspec new change ...` (also through the kit wrapper `node openspec/tooling/bin/openspec.mjs`)
 // when the command names no schema (`--schema <name>` or `--schema=<name>`), and tells the agent to ask
-// the developer which schema to use. The project's default schema does not count as a choice; any named
-// schema, known or not, is passed through to OpenSpec. Commands run in a terminal are not affected.
+// the developer the depth level of the questions and create the change on `clarify`. The project's default
+// schema does not count as a choice; any named schema, known or not (a test-case schema too), is passed
+// through to OpenSpec. Commands run in a terminal are not affected.
 import { runHook, block } from '../lib/hook-io.mjs';
 import { isMain } from '../lib/report.mjs';
 
@@ -12,17 +13,17 @@ import { isMain } from '../lib/report.mjs';
 const NEW_CHANGE = /(?:^|[\s(])(?:[^\s'"]*\/)?openspec(?:\.mjs)?['"]?\s+new\s+change(?=\s|$)/;
 const NAMED = /(?:^|\s)--schema(?:=|\s+)(?!-)['"]?[^\s'"=]+/;
 
-/** The block message: the three-choice starter menu. */
+/** The block message: the starter menu, which asks the depth level of the questions. */
 export function starterMessage() {
   return [
-    'sdd-kit schema-starter: the change names no schema. Do not create it yet.',
-    'Ask the developer with AskUserQuestion, one question "Which test cases does this change need?" with three choices:',
-    '  - No test cases → `clarify`',
-    '  - Test cases reviewed by the AI QA reviewer only → `clarify-ai-qa` (beta)',
-    '  - Test cases reviewed by the AI QA reviewer, then a human QA → `clarify-qa` (beta)',
-    'Then rerun the same command with `--schema <chosen>`.',
+    'sdd-kit schema-starter: the change names no schema. Do not create it yet; show the starter menu first.',
+    'Ask the developer with AskUserQuestion, one question "How deep should the questions about this change go?" with three choices:',
+    '  - `low` — ask from the sources only and settle what the user does not see',
+    '  - `medium` (recommended) — read the touched area of the code first',
+    '  - `high` — investigate the affected modules and check the consequences of each answer',
+    'Then rerun the same command with `--schema clarify`, and write the chosen level as the line `Depth: <level>` of clarifications.md (e.g. `Depth: high`).',
     'If the menu is dismissed: do not create the change; tell the developer to start again with /opsx:new <name>.',
-    'If the answer is free text: explain the three choices and ask again.',
+    'If the answer is free text: explain the three levels and ask again.',
   ].join('\n');
 }
 
