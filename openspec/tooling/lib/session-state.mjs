@@ -13,7 +13,7 @@
 // planning.mjs runs outside a hook and knows no session id: it marks every session file of the project that works
 // on the change. A session that starts working on a paused change takes the pause over.
 // Every function fails safe: an unreadable file counts as no state.
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -21,6 +21,19 @@ export const STATE_DIR_NAME = 'sdd-kit-planning';
 const PREFIX = 'session-';
 /** Session files untouched for this long are removed when a session records its change. */
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The project root in one canonical form: symbolic links resolved (on macOS the temporary folder `/var/...` is
+ * `/private/var/...`, and a hook's cwd and planning.mjs's process.cwd() may name the same folder differently).
+ */
+export function canonicalRoot(root) {
+  const abs = resolve(String(root));
+  try {
+    return realpathSync(abs);
+  } catch {
+    return abs;
+  }
+}
 
 /** The state folder; resolved on every call, so TMPDIR set for a process is honoured. */
 export function stateDir() {
@@ -85,7 +98,7 @@ export function sessionsOfChange(root, change) {
     if (!name.startsWith(PREFIX) || !name.endsWith('.json')) continue;
     const path = join(dir, name);
     const state = readFile(path);
-    if (state && state.root === resolve(root) && state.change === change) out.push({ path, state });
+    if (state && canonicalRoot(state.root) === canonicalRoot(root) && state.change === change) out.push({ path, state });
   }
   return out;
 }
@@ -119,9 +132,9 @@ function removeStale() {
 export function recordChange(id, root, change) {
   const p = statePath(id);
   if (!p) return null;
-  const abs = resolve(root);
+  const abs = canonicalRoot(root);
   const before = existsSync(p) ? readFile(p) : null;
-  const same = before && before.root === abs && before.change === change;
+  const same = before && canonicalRoot(before.root) === abs && before.change === change;
   const state = same ? { ...before } : { root: abs, change, continuations: 0, next: null, wait: null, pause: null };
   if (!same) {
     const paused = sessionsOfChange(abs, change).find((s) => s.state.pause);

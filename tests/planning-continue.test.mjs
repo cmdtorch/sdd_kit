@@ -5,7 +5,7 @@
 // into the temporary project, so the session state never touches the real temporary folder.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -311,6 +311,23 @@ describe('the developer pauses and resumes planning', { skip: cliSkipReason() },
     const s = stop(root);
     goesOn(s);
     assert.match(s.reason, /next artifact: specs/);
+  });
+
+  test('a project opened through a symbolic link: the pause of planning.mjs (real path) holds for the hooks (link path)', () => {
+    // On macOS the temporary folder /var/... is /private/var/...: the hooks get the path Claude Code was opened
+    // with, while planning.mjs sees the real path as its working folder.
+    const real = project();
+    const root = join(mkdtempSync(join(tmpdir(), 'sdd-kit-link-')), 'project');
+    symlinkSync(real, root, 'dir');
+    const name = proposalWritten(root);
+    goesOn(stop(root));
+    const p = planning(root, 'pause', '--change', name);
+    assert.equal(p.code, 0, p.out);
+    ends(stop(root));
+    const q = prompt(root, 'why is the export in scope?');
+    assert.match(q.stdout, /paused/);
+    assert.equal(planning(root, 'resume', '--change', name).code, 0);
+    goesOn(stop(root));
   });
 
   test('a pause recorded in one session holds when another session writes an artifact of the change', () => {

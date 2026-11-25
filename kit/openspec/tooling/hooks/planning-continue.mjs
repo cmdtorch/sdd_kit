@@ -18,14 +18,14 @@
 //     limit repeated blocks, docs/openspec-facts.md K14); a new message of the developer starts the count again.
 // Fails open: any error lets the turn end.
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { runHook, hookRoot, blockStop } from '../lib/hook-io.mjs';
 import { changeDir, changeSchema, isClarifyFamily, readChangeFile, usesNewPlanning } from '../lib/project.mjs';
 import { parseClarifications, roundStatus, roundsFor, isBlankAnswer, answerLetters } from '../lib/clarifications.mjs';
 import { lockDifferences } from '../lib/answers-lock.mjs';
 import { scanUiFolder, isUiMode, INVENTORY_FILE, UI_DIR } from '../lib/ui-inventory.mjs';
-import { readSession, writeSession } from '../lib/session-state.mjs';
+import { readSession, writeSession, canonicalRoot } from '../lib/session-state.mjs';
 import { MOCKUPS_MARK } from '../checks/check-answers.mjs';
 import { isMain } from '../lib/report.mjs';
 
@@ -138,7 +138,7 @@ export function decide(input) {
   if (!root) return { end: 'no project' };
   const state = readSession(input.session_id);
   if (!state || typeof state.change !== 'string' || !state.change) return { end: 'no change in this session' };
-  if (resolve(String(state.root)) !== resolve(root)) return { end: 'another project' };
+  if (canonicalRoot(state.root) !== canonicalRoot(root)) return { end: 'another project' };
   const change = state.change;
   if (!existsSync(join(changeDir(root, change), '.openspec.yaml'))) return { end: 'change gone' };
   if (!usesNewPlanning(root, change)) return { end: 'earlier planning rules' };
