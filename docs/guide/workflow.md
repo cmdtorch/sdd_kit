@@ -1,6 +1,6 @@
 # Daily workflow
 
-Four schemas. **`clarify`** (the default) is for features: every planning artifact starts with a question round.
+Four schemas. **`clarify`** (the default) is for features: question rounds before the proposal and the specs.
 **`clarify-ai-qa`** and **`clarify-qa`** are `clarify` plus a *test-cases stage*: Gherkin test cases written after
 the specs and before the design, reviewed by an AI QA reviewer (and, on `clarify-qa`, then by a human QA).
 **`lean`** is for small, clear changes, with no question rounds but the same tests and gates. When in doubt, use
@@ -11,21 +11,35 @@ the specs and before the design, reviewed by an AI QA reviewer (and, on `clarify
 > for UI screenshots (2b), autonomous apply, the E2E stage (3a) and meta-repositories. `clarify` and `lean` are
 > stable.
 
-## Picking a schema
+**Planning rules since 0.6.0.** A change on `clarify` or `lean` created with kit 0.6.0 or later (stamped
+`x-sdd-kit: 0.6.0` in its `.openspec.yaml`) plans without `/opsx:continue`, with two question rounds and no
+`Looks correct` (`openspec/protocols/planning.md`). Changes started before 0.6.0, and every change on
+`clarify-ai-qa` or `clarify-qa`, keep the earlier rules: see
+[Earlier changes and the test-case schemas](#earlier-changes-and-the-test-case-schemas).
+
+## Starting a change: the depth level
 
 When the agent creates a change without naming a schema (as `/opsx:new <name>` does), the **schema starter** hook
-stops it and the agent asks you one question with three choices:
+stops it and the agent asks you one question: how deep the questions about this change should go.
 
-| Choice | Schema |
-|---|---|
-| No test cases | `clarify` |
-| Test cases reviewed by the AI QA reviewer only | `clarify-ai-qa` (beta) |
-| Test cases reviewed by the AI QA reviewer, then a human QA | `clarify-qa` (beta) |
+| Level | The agent investigates | It settles itself | It asks you |
+|---|---|---|---|
+| `low` | the sources and your description | everything a user does not see | every decision a user sees |
+| `medium` (recommended) | also the existing specs and the code of the area the change touches | also minor visible details (an order, a label, a default) | everything about permissions, money and data, visible or not |
+| `high` | also the code affected outside that area, every requirement by roles, states, errors, boundaries, concurrent use and existing data, the bugs QA would file | nothing that no source, spec or code settles | every decision nothing settles, and the consequences of each answer for existing behaviour and data |
+
+The change is created on `clarify` and the level is written as `Depth: <level>` in `clarifications.md`;
+without the menu it is `medium`. The level changes how deep the agent looks, not how many questions it asks: a
+question is asked only when the agent can say what in the specs depends on the answer (its `Why this is asked:`
+line; on `high` it also names the finding that raised it). Decisions the agent settles itself are listed as
+assumptions in the proposal (later ones in the design or the verification plan) and shown in the digest. Change
+the level at any time by telling the agent or editing the `Depth:` line; it applies to the questions not asked
+yet.
 
 The project's default schema does not count as a choice. If you dismiss the menu, no change is created; start
-again with `/opsx:new <name>`. To skip the menu, name the schema: `/opsx:new <name> --schema clarify-qa`.
-`lean` is never offered; name it when you want it. A change you create yourself in a terminal gets the default
-schema without a menu.
+again with `/opsx:new <name>`. The menu offers no schema: name one to skip it, `/opsx:new <name> --schema lean`
+or `--schema clarify-qa` (the test-case schemas are no longer in the menu; such a change gets no depth level). A
+change you create yourself in a terminal gets the default schema without a menu.
 
 ## A feature (`clarify`)
 
@@ -36,43 +50,89 @@ schema without a menu.
 ```
 
 Give the agent the request: your description, and the client's text or file. The file goes to the change's
-`sources/` as `.md`, `.pdf` or `.txt`; export `.docx` first. The agent writes `clarifications.md` with the
-**Main round** questions:
+`sources/` as `.md`, `.pdf` or `.txt`; export `.docx` first. In the same turn the agent writes `clarifications.md`
+with the **Main round** questions:
 
+- The agent asks once per change how you want to answer: questions in the chat, editing the file, or a free
+  discussion. The choice is recorded as `Answer mode:` in the file and used for every later round, in a new chat
+  too. Say "ask me here instead" to switch.
 - Every question makes sense on its own, so you can forward any of them to whoever knows the answer. Bring the
   answers back into the file; the round waits for them.
-- You choose how to answer: interactively (*Guide me*), by editing the file, or by chatting.
+- A question may carry `Recommended: B — <reason>` when a source, an existing spec or the code supports an option
+  (on `low`: a source only). It is a suggestion, never an answer: the `[Answer]:` stays blank until you answer, and
+  "accept all your recommendations" is not an answer; each question needs its own.
 - `Not yet defined` is a valid answer: it becomes an open question or an explicit assumption, never invented detail.
 
-The agent analyses the answers: vague words, contradictions, answers like "up to you". It asks follow-ups, then
-writes a **summary** with the assumptions it will make. Reply **Looks correct** or **Request changes**. Until the
-summary says exactly `Looks correct`, the proposal cannot be written: the answers-gate hook blocks it.
+The agent analyses the answers: vague words, contradictions, answers like "up to you", and on `high` the
+consequences of each answer. It asks follow-ups in the same round. A round is **closed** when none of its answers
+is blank; there is no summary and no `Looks correct`. While an answer is blank the proposal cannot be written: the
+answers-gate hook blocks it.
 
-### 2. Proposal, specs, design, verification plan, tasks
+### 2. Planning goes on by itself
+
+Once the Main round is closed the agent writes the rest of planning without a command from you:
 
 ```
-/opsx:continue        (repeat for each artifact)
+proposal → Technical round → specs → spec review → digest → design → verification plan → tasks
 ```
 
-- **proposal** — every statement cites `[Q3]`, `[D1]` or `[desc]`; assumptions are listed separately.
-- **specs** — first the *Specs round* (errors, edge cases, permissions, rules, limits). Then the delta specs.
-  Then the `spec-reviewer` subagent answers one question: can work start from these specs without asking anything?
-  You decide what to do with each finding: fix the spec, ask a follow-up, or accept it.
-- **design** — the *Design round* asks only about choices that would change the approach.
-- **verification-plan** — the *Verification round* asks which scenarios are critical, which need an integration
-  test, test data, environments and whether the checks need the application running. It does not ask whether a
-  check should be automated or stay manual. Every scenario gets a level: `unit`, `integration` or `manual`; a
+- **proposal** — every statement cites `[Q3]`, `[D1]` or `[desc]`; the agent's own decisions are listed as
+  assumptions.
+- **Technical round** — the second and last round before the code: errors, edge cases, permissions, rules,
+  limits, and the design forks (a new table, sync or async processing, a migration, a new dependency). With
+  nothing to ask, the round holds `No questions.` and planning goes on.
+- **specs** — then the `spec-reviewer` subagent checks whether work can start from them without asking anything.
+  The agent fixes the findings itself; one that needs a decision about the requirements becomes a Technical round
+  question for you. The reviewer runs at most twice (the run-limit hook), and not again after a first run without
+  findings.
+- **digest** — at most 15 lines in the questions language: what will be built, what is left out, the decisions
+  the agent made itself (those you would see first; with too many, the number of the others and a pointer to
+  `proposal.md`), and the review findings it could not fix. The agent goes on without waiting; read it and say
+  "stop" if the scope is wrong.
+- **design** — always written; its forks were asked in the Technical round.
+- **verification-plan** — no round: the agent decides which scenarios are critical, the test data and the
+  environment, and records them as assumptions. Every scenario gets a level: `unit`, `integration` or `manual`; a
   `manual` row needs a reason that starts with `cannot be automated:` or `dangerous:` (money, many users or
   records at once, irreversible changes). A dangerous scenario is tested automatically and checked by hand in
   addition.
 - **tasks** — each group starts with its failing tests; the final group runs the test review and the full suite.
+
+At the end the agent says that apply can start and recommends `/clear` or a new chat before `/opsx:apply`: apply
+works from the artifacts, not from the planning conversation. It does not start apply itself.
+
+**How it keeps going.** After an artifact is written, a `Stop` hook (`planning-continue`) keeps the agent's turn
+going and names the next artifact or round. You never need `/opsx:continue`; running it anyway does no harm. The
+agent stops only where you are needed:
+
+- a question with a blank answer, in the file or in the chat;
+- screenshots you said you will add (2b);
+- an answer you changed after artifacts were written from it (below);
+- an artifact check that still fails, or a write that stays blocked, after two fix attempts: the agent shows the
+  remaining errors or the cause (for example an `.svg` in `sources/ui/` to export as PNG);
+- a pause you asked for.
+
+**Pause.** Say "stop" or "pause" in plain words: the agent ends its turn and writes nothing more for the change,
+but still answers your questions. Say "go on" to resume. A wait or a pause is marked with
+`node openspec/tooling/bin/planning.mjs wait|pause|resume --change <name>`; the agent runs it, you do not need to.
+
+**A changed answer.** Change an answer before anything was written from it and it is simply the answer. Change it
+after the proposal (or the specs) was written from it, and the kit (`answers-lock.json` in the change) blocks every
+later artifact and every task check-off; the agent names the question and the artifacts that no longer match, and
+waits. Restore the earlier answer, or tell it to update: it rewrites the artifacts in order, reruns the spec
+reviewer once on rewritten specs and prints the digest again. During apply it runs `check-answers` before the first
+task and each task group, and starts no task while an answer differs.
+
+**Notifications.** The agent works on its own for a while and then waits for you. Switch on Claude Code's
+built-in notifications (`/config`, *Notifications*) to be told when the agent waits for you. The kit adds no
+notification of its own.
 
 Need more questions at any stage? `/sdd:clarify`.
 
 ### 2a. Test cases (`clarify-ai-qa`, `clarify-qa`)
 
 On the test-case schemas a `test-cases` artifact comes right after the specs; the design waits for it.
-The rules are in `openspec/protocols/test-cases.md`.
+The rules are in `openspec/protocols/test-cases.md`. These schemas keep the earlier planning rules (four rounds,
+`Looks correct`, `/opsx:continue`; see [Earlier changes and the test-case schemas](#earlier-changes-and-the-test-case-schemas)).
 
 **For the developer:**
 
@@ -118,8 +178,9 @@ one. A test that proves a case carries a reference next to its scenario marker:
 
 The agent's first question in a change is whether it has UI mockups (on `lean`: asked in chat before the
 proposal). Answer "yes" and it creates `openspec/changes/<change>/sources/ui/` and waits: export the mockups from
-your design tool as PNG (JPG and WebP work too), put them there and run `/opsx:continue`. Screenshots already in
-the folder skip the question. One file per screen and variant, named in
+your design tool as PNG (JPG and WebP work too), put them there and say "done" (on changes started before 0.6.0
+and on the test-case schemas: run `/opsx:continue`). With the folder still empty the agent asks once more: wait,
+or go on without mockups. Screenshots already in the folder skip the question. One file per screen and variant, named in
 screen order: `01-orders-list.png`, `02-orders-list-mobile.png`. An optional `sources/ui/screens.md` may say
 what each one shows. Any other file there (SVG, PDF, a Figma file) blocks the next artifact until it is exported
 as PNG. The rules are in `openspec/protocols/ui-inventory.md`.
@@ -129,7 +190,8 @@ as PNG. The rules are in `openspec/protocols/ui-inventory.md`.
   (buttons, links, fields, toggles, menus) and states (empty, error, loading). It then asks about every element
   your description does not mention, every requirement with nothing on the screens, and every missing state.
 - Every element gets a decision: `in scope`, `mock` (a stub now), `out of scope`, `decoration` or `existing`.
-  Out of scope, decoration and mock come only from your answers. You review them all in the round summary.
+  Out of scope, decoration and mock come only from your answers. You see them all in a short message the agent
+  writes before the proposal, without waiting for a reply (earlier rules: in the round summary).
 - Every `in scope` and `mock` element needs a spec scenario before the design; on the test-case schemas its test
   cases are labelled `e2e`. The design maps each screen to its pages and components, and UI tasks link their
   screenshots; the agent opens them before it builds a screen.
@@ -143,10 +205,12 @@ Screenshots stay in git with the change and are archived with it.
 ### 3. Apply
 
 ```
+/clear
 /opsx:apply
 ```
 
-After planning, apply runs on its own (`openspec/protocols/apply.md`): every task, the test review, the full
+Start apply after `/clear` or in a new chat: it works from the artifacts, and a planning conversation only fills
+its context. After planning, apply runs on its own (`openspec/protocols/apply.md`): every task, the test review, the full
 suite and the E2E stage, without asking you anything. The agent stops only on a decision that belongs to you: a
 requirement gap, a test that still fails after two fix attempts, an environment that does not start the
 application the way the project describes, an action outside the project or a weaker test (both need your
@@ -261,6 +325,26 @@ The flow is proposal → specs → verification-plan → tasks → apply, with n
 guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates are the same. Before the first task
 the agent asks whether the change needs E2E (section 3a).
 
+Since 0.6.0 a `lean` change also plans by itself: the agent asks about mockups in the chat, writes the proposal
+and goes on to the tasks without `/opsx:continue`, with the same stops, pause and end message as `clarify`
+(section 2). It has no depth level, no answer mode, no spec review and no digest.
+
+## Earlier changes and the test-case schemas
+
+A change created before 0.6.0 (no `x-sdd-kit` stamp, or one below 0.6.0), and every change on `clarify-ai-qa` or
+`clarify-qa`, keeps the planning rules of `openspec/protocols/questions.md`:
+
+- **Depth** `Minimal`, `Standard` or `Comprehensive` (default `Comprehensive`); no recommendations.
+- **Four rounds before the code:** Main (before the proposal), Specs (errors, edge cases, permissions, rules,
+  limits), Design (only choices that would change the approach) and Verification (which scenarios are critical,
+  which need an integration test, test data, environments, whether the checks need the application running).
+- **A summary per round.** After the answers the agent writes a summary with the assumptions it will make;
+  reply **Looks correct** or **Request changes**. Until it says exactly `Looks correct`, the next artifact is
+  blocked.
+- **`/opsx:continue`** after each artifact; nothing goes on by itself, and there is no digest.
+- **Spec review:** you decide what to do with each finding of the `spec-reviewer`: fix the spec, ask a
+  follow-up, or accept it.
+
 ## Meta-repositories
 
 When `openspec/clones` exists ([install](install.md#meta-repositories)), the project is a meta-repository. Start
@@ -294,11 +378,14 @@ steps above; changes started before the list existed finish under the old rules.
 
 | When | What |
 |---|---|
-| session start | where each change stands, open questions, OpenSpec version and skills drift |
-| `openspec new change` without `--schema` | the schema starter asks which schema to use |
-| writing an artifact | answers-gate blocks it while its question round is open; on the test-case schemas the design also waits for the test-cases stage; in UI mode it also waits for an up-to-date UI inventory (`check-ui`) |
+| session start | where each change stands, open questions, changed answers, OpenSpec version and skills drift |
+| `openspec new change` without `--schema` | the schema starter asks the depth level and creates the change on `clarify` |
+| writing an artifact | answers-gate blocks it while its question round is open, and (0.6.0) while an answer changed after earlier artifacts were written from it; on the test-case schemas the design also waits for the test-cases stage; in UI mode it also waits for an up-to-date UI inventory (`check-ui`) |
 | running the AI QA reviewer | the run-limit hook blocks a fourth run in a loop |
-| after writing an artifact | the matching check runs, and its errors go back to the agent (`check-e2e` after `e2e.md`, `check-apply-report` after `apply-report.md`); the first artifact of a change records the kit version |
+| running the spec reviewer (0.6.0, `clarify`) | the run-limit hook blocks a third run on the same specs, and a second one after a run without findings |
+| after writing an artifact | the matching check runs, and its errors go back to the agent (`check-e2e` after `e2e.md`, `check-apply-report` after `apply-report.md`); the first artifact of a change records the kit version; on 0.6.0 changes the answers it was written from are recorded in `answers-lock.json` |
+| the agent ends its turn during planning (0.6.0) | `planning-continue` keeps it going with the next artifact unless the change waits for you |
+| your next message | ends a wait the agent marked; a pause stays until you say "go on" |
 | start of apply | `start-check.mjs` starts the application, requests one address and stops it again, when the plan needs it |
 | a Bash command outside the project | the command guard asks you first |
 | E2E stage | `e2e-run.mjs` runs Playwright and records the run in `e2e-runs.json` |

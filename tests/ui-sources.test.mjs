@@ -834,3 +834,34 @@ describe('UI test cases carry the e2e label (check-test-cases)', () => {
     assertClean(tc(root));
   });
 });
+
+describe('new planning rules: a closed round backs a decision (check-ui)', () => {
+  /** project() as a clarify change stamped 0.6.0: no summary confirmations, the Specs round named Technical. */
+  function newRulesProject() {
+    const p = project();
+    writeFileSync(join(p.dir, '.openspec.yaml'), 'schema: clarify\ncreated: 2026-10-26\nx-sdd-kit: 0.6.0\n');
+    const clar = readFileSync(join(p.dir, 'clarifications.md'), 'utf8')
+      .replace('Depth: Standard', 'Depth: medium\nAnswer mode: file')
+      .replace(/### Summary confirmation — Main round[\s\S]*?\[Answer\]: Looks correct\n/, '')
+      .replace('## Specs round', '## Technical round')
+      .replace(/### Summary confirmation — Specs round[\s\S]*$/, '');
+    writeFileSync(join(p.dir, 'clarifications.md'), clar);
+    return p;
+  }
+
+  // @scenario ui-sources/inventory :: Mock citing a closed round is accepted
+  test('a mock citing an answered question of a Main round without a summary confirmation', () => {
+    const { root, dir } = newRulesProject();
+    assert.doesNotMatch(readFileSync(join(dir, 'clarifications.md'), 'utf8'), /Summary confirmation/);
+    const r = ui(root);
+    assertClean(r);
+    noErrorAbout(r, 'share-button');
+  });
+
+  // @scenario ui-sources/inventory :: Mock citing an open round is reported
+  test('a mock citing an answered question of a Main round with a blank answer', () => {
+    const { root, dir } = newRulesProject();
+    plant(dir, 'clarifications.md', '## Technical round', '### Q5. Is the list paginated?\nWhy this is asked: not stated anywhere.\n- A. Yes\n- B. No\n\n[Answer]:\n\n## Technical round');
+    assertCaught(ui(root), /"share-button".*Q2 of the Main round, which is not closed/);
+  });
+});

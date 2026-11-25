@@ -191,6 +191,21 @@ export function usesSubagents(root, name) {
   return versionAtLeast(changeKitVersion(root, name), SUBAGENT_VERSION);
 }
 
+/** First kit version whose `clarify` and `lean` changes follow the planning rules of openspec/protocols/planning.md. */
+export const NEW_PLANNING_VERSION = '0.6.0';
+/** Schemas that follow those rules; the test-case schemas keep the rounds and confirmations of questions.md. */
+export const NEW_PLANNING_SCHEMAS = ['clarify', 'lean'];
+
+/**
+ * True for a change that follows the new planning rules (two rounds closed without a summary confirmation,
+ * depth levels, recommendations, automatic continuation): stamped 0.6.0 or later (a pre-release counts as its
+ * base version) and on `clarify` or `lean`. Every hook and check asks this one function; other changes keep the
+ * rules they started with.
+ */
+export function usesNewPlanning(root, name) {
+  return NEW_PLANNING_SCHEMAS.includes(changeSchema(root, name)) && versionAtLeast(changeKitVersion(root, name), NEW_PLANNING_VERSION);
+}
+
 /** Top-level key of openspec/config.yaml (outside the kit block) with the model of the implementation subagents. */
 export const SUBAGENT_MODEL_KEY = 'x-sdd-kit-subagent-model';
 /** Short model names; `inherit` means the main chat's model. A full model ID starting with `claude-` is also allowed. */

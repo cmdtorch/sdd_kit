@@ -454,3 +454,47 @@ describe('plan lines and group size are not checked (processes on temp projects)
     assert.match(proto, /A group with `Area: unknown` runs alone/);
   });
 });
+
+// --- Planning protocol pointers (change streamline-planning, design D-5): the clarify and lean instructions, the
+// clarifications template and the kit block of config.yaml point to planning.md for changes stamped 0.6.0 or later
+// and keep the present rules for earlier changes and the test-case schemas. ---------------------------------------
+
+describe('planning protocol pointers (no CLI needed)', () => {
+  const POINTER = /on a change on `clarify` or `lean` stamped with kit version 0\.6\.0 or later \(`x-sdd-kit` in its `\.openspec\.yaml`\), follow `openspec\/protocols\/planning\.md` first; where it differs from these rules, it applies\. Earlier changes and the `clarify-ai-qa` and `clarify-qa` schemas keep these rules/;
+
+  test('every artifact instruction of clarify and lean after the clarifications points to planning.md', () => {
+    for (const schema of ['clarify', 'lean']) {
+      for (const a of schemaDoc(schema).artifacts) {
+        if (a.id === 'clarifications') continue;
+        assert.match(flatText(a.instruction), POINTER, `${schema}.${a.id}`);
+      }
+    }
+  });
+
+  test('the clarifications instruction names the new-rules lines and keeps the earlier rules', () => {
+    const c = flatText(schemaDoc('clarify').artifacts.find((a) => a.id === 'clarifications').instruction);
+    assert.match(c, /On a change on `clarify` stamped with kit version 0\.6\.0 or later \(`x-sdd-kit` in its `\.openspec\.yaml`\), follow `openspec\/protocols\/planning\.md` first/);
+    assert.match(c, /recommend an option only with a basis, on a `Recommended:` line \(planning\.md §12\)/);
+    assert.match(c, /close the Main round without a summary confirmation, or with the line `No questions\.`/);
+    assert.match(c, /keep the rules below: no `Recommended:` line, `Depth:` `Minimal`, `Standard` or `Comprehensive` \(default `Comprehensive`\), and the summary confirmation/);
+    assert.match(c, /Depth from the file header; default Comprehensive/);
+  });
+
+  test('the apply instruction of clarify runs the answers check of planning.md on new changes', () => {
+    assert.match(applyInstruction('clarify'), /On a change stamped 0\.6\.0 or later, run `node openspec\/tooling\/checks\/check-answers\.mjs --change <name>` before the first task and before each task group, and start no task while it reports a changed answer \(`openspec\/protocols\/planning\.md` §7\)/);
+  });
+
+  test('the clarifications template explains both depth names and points to planning.md', () => {
+    for (const schema of ['clarify', ...TEST_CASE_SCHEMAS]) {
+      const tpl = readFileSync(join(SCHEMAS, schema, 'templates', 'clarifications.md'), 'utf8');
+      assert.match(flatText(tpl), /On `clarify` stamped 0\.6\.0 or later \(openspec\/protocols\/planning\.md\): `Depth: low`, `medium` or `high` \(the level chosen in the starter menu, otherwise `medium`\), an `Answer mode:` line, the rounds Main and Technical without a summary confirmation\. Earlier changes and the test-case schemas: `Minimal`, `Standard` or `Comprehensive`/, schema);
+      assert.match(tpl, /^Depth: Comprehensive$/m, schema);
+    }
+  });
+
+  test('the kit block of config.yaml points to planning.md and keeps the earlier depth default', () => {
+    const frag = readFileSync(join(REPO, 'kit', 'config-fragment.yaml'), 'utf8');
+    assert.match(frag, /Clarifying questions: openspec\/protocols\/questions\.md \(default depth: Comprehensive\)/);
+    assert.match(flatText(frag), /Planning of changes on `clarify` or `lean` stamped 0\.6\.0 or later: openspec\/protocols\/planning\.md first \(no `\/opsx:continue`, two rounds, recommendations, depth `low`, `medium` or `high`, default `medium`\)/);
+  });
+});

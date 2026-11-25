@@ -100,4 +100,19 @@ describe('doctor', () => {
     writeFileSync(join(root, 'x'), '');
     assert.equal(doctor(root).find((i) => i.check === 'kit').level, 'error');
   });
+
+  test('reports the planning continuation hooks missing from .claude/settings.json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-doctor-hooks-'));
+    await install({ target: root, skipOpenspec: true, yes: true, json: true });
+    const file = join(root, '.claude', 'settings.json');
+    const settings = JSON.parse(readFileSync(file, 'utf8'));
+    delete settings.hooks.Stop;
+    delete settings.hooks.UserPromptSubmit;
+    writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
+    const hooks = doctor(root).find((i) => i.check === 'hooks');
+    assert.equal(hooks.level, 'error');
+    assert.match(hooks.message, /planning-continue/);
+    assert.match(hooks.message, /planning-prompt/);
+    assert.doesNotMatch(hooks.message, /artifact-feedback/);
+  });
 });

@@ -28,7 +28,7 @@ import { toLines, fenceMask, stripComments, headings, sectionRange, firstTable, 
 import { loadChangeDeltas, changeScenarios } from '../lib/spec-parser.mjs';
 import { parseClarifications, roundStatus, isBlankAnswer } from '../lib/clarifications.mjs';
 import { scanUiFolder, isUiMode, parseInventory, allElements, elementOnShot, normTag, UI_DIR, INVENTORY_FILE, NOTES_FILE, DECISIONS, BUILT_DECISIONS } from '../lib/ui-inventory.mjs';
-import { changeDir, changeSchema, readChangeFile, isClarifyFamily, isKitSchema, hasTestCases, KIT_SCHEMAS } from '../lib/project.mjs';
+import { changeDir, changeSchema, readChangeFile, isClarifyFamily, isKitSchema, hasTestCases, usesNewPlanning, KIT_SCHEMAS } from '../lib/project.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 import { FILES as GROUNDED_FILES } from './check-grounding.mjs';
 
@@ -109,7 +109,8 @@ export function checkUi({ root, change, stage = 'base' }) {
 
   // --- registration (clarify family: "## Sources") --------------------------------------------------
   const clarContent = clarify ? readChangeFile(root, change, 'clarifications.md') : null;
-  const parsed = clarContent ? parseClarifications(clarContent) : null;
+  // under the new planning rules a closed round counts as confirmed (roundStatus)
+  const parsed = clarContent ? parseClarifications(clarContent, { newPlanning: usesNewPlanning(root, change) }) : null;
   if (clarify) {
     if (!parsed) {
       f.error(clarPath, null, 'clarifications.md does not exist, so no screenshot can be registered', `register each screenshot under "## Sources" as "- [U<n>] Screenshot — \`${UI_DIR}/<file>\`"`);
@@ -187,6 +188,8 @@ export function checkUi({ root, change, stage = 'base' }) {
 
   // decisions and their sources
   const confirmed = new Set(parsed ? parsed.rounds.filter((r) => roundStatus(parsed, r.name).confirmed).map((r) => r.name) : []);
+  const notConfirmed = parsed?.newPlanning ? 'not closed (a question in it is not answered yet)' : 'not confirmed ("Looks correct")';
+  const confirmedRound = parsed?.newPlanning ? 'a closed round' : 'a confirmed round';
   for (const { screen, element: el } of allElements(inv)) {
     const who = `element "${el.name}" (screen "${screen.name}")`;
     if (!el.decision) {
@@ -210,7 +213,7 @@ export function checkUi({ root, change, stage = 'base' }) {
         const q = parsed.questions.get(Number(tag.slice(1)));
         if (!q) f.error(invPath, el.line, `${who} cites ${tag}, which does not exist in clarifications.md`);
         else if (q.answerLine === null || isBlankAnswer(q.answer)) f.error(invPath, el.line, `${who} cites ${tag}, which is not answered yet`);
-        else if (el.decision !== 'in scope' && !confirmed.has(q.round)) f.error(invPath, el.line, `${who} cites ${tag} of the ${q.round} round, which is not confirmed ("Looks correct")`, `the decision "${el.decision}" needs an answered question of a confirmed round`);
+        else if (el.decision !== 'in scope' && !confirmed.has(q.round)) f.error(invPath, el.line, `${who} cites ${tag} of the ${q.round} round, which is ${notConfirmed}`, `the decision "${el.decision}" needs an answered question of ${confirmedRound}`);
         else valid.push(tag);
       }
     }
@@ -220,7 +223,7 @@ export function checkUi({ root, change, stage = 'base' }) {
         f.error(invPath, el.line, `${who} is "in scope" ${onlyShots ? 'but cites only a screenshot; a screenshot alone does not back it' : 'with no valid source'}`, 'cite [desc], a registered [D<n>] or an answered [Q<n>]; if no source names it, ask about it');
       }
     } else if (!valid.some((t) => t.startsWith('Q'))) {
-      f.error(invPath, el.line, `${who} is "${el.decision}" and needs an answered question of a confirmed round`, `ask about it, cite the answer as [Q<n>] in the Source column`);
+      f.error(invPath, el.line, `${who} is "${el.decision}" and needs an answered question of ${confirmedRound}`, `ask about it, cite the answer as [Q<n>] in the Source column`);
     }
   }
 

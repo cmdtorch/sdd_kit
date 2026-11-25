@@ -19,9 +19,14 @@
 // changes follow the autonomous-apply rules (openspec/protocols/apply.md), older ones keep theirs. In a
 // meta-repository (openspec/clones exists) the same write also marks the change `x-sdd-kit-metarepo: true`: it
 // follows the meta-repository rules (openspec/protocols/metarepo.md).
+// A change under the new planning rules on clarify (lib/answers-lock.mjs): writing the proposal, a spec, the design,
+// the verification plan or the tasks records in answers-lock.json the answers the artifact was written from.
+// A change under the new planning rules (clarify or lean, lib/project.mjs usesNewPlanning): any of its artifacts
+// written records the change as the one this session works on (lib/session-state.mjs), so the Stop hook
+// planning-continue can go on with its next artifact.
 import { basename } from 'node:path';
 import { runHook, hookRoot, touchedFiles, addContext } from '../lib/hook-io.mjs';
-import { locateInChange, changeSchema, isKitSchema, isClarifyFamily, readChangeFile, stampChange, isStamped } from '../lib/project.mjs';
+import { locateInChange, changeSchema, isKitSchema, isClarifyFamily, readChangeFile, stampChange, isStamped, usesNewPlanning } from '../lib/project.mjs';
 import { isMain } from '../lib/report.mjs';
 import { taskCounts, handTasks } from '../lib/markdown.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
@@ -36,6 +41,8 @@ import { APPLY_REPORT } from '../lib/apply-report.mjs';
 import { E2E_FILE } from '../lib/e2e-record.mjs';
 import { INVENTORY_FILE } from '../lib/ui-inventory.mjs';
 import { markChange } from '../lib/clones.mjs';
+import { writeLockEntry } from '../lib/answers-lock.mjs';
+import { recordChange } from '../lib/session-state.mjs';
 
 const MAX_LISTED = 10;
 
@@ -86,6 +93,15 @@ export function tasksDoneNote(root, change) {
   return `${note} Then write apply-report.md, ask the consent list once and give the ready message (openspec/protocols/apply.md §7–9); do not archive the change yourself.`;
 }
 
+/** Records the change of the session; the state is a convenience and never fails the feedback. */
+function recordSession(id, root, change) {
+  try {
+    recordChange(id, root, change);
+  } catch {
+    /* an unwritable temporary folder only means no automatic continuation */
+  }
+}
+
 export function feedback(input) {
   const root = hookRoot(input);
   if (!root) return null;
@@ -100,6 +116,8 @@ export function feedback(input) {
     const schema = changeSchema(root, loc.change);
     if (!isKitSchema(schema)) continue;
     if (loc.artifact && stampChange(root, loc.change, loc.rel)) markChange(root, loc.change);
+    if (loc.artifact) writeLockEntry(root, loc.change, loc.artifact);
+    if (input.session_id && usesNewPlanning(root, loc.change)) recordSession(input.session_id, root, loc.change);
     if (artifact === 'tasks') {
       const hand = handTasksNote(root, loc.change);
       if (hand) out.push(hand);

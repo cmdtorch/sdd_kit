@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // session-start — SessionStart hook. Tells Claude (and, through it, the developer) where each active
-// kit-schema change stands: next artifact, open questions, unconfirmed rounds, task progress.
+// kit-schema change stands: next artifact, open questions, unconfirmed rounds, task progress. A change under the new
+// planning rules (openspec/protocols/planning.md) is reported with its open questions and its changed answers (the
+// answers lock, lib/answers-lock.mjs), never with a summary waiting for "Looks correct".
 // Warns when the OpenSpec CLI differs from the pinned version (D12) or the installed OpenSpec skills
 // drift from the kit's workflow profile (D20).
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { runHook, hookRoot, addContext } from '../lib/hook-io.mjs';
-import { listChanges, changeSchema, changeDir, isKitSchema, isClarifyFamily, readChangeFile } from '../lib/project.mjs';
+import { listChanges, changeSchema, changeDir, isKitSchema, isClarifyFamily, readChangeFile, usesNewPlanning } from '../lib/project.mjs';
+import { lockDifferences } from '../lib/answers-lock.mjs';
 import { parseClarifications, roundStatus } from '../lib/clarifications.mjs';
 import { isMain } from '../lib/report.mjs';
 import { taskCounts } from '../lib/markdown.mjs';
@@ -27,6 +30,7 @@ function exists(dir, id) {
 }
 
 let openQuestions = false;
+let changedAnswers = false;
 
 /** One status line per kit change. */
 export function changeLine(root, name, schema) {
@@ -41,16 +45,22 @@ export function changeLine(root, name, schema) {
   }
   if (isClarifyFamily(schema)) {
     const content = readChangeFile(root, name, 'clarifications.md');
+    const newPlanning = usesNewPlanning(root, name);
     if (content) {
-      const parsed = parseClarifications(content);
+      const parsed = parseClarifications(content, { newPlanning });
       for (const r of parsed.rounds) {
         const st = roundStatus(parsed, r.name);
         if (st.confirmed) continue;
         openQuestions = true;
         if (st.unanswered.length) parts.push(`${r.name} round: ${st.unanswered.length} unanswered (${st.unanswered.map((q) => (q.kind === 'question' ? `Q${q.n}` : 'requested changes')).slice(0, 6).join(', ')}${st.unanswered.length > 6 ? ', …' : ''})`);
+        else if (newPlanning) parts.push(`${r.name} round: no question and no "No questions." line yet`);
         else if (!r.summary) parts.push(`${r.name} round: answers complete, summary confirmation not written yet`);
         else parts.push(`${r.name} round: summary waiting for "Looks correct" (now: ${st.summaryAnswer ? `"${st.summaryAnswer}"` : 'blank'})`);
       }
+    }
+    for (const d of lockDifferences(root, name)) {
+      changedAnswers = true;
+      parts.push(`changed answer: Q${d.n} (${d.artifacts.join(', ')} written from the earlier answer)`);
     }
   }
   return `- ${name} [${schema}] — ${parts.join('; ')}`;
@@ -76,6 +86,7 @@ export function sessionContext(root) {
   if (kitChanges.length) {
     lines.push('sdd-kit: active changes on kit schemas (protocols: openspec/protocols/):', ...kitChanges);
     if (openQuestions) lines.push('Unanswered or unconfirmed question rounds block the next artifact (answers-gate). Tell the developer what is waiting for them before starting other work.');
+    if (changedAnswers) lines.push('A changed answer blocks the artifacts written after it and every task (answers-gate, check-answers): warn the developer, name the questions and the artifacts, and wait until they tell you to update the artifacts or restore the earlier answer (openspec/protocols/planning.md).');
   }
   if (otherChanges) lines.push(`sdd-kit: ${otherChanges} other change(s) use their own schema (e.g. spec-driven) and keep their old workflow.`);
 

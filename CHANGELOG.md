@@ -5,6 +5,52 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
+## 0.6.0 — unreleased
+
+Planning without stops: after the first answers the agent writes the rest of planning by itself and stops only
+where a human is needed.
+
+The new planning rules apply only to changes on `clarify` and `lean` created with 0.6.0 or later (stamped
+`x-sdd-kit: 0.6.0`). Changes started with an older kit, and every change on `clarify-ai-qa` or `clarify-qa`, keep
+the rounds, `Looks correct` and `/opsx:continue` they started with.
+
+Upgrading: team lead runs `npx github:cmdtorch/sdd_kit#v0.6.0 update`, reviews the diff (two new hooks, `Stop` and
+`UserPromptSubmit`, in `.claude/settings.json`; the new protocol; changed schemas and checks) and commits. To start
+a change on a test-case schema, name it: `/opsx:new <name> --schema clarify-qa`.
+
+- **Planning goes on by itself** (new protocol `openspec/protocols/planning.md`): after an artifact is written and
+  nothing waits for the developer, the new `Stop` hook `planning-continue` keeps the agent writing the next
+  artifact; no `/opsx:continue`, no setting to switch it off. It stops on a blank answer, a question asked in the
+  chat, awaited screenshots, a changed answer, an artifact check that still fails after two fix attempts, or a
+  pause. The developer pauses and resumes in plain words; the agent marks it with
+  `node openspec/tooling/bin/planning.mjs wait|pause|resume --change <name>` (session state in the system
+  temporary folder, never in the change). New `UserPromptSubmit` hook `planning-prompt` ends a wait.
+- **Breaking:** `Looks correct` is removed on new changes: a round is closed when none of its answers is blank; a
+  round without questions holds `No questions.`.
+- **Breaking:** two rounds, Main and Technical, on new `clarify` changes: the Technical round, before the specs,
+  asks about the specs' completeness and the design forks; the Specs, Design and Verification rounds are gone (the
+  verification plan's decisions are recorded as assumptions). The Apply round stays.
+- **Answer mode asked once** per change and recorded as `Answer mode: chat|file|discussion`.
+- **Recommendations**: a question may carry `Recommended: <letters> — <reason>` when a source, an existing spec or
+  the code supports it; never an answer, no "accept all". `check-answers` reports a letter that is not an option.
+- **Depth levels** `low`, `medium` (default) and `high`, as `Depth:` in `clarifications.md`: how deep the agent
+  investigates and what it settles itself, not how many questions it asks; every question says what depends on its
+  answer; on `high` the consequences of each answer are checked.
+- **Breaking:** the starter menu asks the depth level and creates the change on `clarify`; the test-case schemas
+  leave the menu (`--schema clarify-qa` still works when named).
+- **Changed answers**: `answers-lock.json` records the answers each artifact was written from; answers-gate blocks
+  later artifacts and task check-offs while an answer differs, `check-answers` reports it, session start lists it,
+  and apply starts no task until the developer restores the answer or has the artifacts updated.
+- **Spec review settled by the agent**: it fixes the findings itself and asks only about requirements decisions; the
+  run-limit hook allows two `spec-reviewer` runs (`reviews/spec-review-runs.json`), one more after specs rewritten
+  for a changed answer.
+- **Digest after the specs** (at most 15 lines, the agent's own decisions included) and, at the end of planning,
+  the recommendation to start `/opsx:apply` after `/clear` or in a new chat. In UI mode the element decisions are
+  shown in a message before the proposal.
+- **No waiting notification** in the kit; the workflow guide recommends Claude Code's built-in notifications.
+- Doctor reports the two new hooks when they are missing from `.claude/settings.json`; the kit permissions allow
+  `planning.mjs`.
+
 ## 0.5.0 — 2026-11-22
 
 Apply through subagents: one fresh subagent per task group, independent groups in parallel, verify in a

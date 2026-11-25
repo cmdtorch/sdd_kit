@@ -1,6 +1,6 @@
 {
   "name": "sdd-kit",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Spec-Driven Development kit for OpenSpec + Claude Code: clarifying questions before code, spec-to-test traceability, test review",
   "keywords": [
     "openspec",
@@ -35,6 +35,6 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --import ./tests/helpers/isolate-tmp.mjs --test tests/*.test.mjs"
   }
 }

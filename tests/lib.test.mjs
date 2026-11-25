@@ -1,13 +1,15 @@
 // Unit tests for the kit's shared libraries (yaml, markdown, spec parser, clarifications parser).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseYaml, YamlError } from '../kit/openspec/tooling/lib/yaml.mjs';
 import { toLines, fenceMask, stripComments, firstTable, splitRow, taskCounts } from '../kit/openspec/tooling/lib/markdown.mjs';
 import { parseDeltaSpec, parseMainSpec } from '../kit/openspec/tooling/lib/spec-parser.mjs';
 import { parseClarifications, roundStatus, answerLetters, isBlankAnswer } from '../kit/openspec/tooling/lib/clarifications.mjs';
+import { usesNewPlanning } from '../kit/openspec/tooling/lib/project.mjs';
 import { cliSkipReason, makeProject, openspecJson } from './helpers/openspec.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -336,5 +338,118 @@ describe('clarifications parser', () => {
     assert.equal(s.unanswered.length, 14);
     assert.equal(s.round.summary, null);
     assert.ok([...p.questions.values()].every((q) => q.why));
+  });
+});
+
+describe('version gate of the new planning rules (usesNewPlanning)', () => {
+  /** A project with one change `c1` on `schema`, stamped `stamp` (null: no stamp). */
+  function changeOn(schema, stamp) {
+    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-planning-gate-'));
+    mkdirSync(join(root, 'openspec', 'changes', 'c1'), { recursive: true });
+    writeFileSync(join(root, 'openspec', 'changes', 'c1', '.openspec.yaml'), `schema: ${schema}\ncreated: 2026-11-25\n${stamp ? `x-sdd-kit: ${stamp}\n` : ''}`);
+    return root;
+  }
+  const uses = (schema, stamp) => usesNewPlanning(changeOn(schema, stamp), 'c1');
+
+  test('clarify and lean changes stamped 0.6.0 or later follow the new rules; a pre-release counts as its base version', () => {
+    for (const schema of ['clarify', 'lean']) {
+      for (const stamp of ['0.6.0', '0.6.0-beta.1', '0.6.1', '1.0.0']) assert.equal(uses(schema, stamp), true, `${schema} ${stamp}`);
+    }
+  });
+
+  test('a change stamped below 0.6.0 or without a stamp keeps the earlier rules', () => {
+    for (const schema of ['clarify', 'lean']) {
+      for (const stamp of ['0.5.0', '0.5.9', '0.5.0-beta.1', '0.4.0', null]) assert.equal(uses(schema, stamp), false, `${schema} ${stamp}`);
+    }
+  });
+
+  test('the test-case schemas and schemas outside the kit keep the earlier rules whatever the stamp', () => {
+    for (const schema of ['clarify-qa', 'clarify-ai-qa', 'spec-driven']) assert.equal(uses(schema, '0.6.0'), false, schema);
+  });
+});
+
+describe('clarifications parser: the file of a new-rules change', () => {
+  const md = [
+    '# Clarifications — x',
+    '',
+    'Depth: high',
+    'Answer mode: file',
+    '',
+    '## Sources',
+    '',
+    '- [desc] Developer description: "export"',
+    '',
+    '## Main round',
+    '',
+    '### Q1. Who may export?',
+    'Why this is asked: the permission rule of the export depends on it.',
+    '- A. Accountants',
+    '- B. Everyone',
+    '- C. Not yet defined',
+    '- X. Other (please specify)',
+    '',
+    'Recommended: A — the existing export spec limits exports to accountants',
+    '',
+    '[Answer]: A',
+    '',
+    '### Q2. Which roles get the report? (select all that apply)',
+    'Why this is asked: the list of roles in the access rule depends on it.',
+    '- A. Accountants',
+    '- B. Teachers',
+    '- C. Administrators',
+    '- X. Other (please specify)',
+    'Recommended: A, C — [D1] names both roles',
+    '[Answer]:',
+    '',
+    '## Technical round',
+    '',
+    'No questions.',
+    '',
+    '## Apply round',
+    '',
+    '### Q3. Edge?',
+    '[Answer]: B',
+  ].join('\n');
+
+  test('header lines, recommendations and a round without questions are read', () => {
+    const p = parseClarifications(md, { newPlanning: true });
+    assert.equal(p.depth, 'high');
+    assert.equal(p.answerMode, 'file');
+    assert.deepEqual(p.problems, []);
+    assert.deepEqual(p.rounds.map((r) => [r.name, r.noQuestions]), [['Main', false], ['Technical', true], ['Apply', false]]);
+    assert.deepEqual(p.questions.get(1).recommendations, [{ line: 19, letters: ['A'], reason: 'the existing export spec limits exports to accountants', text: 'A — the existing export spec limits exports to accountants' }]);
+    assert.deepEqual(p.questions.get(2).recommendations.map((r) => r.letters), [['A', 'C']]);
+    assert.deepEqual(p.questions.get(3).recommendations, []);
+    assert.equal(p.questions.get(1).answer, 'A');
+    assert.deepEqual(p.questions.get(1).options.map((o) => o.key), ['A', 'B', 'C', 'X']);
+  });
+
+  test('a recommendation is never read as the answer', () => {
+    const p = parseClarifications(md.replace('Recommended: A, C — [D1] names both roles\n[Answer]:', '[Answer]:\nRecommended: A, C — [D1] names both roles'), { newPlanning: true });
+    assert.equal(isBlankAnswer(p.questions.get(2).answer), true);
+    assert.deepEqual(p.questions.get(2).recommendations.map((r) => r.letters), [['A', 'C']]);
+  });
+
+  test('a round is closed, and counts as confirmed, when no answer in it is blank; no summary is needed', () => {
+    const p = parseClarifications(md, { newPlanning: true });
+    const main = roundStatus(p, 'Main');
+    assert.deepEqual(main.unanswered.map((q) => q.n), [2]);
+    assert.equal(main.confirmed, false);
+    assert.equal(roundStatus(p, 'Technical').confirmed, true, 'a round with "No questions." is closed');
+    assert.equal(roundStatus(p, 'Apply').confirmed, true);
+    const answered = parseClarifications(md.replace('names both roles\n[Answer]:', 'names both roles\n[Answer]: A, C'), { newPlanning: true });
+    assert.equal(roundStatus(answered, 'Main').confirmed, true);
+  });
+
+  test('a round section with neither a question nor "No questions." is not closed', () => {
+    const p = parseClarifications(md.replace('No questions.\n', ''), { newPlanning: true });
+    assert.equal(roundStatus(p, 'Technical').exists, true);
+    assert.equal(roundStatus(p, 'Technical').confirmed, false);
+  });
+
+  test('read without the new rules, the same answered round still needs its summary confirmation', () => {
+    const answered = md.replace('names both roles\n[Answer]:', 'names both roles\n[Answer]: A, C');
+    assert.equal(roundStatus(parseClarifications(answered), 'Main').confirmed, false);
+    assert.equal(roundStatus(parseClarifications(answered), 'Technical').confirmed, false);
   });
 });

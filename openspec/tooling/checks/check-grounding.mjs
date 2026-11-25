@@ -8,7 +8,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { toLines, fenceMask, stripComments } from '../lib/markdown.mjs';
 import { parseClarifications, roundStatus, isBlankAnswer } from '../lib/clarifications.mjs';
-import { changeDir, changeSchema, readChangeFile, isClarifyFamily, CLARIFY_FAMILY } from '../lib/project.mjs';
+import { changeDir, changeSchema, readChangeFile, isClarifyFamily, usesNewPlanning, CLARIFY_FAMILY } from '../lib/project.mjs';
 import { UI_DIR } from '../lib/ui-inventory.mjs';
 import { makeReport, skippedReport, findingsFor, runCli, isMain, UsageError } from '../lib/report.mjs';
 
@@ -86,7 +86,8 @@ export function checkGrounding({ root, change, file }) {
   const f = findingsFor(root);
   const clarFile = join(dir, 'clarifications.md');
   const clarContent = readChangeFile(root, change, 'clarifications.md');
-  const parsed = clarContent ? parseClarifications(clarContent) : null;
+  // under the new planning rules a closed round counts as confirmed (roundStatus)
+  const parsed = clarContent ? parseClarifications(clarContent, { newPlanning: usesNewPlanning(root, change) }) : null;
   if (!parsed) f.error(clarFile, null, 'clarifications.md does not exist, so no [Q<n>] or [D<n>] tag can be resolved');
 
   const confirmedRounds = new Set(parsed ? parsed.rounds.filter((r) => roundStatus(parsed, r.name).confirmed).map((r) => r.name) : []);
@@ -111,7 +112,7 @@ export function checkGrounding({ root, change, file }) {
     const q = parsed.questions.get(Number(tag.slice(1)));
     if (!q) f.error(path, line, `[${tag}] does not exist in clarifications.md`);
     else if (q.answerLine === null || isBlankAnswer(q.answer)) f.error(path, line, `[${tag}] is not answered yet`);
-    else if (!confirmedRounds.has(q.round)) f.error(path, line, `[${tag}] belongs to the ${q.round} round, which is not confirmed ("Looks correct")`);
+    else if (!confirmedRounds.has(q.round)) f.error(path, line, `[${tag}] belongs to the ${q.round} round, which is ${parsed.newPlanning ? 'not closed (a question in it is not answered yet)' : 'not confirmed ("Looks correct")'}`);
   };
 
   for (const name of file ? [file] : FILES) {

@@ -4,6 +4,13 @@
 Applies to changes that use the `clarify` schema. Requirements we get from clients are often vague.
 This protocol makes the gaps visible and gets them answered by a human **before** anything is written.
 
+On a change on `clarify` stamped with kit version 0.6.0 or later (`x-sdd-kit` in its `.openspec.yaml`), follow
+`openspec/protocols/planning.md` first: it has two rounds (Main and Technical) and the Apply round, closes a round
+without a summary confirmation, asks the answer mode once and records it, and handles a changed answer. Where the two
+differ, `planning.md` applies; the question format (§2), the answer syntax (§4) and the analysis of the answers (§5)
+apply to both. A change stamped below 0.6.0 or without the stamp, and every change on `clarify-ai-qa` or
+`clarify-qa`, follows this protocol unchanged.
+
 **The clarifications file is the source of truth.** Interactive answers, answers edited into the
 file and decisions reached in chat all end up in this file. Nothing that is only said in chat counts.
 
