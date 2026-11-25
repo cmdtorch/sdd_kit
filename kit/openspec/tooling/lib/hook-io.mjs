@@ -4,6 +4,9 @@
 //   - PreToolUse: exit 2 blocks the tool call; stderr is shown to Claude; JSON on stdout with
 //     hookSpecificOutput.permissionDecision "ask" lets the developer approve or refuse the call
 //   - SessionStart / PostToolUse: JSON on stdout with hookSpecificOutput.additionalContext
+//   - Stop (verified against Claude Code 2.1.330, K12–K17): exit 0 with {"decision":"block","reason":…} on stdout
+//     keeps the agent working and the reason reaches it as "Stop hook feedback"; Claude Code does not limit
+//     repeated blocks, so a Stop hook must limit its own
 // Hooks fail open: an unexpected error never blocks the user (exit 1 = non-blocking); CI is the backstop.
 import { readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
@@ -37,6 +40,14 @@ export function touchedFiles(input) {
 export function block(message) {
   process.stderr.write(message.endsWith('\n') ? message : message + '\n');
   process.exit(2);
+}
+
+/**
+ * Keeps the agent from ending its turn (Stop hook); the reason reaches the agent. Returns, so the output is
+ * flushed before the process ends (stdout pipes are asynchronous on some systems); the caller returns next.
+ */
+export function blockStop(reason) {
+  process.stdout.write(JSON.stringify({ decision: 'block', reason }) + '\n');
 }
 
 /** Asks the developer to approve a PreToolUse call; the reason is shown with the prompt. */

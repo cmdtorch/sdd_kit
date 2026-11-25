@@ -16,6 +16,9 @@ import { handTasks } from '../kit/openspec/tooling/lib/markdown.mjs';
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOOKS = join(REPO, 'kit', 'openspec', 'tooling', 'hooks');
 const KIT_VERSION = JSON.parse(readFileSync(join(REPO, 'kit', 'openspec', 'tooling', 'kit.json'), 'utf8')).kitVersion;
+// The fixtures hold clarifications in the format of the earlier planning rules, so they are stamped with the last
+// version before the new planning rules (usesNewPlanning, 0.6.0): the autonomous-apply rules apply to any stamp.
+const FIXTURE_STAMP = '0.5.0';
 const FIXTURES = { clarify: ['checks-good', 'add-sales-export'], 'clarify-ai-qa': ['ai-qa-good', 'add-sale-export'] };
 
 /** Copy of a fixture project with the kit's openspec/; returns { root, change, C }. */
@@ -25,7 +28,7 @@ function project(schema = 'clarify', { stamped = true } = {}) {
   cpSync(join(REPO, 'fixtures', 'projects', fixture), root, { recursive: true });
   cpSync(join(REPO, 'kit', 'openspec'), join(root, 'openspec'), { recursive: true });
   const C = `openspec/changes/${change}`;
-  if (stamped) appendFileSync(join(root, C, '.openspec.yaml'), `x-sdd-kit: ${KIT_VERSION}\n`);
+  if (stamped) appendFileSync(join(root, C, '.openspec.yaml'), `x-sdd-kit: ${FIXTURE_STAMP}\n`);
   return { root, change, C };
 }
 function plant(root, file, from, to) {

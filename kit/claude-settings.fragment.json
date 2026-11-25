@@ -74,11 +74,34 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/planning-prompt.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/openspec/tooling/hooks/planning-continue.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   },
   "permissions": {
     "allow": [
       "Bash(node openspec/tooling/bin/e2e-run.mjs *)",
+      "Bash(node openspec/tooling/bin/planning.mjs *)",
       "Bash(node openspec/tooling/bin/review-input.mjs *)",
       "Bash(node openspec/tooling/bin/start-check.mjs *)",
       "Bash(node openspec/tooling/checks/check-answers.mjs *)",

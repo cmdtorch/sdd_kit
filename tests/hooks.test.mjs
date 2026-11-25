@@ -246,3 +246,116 @@ describe('settings merge (D10)', () => {
     assert.throws(() => mergeSettings({ hooks: [] }, FRAGMENT), /"hooks" must be an object/);
   });
 });
+
+// The question rounds of a change under the new planning rules (stamped 0.6.0 or later on clarify): Main and
+// Technical are closed when no answer is blank, without a summary confirmation.
+const newQuestion = (n, title, answer, extra = '') =>
+  `### Q${n}. ${title}\nWhy this is asked: it decides a rule of the export.\n- A. Yes\n- B. No\n- C. Not yet defined\n- X. Other (please specify)\n${extra}\n[Answer]:${answer ? ` ${answer}` : ''}\n`;
+const NEW_MAIN = [
+  newQuestion(1, 'Are there UI mockups for this change? (UI mockups)', 'B'),
+  newQuestion(2, 'Do accountants download the export?', 'A'),
+  newQuestion(3, 'Is the monthly email part of this change?', 'B'),
+  newQuestion(4, 'Are cancelled sales left out?', 'A'),
+  newQuestion(5, 'Is the file an Excel workbook?', 'A'),
+];
+const NEW_TECHNICAL = [newQuestion(6, 'Is an empty period a file with the header row only?', 'A')];
+function newRulesClar({ main = NEW_MAIN, technical = NEW_TECHNICAL } = {}) {
+  const round = (name, qs) => (qs === null ? '' : `## ${name} round\n\n${qs.length ? qs.join('\n') : 'No questions.\n'}\n`);
+  return `# Clarifications — ${CHANGE}\n\nDepth: medium\nAnswer mode: file\n\n## Sources\n\n- [desc] Developer description: "Sales export to Excel for accountants"\n- [D1] Client request — \`sources/D1.md\`\n\n${round('Main', main)}${round('Technical', technical)}`;
+}
+/** The good project as a change stamped `stamp` on `schema`; `clar` (default: built from `main` and `technical`) replaces clarifications.md; `drop` removes artifacts. */
+function stampedProject({ stamp = '0.6.0', schema = 'clarify', main, technical, clar = newRulesClar({ main, technical }), drop = [] } = {}) {
+  const root = project();
+  writeFileSync(join(root, C, '.openspec.yaml'), `schema: ${schema}\ncreated: 2026-10-03\nx-sdd-kit: ${stamp}\n`);
+  if (clar !== null) writeFileSync(join(root, C, 'clarifications.md'), clar);
+  for (const f of drop) rmSync(join(root, C, f), { recursive: true, force: true });
+  return root;
+}
+const writeProposal = (root) => pre(root, 'Write', { file_path: join(root, C, 'proposal.md'), content: '## Why\n\nAccountants download the export [Q2].\n' });
+const writeSpec = (root) => pre(root, 'Write', { file_path: join(root, C, 'specs/inventory/sales-export/spec.md'), content: 'x' });
+const LATER = ['proposal.md', 'specs', 'design.md', 'verification-plan.md', 'tasks.md'];
+
+describe('answers-gate: rounds of a change under the new planning rules', () => {
+  // @scenario questions/rounds :: Proposal after the last answer
+  test('a Main round with five answered questions and no summary lets the proposal be written', () => {
+    const root = stampedProject({ technical: null, drop: LATER });
+    const r = writeProposal(root);
+    assert.equal(r.code, 0, r.stderr);
+    writeFileSync(join(root, C, 'proposal.md'), '## Why\n\nAccountants download the export [Q2].\n');
+    const after = hook('artifact-feedback.mjs', root, { hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: { file_path: join(root, C, 'proposal.md'), content: '' } });
+    assert.equal(after.code, 0, after.stderr);
+    assert.doesNotMatch(after.stdout, /confirm|Looks correct|summary/i);
+  });
+
+  // @scenario questions/rounds :: Blank answer still blocks
+  test('a blank answer in the Main round blocks the proposal and names the question', () => {
+    const main = NEW_MAIN.map((q, i) => (i === 3 ? newQuestion(4, 'Are cancelled sales left out?', '') : q));
+    const root = stampedProject({ main, technical: null, drop: LATER });
+    const r = writeProposal(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /Q4 is not answered/);
+    assert.match(r.stderr, /the Main round in clarifications\.md is not closed/);
+    assert.doesNotMatch(r.stderr, /Looks correct|summary/i);
+  });
+
+  // @scenario questions/rounds :: Round not started blocks
+  test('a missing Technical round section blocks a spec file', () => {
+    const root = stampedProject({ technical: null, drop: ['specs', 'design.md', 'verification-plan.md', 'tasks.md'] });
+    const r = writeSpec(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /the Technical round has not been run/);
+    assert.doesNotMatch(r.stderr, /Looks correct|Specs round/);
+  });
+
+  // @scenario questions/rounds :: Follow-up reopens the round
+  test('a follow-up question added to a closed Main round blocks the proposal until it is answered', () => {
+    const root = stampedProject({ technical: null, drop: LATER });
+    assert.equal(writeProposal(root).code, 0);
+    const followUp = newQuestion(7, 'Which accountants? (follow-up to Q2)', '');
+    writeFileSync(join(root, C, 'clarifications.md'), newRulesClar({ main: [...NEW_MAIN, followUp], technical: null }));
+    const r = writeProposal(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /Q7 is not answered/);
+    writeFileSync(join(root, C, 'clarifications.md'), newRulesClar({ main: [...NEW_MAIN, newQuestion(7, 'Which accountants? (follow-up to Q2)', 'A')], technical: null }));
+    assert.equal(writeProposal(root).code, 0);
+  });
+
+  // @scenario questions/rounds :: Technical round without questions
+  test('a Technical round with only "No questions." lets the specs and the design be written', () => {
+    const root = stampedProject({ technical: [], drop: ['specs', 'design.md', 'verification-plan.md', 'tasks.md'] });
+    assert.match(readFileSync(join(root, C, 'clarifications.md'), 'utf8'), /## Technical round\n\nNo questions\.\n/);
+    const r = writeSpec(root);
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(pre(root, 'Write', { file_path: join(root, C, 'design.md'), content: 'x' }).code, 0);
+  });
+
+  // @scenario questions/recommendations :: Recommended question stays unanswered
+  test('a recommended option is not an answer: the only Main question with a blank answer blocks the proposal', () => {
+    const only = newQuestion(1, 'Are there UI mockups for this change? (UI mockups)', '', 'Recommended: B — [D1] has no mockups\n');
+    const root = stampedProject({ main: [only], technical: null, drop: LATER });
+    const r = writeProposal(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /Q1 is not answered/);
+    assert.doesNotMatch(r.stderr, /Looks correct/);
+  });
+
+  const OLD_MAIN_ANSWERED = `# Clarifications — ${CHANGE}\n\n## Sources\n\n- [desc] Developer description: "Sales export"\n\n## Main round\n\n${NEW_MAIN.join('\n')}`;
+
+  // @scenario questions/rounds :: Older change still needs the confirmation
+  test('a change stamped 0.5.0 on clarify still needs "Looks correct" on the Main round summary', () => {
+    const root = stampedProject({ stamp: '0.5.0', clar: OLD_MAIN_ANSWERED, drop: LATER });
+    const r = writeProposal(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /"Main" round has no summary confirmation/);
+    assert.match(r.stderr, /Looks correct/);
+  });
+
+  // @scenario questions/rounds :: Test-case schema still needs the confirmation
+  test('a change created with 0.6.0 on clarify-qa still needs "Looks correct" on the Main round summary', () => {
+    const root = stampedProject({ schema: 'clarify-qa', clar: OLD_MAIN_ANSWERED, drop: LATER });
+    const r = writeProposal(root);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /"Main" round has no summary confirmation/);
+    assert.match(r.stderr, /Looks correct/);
+  });
+});

@@ -11,12 +11,31 @@ export const ROUND_FOR_ARTIFACT = {
 };
 export const KNOWN_ROUNDS = ['Main', 'Specs', 'Design', 'Verification', 'Apply'];
 
+/** Round each artifact depends on for a change under the new planning rules (`usesNewPlanning`). */
+export const NEW_ROUND_FOR_ARTIFACT = {
+  proposal: 'Main',
+  specs: 'Technical',
+  design: 'Technical',
+  'verification-plan': 'Technical',
+};
+export const NEW_ROUNDS = ['Main', 'Technical', 'Apply'];
+/** Values of the header lines of a new-rules file. */
+export const DEPTH_LEVELS = ['low', 'medium', 'high'];
+export const ANSWER_MODES = ['chat', 'file', 'discussion'];
+
+/** Round map and round names for a change under the new planning rules (`newPlanning`) or the earlier ones. */
+export function roundsFor(newPlanning) {
+  return newPlanning ? { forArtifact: NEW_ROUND_FOR_ARTIFACT, known: NEW_ROUNDS } : { forArtifact: ROUND_FOR_ARTIFACT, known: KNOWN_ROUNDS };
+}
+
 const ROUND_HEADING = /^##\s+(.+?)\s+round\s*$/i;
 const QUESTION_HEADING = /^###\s+Q(\d+)\.\s*(.*?)\s*$/;
 const SUMMARY_HEADING = /^###\s+Summary confirmation\s*[—–-]\s*(.+?)(?:\s+round)?\s*$/i;
 const CHANGES_HEADING = /^###\s+Requested changes\s*[—–-]\s*(.+?)(?:\s+round)?\s*(?:#\s*(\d+))?\s*$/i;
 const ANSWER = /^\s*\[Answer\]:(.*)$/;
 const OPTION = /^\s*[-*]\s+([A-Z])\.\s+(.*)$/;
+const RECOMMENDED = /^\s*Recommended:\s*(.*?)\s*$/;
+const NO_QUESTIONS = /^\s*No questions\.?\s*$/i;
 const FOLLOW_UP = /\(follow-up to ((?:Q\d+(?:\s*,\s*|\s+and\s+)?)+)\)/i;
 
 /** True when an answer value counts as not answered (blank or only underscores). */
@@ -30,9 +49,9 @@ export function answerLetters(value) {
   return m ? m[1].split(/\s*,\s*/) : [];
 }
 
-function canonicalRound(name) {
+function canonicalRound(name, newPlanning) {
   const n = name.trim().replace(/\s+round$/i, '');
-  const known = KNOWN_ROUNDS.find((r) => r.toLowerCase() === n.toLowerCase());
+  const known = (newPlanning ? NEW_ROUNDS : KNOWN_ROUNDS).find((r) => r.toLowerCase() === n.toLowerCase());
   return known || n;
 }
 
@@ -40,30 +59,43 @@ function canonicalRound(name) {
  * Reads the answer that belongs to the `[Answer]:` tag on line i: the rest of that line, or, when
  * empty, the following non-blank lines up to a blank line or a heading.
  */
-function readAnswer(lines, i) {
+function readAnswer(lines, i, newPlanning) {
   const first = lines[i].match(ANSWER)[1].trim();
   if (first) return first;
   const more = [];
   for (let j = i + 1; j < lines.length; j++) {
     const t = lines[j].trim();
     if (!t || /^#{1,6}\s/.test(t)) break;
+    if (newPlanning && RECOMMENDED.test(t)) break;
     more.push(t);
   }
   return more.join(' ').trim();
 }
 
+/** Reads the text of a `Recommended:` line: { letters, reason } (letters [] / reason null when missing). */
+function readRecommendation(text) {
+  const m = text.match(/^([A-Z](?:\s*,\s*[A-Z])*)(?:\s+[—–-]\s*(.*))?$/);
+  if (!m) return { letters: [], reason: null };
+  const reason = (m[2] || '').trim();
+  return { letters: m[1].split(/\s*,\s*/), reason: reason || null };
+}
+
 /**
  * Parses clarifications.md.
- * Returns { depth, sources:{desc, docs:Set, ui:Map(tag -> {file, line})}, rounds:[...], questions: Map(n -> question),
- * problems:[{line, message}] }. `sources.ui` holds the screenshot registrations `- [U<n>] ... sources/ui/<file>`
+ * Options: { newPlanning } — the file of a change under the new planning rules (`usesNewPlanning`): the header
+ * line `Answer mode:`, `Recommended: <letters> — <reason>` lines under a question (never read as its answer) and
+ * the line `No questions.` in a round are read, and roundStatus() reports a closed round as confirmed.
+ * Returns { newPlanning, depth, depthLine, answerMode, answerModeLine, sources:{desc, docs:Set, ui:Map(tag -> {file, line})}, rounds:[...], questions: Map(n -> question),
+ * problems:[{line, message}] }. A round has { name, line, questions, summary, changes, noQuestions,
+ * noQuestionsLine }; a question has `recommendations: [{line, letters, reason, text}]` (new rules only). `sources.ui` holds the screenshot registrations `- [U<n>] ... sources/ui/<file>`
  * (file: the first image file name on the line, or null).
  * Lines are 1-based. HTML comments and fenced code are ignored.
  */
-export function parseClarifications(content) {
+export function parseClarifications(content, { newPlanning = false } = {}) {
   const raw = toLines(content);
   const fences = fenceMask(raw);
   const lines = stripComments(raw, fences).map((l, i) => (fences[i] ? '' : l));
-  const result = { depth: null, sources: { desc: false, docs: new Set(), ui: new Map() }, rounds: [], questions: new Map(), problems: [] };
+  const result = { newPlanning, depth: null, depthLine: null, answerMode: null, answerModeLine: null, sources: { desc: false, docs: new Set(), ui: new Map() }, rounds: [], questions: new Map(), problems: [] };
 
   let section = null; // 'sources' | round object | null
   let item = null; // current question / summary / changes entry
@@ -76,7 +108,15 @@ export function parseClarifications(content) {
     const ln = i + 1;
 
     const depth = line.match(/^Depth:\s*(\S+)/);
-    if (depth && !section) result.depth = depth[1];
+    if (depth && !section) {
+      result.depth = depth[1];
+      result.depthLine = ln;
+    }
+    const mode = newPlanning && !section && line.match(/^Answer mode:\s*(.*?)\s*$/);
+    if (mode) {
+      result.answerMode = mode[1];
+      result.answerModeLine = ln;
+    }
 
     if (/^##\s+Sources\s*$/i.test(line)) {
       section = 'sources';
@@ -85,7 +125,7 @@ export function parseClarifications(content) {
     }
     const rh = line.match(ROUND_HEADING);
     if (rh && !line.startsWith('###')) {
-      section = { name: canonicalRound(rh[1]), line: ln, questions: [], summary: null, changes: [] };
+      section = { name: canonicalRound(rh[1], newPlanning), line: ln, questions: [], summary: null, changes: [], noQuestions: false, noQuestionsLine: null };
       result.rounds.push(section);
       closeItem();
       continue;
@@ -111,6 +151,13 @@ export function parseClarifications(content) {
     }
     if (!section) continue;
 
+    if (newPlanning && NO_QUESTIONS.test(line)) {
+      section.noQuestions = true;
+      section.noQuestionsLine = ln;
+      closeItem();
+      continue;
+    }
+
     const qh = line.match(QUESTION_HEADING);
     if (qh) {
       const n = Number(qh[1]);
@@ -125,6 +172,7 @@ export function parseClarifications(content) {
         options: [],
         answer: null,
         answerLine: null,
+        recommendations: [],
         followUpOf: fu ? [...fu[1].matchAll(/Q(\d+)/g)].map((m) => Number(m[1])) : [],
       };
       section.questions.push(item);
@@ -137,7 +185,7 @@ export function parseClarifications(content) {
     }
     const sh = line.match(SUMMARY_HEADING);
     if (sh) {
-      item = { kind: 'summary', round: canonicalRound(sh[1]), line: ln, answer: null, answerLine: null };
+      item = { kind: 'summary', round: canonicalRound(sh[1], newPlanning), line: ln, answer: null, answerLine: null };
       if (item.round !== section.name) {
         result.problems.push({ line: ln, message: `summary for "${item.round}" round is inside the "${section.name}" round section` });
       }
@@ -147,7 +195,7 @@ export function parseClarifications(content) {
     }
     const ch = line.match(CHANGES_HEADING);
     if (ch) {
-      item = { kind: 'changes', round: canonicalRound(ch[1]), k: ch[2] ? Number(ch[2]) : null, line: ln, answer: null, answerLine: null };
+      item = { kind: 'changes', round: canonicalRound(ch[1], newPlanning), k: ch[2] ? Number(ch[2]) : null, line: ln, answer: null, answerLine: null };
       section.changes.push(item);
       continue;
     }
@@ -159,6 +207,11 @@ export function parseClarifications(content) {
     if (!item) continue;
 
     if (item.kind === 'question') {
+      const rec = newPlanning && line.match(RECOMMENDED);
+      if (rec) {
+        item.recommendations.push({ line: ln, ...readRecommendation(rec[1]), text: rec[1] });
+        continue;
+      }
       if (/^Why this is asked:\s*\S/.test(line)) item.why = true;
       const o = line.match(OPTION);
       if (o && item.answerLine === null) item.options.push({ key: o[1], text: o[2].trim() });
@@ -167,7 +220,7 @@ export function parseClarifications(content) {
       if (item.answerLine !== null) {
         result.problems.push({ line: ln, message: `${describe(item)} has more than one [Answer]: tag` });
       } else {
-        item.answer = readAnswer(lines, i);
+        item.answer = readAnswer(lines, i, newPlanning);
         item.answerLine = ln;
       }
     }
@@ -182,12 +235,20 @@ export function describe(item) {
   return `${item.round} round requested changes${item.k ? ` #${item.k}` : ''}`;
 }
 
-/** Status of a round: { exists, unanswered:[items], confirmed, summaryAnswer }. */
+/**
+ * Status of a round: { exists, unanswered:[items], confirmed, summaryAnswer }. Under the earlier rules a round is
+ * confirmed by "Looks correct" on its summary with every entry answered. Under the new planning rules (a file
+ * parsed with `newPlanning`) a round is closed, and reported as confirmed, when it holds a question or the line
+ * "No questions." and none of its answers is blank; no summary is needed.
+ */
 export function roundStatus(parsed, roundName) {
   const round = parsed.rounds.find((r) => r.name === roundName);
   if (!round) return { exists: false, unanswered: [], confirmed: false, summaryAnswer: null };
   const entries = [...round.questions, ...round.changes];
   const unanswered = entries.filter((e) => e.answerLine === null || isBlankAnswer(e.answer));
   const summaryAnswer = round.summary && round.summary.answerLine !== null ? round.summary.answer : null;
-  return { exists: true, round, unanswered, confirmed: summaryAnswer === 'Looks correct' && unanswered.length === 0, summaryAnswer };
+  const confirmed = parsed.newPlanning
+    ? unanswered.length === 0 && (round.questions.length > 0 || round.noQuestions)
+    : summaryAnswer === 'Looks correct' && unanswered.length === 0;
+  return { exists: true, round, unanswered, confirmed, summaryAnswer };
 }

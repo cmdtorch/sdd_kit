@@ -22,7 +22,7 @@ to be installed into startup projects (2–3 developers each).
 
 - Full suite: `npm test` (needs the pinned OpenSpec CLI, `npm i -g @fission-ai/openspec@1.15.0`;
   some tests run it for real).
-- One file: `node --test tests/<name>.test.mjs`.
+- One file: `node --import ./tests/helpers/isolate-tmp.mjs --test tests/<name>.test.mjs`.
 - No linter or type checker is configured; the suite is the quality gate.
 - Kit health in this repository: `node openspec/tooling/bin/doctor.mjs`.
 

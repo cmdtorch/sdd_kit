@@ -15,6 +15,21 @@ artifacts:
       follow it exactly - it defines the file layout, question format, rounds,
       answer modes, answer analysis and summary confirmation.
 
+      On a change on `clarify` stamped with kit version 0.6.0 or later
+      (`x-sdd-kit` in its `.openspec.yaml`), follow
+      `openspec/protocols/planning.md` first; where it differs from the steps
+      below, it applies: write the line `Depth: <level>` under the title: the
+      level the developer chose in the starter menu, otherwise `Depth: medium`
+      (`low`, `medium` or `high`, planning.md §13); ask the answer mode once
+      and record it as `Answer mode:` (planning.md §6); recommend an option
+      only with a basis, on a `Recommended:` line (planning.md §12); close the
+      Main round without a summary confirmation, or with the line
+      `No questions.`; never tell the developer to run `/opsx:continue`.
+      Changes on `clarify-ai-qa` or `clarify-qa`, and changes stamped below
+      0.6.0 or without the stamp, keep the rules below: no `Recommended:`
+      line, `Depth:` `Minimal`, `Standard` or `Comprehensive` (default
+      `Comprehensive`), and the summary confirmation.
+
       Steps for this artifact:
       1. Register sources under `## Sources`: the developer's description as
          `[desc]` (verbatim), and every requirement source as `[D<n>]` stored in
@@ -98,6 +113,11 @@ artifacts:
       This is the foundation - specs, design, and tasks all build on this.
 
       KIT RULES (sdd-kit `clarify` schema - these extend the instructions above):
+      - Changes stamped 0.6.0 or later: on a change on `clarify` or `lean`
+        stamped with kit version 0.6.0 or later (`x-sdd-kit` in its
+        `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
+        it differs from these rules, it applies. Earlier changes and the
+        `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
       - Gate: before writing, read clarifications.md. The `## Main round` must
         have no blank `[Answer]:` and its summary confirmation answer must be
         exactly `Looks correct`. If not, continue the question protocol
@@ -228,6 +248,11 @@ artifacts:
       Specs should be testable - each scenario is a potential test case.
 
       KIT RULES (sdd-kit `clarify` schema - these extend the instructions above):
+      - Changes stamped 0.6.0 or later: on a change on `clarify` or `lean`
+        stamped with kit version 0.6.0 or later (`x-sdd-kit` in its
+        `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
+        it differs from these rules, it applies. Earlier changes and the
+        `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
       - Specs round first. Before writing any spec file, append `## Specs round`
         to clarifications.md and run it per `openspec/protocols/questions.md`:
         check completeness across the six dimensions (functional, non-functional,
@@ -287,6 +312,11 @@ artifacts:
       Good design docs explain the "why" behind technical decisions.
 
       KIT RULES (sdd-kit `clarify` schema - these extend the instructions above):
+      - Changes stamped 0.6.0 or later: on a change on `clarify` or `lean`
+        stamped with kit version 0.6.0 or later (`x-sdd-kit` in its
+        `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
+        it differs from these rules, it applies. Earlier changes and the
+        `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
       - Design round first. Before writing, append `## Design round` to
         clarifications.md and ask only about architectural forks - choices that
         would change the specs, the approach or the task breakdown. If there are
@@ -314,6 +344,12 @@ artifacts:
     instruction: |
       Create the verification plan: how every spec scenario of this change will
       be verified. Follow `openspec/protocols/testing.md` (format in section 2).
+
+      Changes stamped 0.6.0 or later: on a change on `clarify` or `lean`
+      stamped with kit version 0.6.0 or later (`x-sdd-kit` in its
+      `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
+      it differs from these rules, it applies. Earlier changes and the
+      `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
 
       1. Verification round first: append `## Verification round` to
          clarifications.md and run it per `openspec/protocols/questions.md` -
@@ -409,6 +445,11 @@ artifacts:
       Reference specs for what needs to be built, design for how to build it.
 
       KIT RULES (sdd-kit - these extend the instructions above):
+      - Changes stamped 0.6.0 or later: on a change on `clarify` or `lean`
+        stamped with kit version 0.6.0 or later (`x-sdd-kit` in its
+        `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
+        it differs from these rules, it applies. Earlier changes and the
+        `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
       - Read verification-plan.md. Every scenario in its Scenario coverage table
         must be covered by at least one task.
       - Each task group that adds behaviour starts with its test task (TDD) that
@@ -500,6 +541,12 @@ apply:
     - If a requirement gap appears, append `## Apply round` to
       clarifications.md and ask (`openspec/protocols/questions.md`); do not
       guess.
+    - Changed answers. On a change stamped 0.6.0 or later, run
+      `node openspec/tooling/checks/check-answers.mjs --change <name>` before
+      the first task and before each task group, and start no task while it
+      reports a changed answer (`openspec/protocols/planning.md` §7). A
+      requirement gap goes into the `## Apply round`, asked in the recorded
+      answer mode.
     - Before the final verification, run the `test-reviewer` subagent
       (`openspec/protocols/review-tests.md`): fix blocker/major findings in the
       tests (at most two review rounds), then show what remains to the human.

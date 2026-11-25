@@ -2,7 +2,12 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // answers-gate — PreToolUse hook (Write|Edit|MultiEdit|Bash).
 // Blocks writing a clarify-family artifact while the question round it depends on is unanswered or
-// unconfirmed (proposal→Main, specs→Specs, design→Design, verification-plan→Verification).
+// unconfirmed (proposal→Main, specs→Specs, design→Design, verification-plan→Verification). A change under the new
+// planning rules (lib/project.mjs usesNewPlanning; openspec/protocols/planning.md) maps the proposal to the Main
+// round and the specs, the design and the verification plan to the Technical round; a missing round section blocks,
+// a round is closed when no answer is blank, and no summary is asked. Its answers lock (lib/answers-lock.mjs): while
+// an answer differs from the one an earlier written artifact was based on, the later artifacts are blocked, and a
+// check-off in tasks.md is blocked while any locked answer differs; the message names the questions and artifacts.
 // On a test-case schema (clarify-ai-qa, clarify-qa) design.md also needs a complete test-cases stage
 // (check-test-cases --stage); a blocked spec write during that stage says the Specs round was reopened.
 // UI sources (openspec/protocols/ui-inventory.md), on all four kit schemas, lean included: writing proposal.md,
@@ -29,10 +34,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve, relative, isAbsolute } from 'node:path';
 import { runHook, hookRoot, touchedFiles, block, absPath } from '../lib/hook-io.mjs';
-import { locateInChange, changeSchema, changeDir, isClarifyFamily, isKitSchema, hasTestCases, isStamped } from '../lib/project.mjs';
+import { locateInChange, changeSchema, changeDir, isClarifyFamily, isKitSchema, hasTestCases, isStamped, usesNewPlanning } from '../lib/project.mjs';
 import { checkUi, uiStageFor } from '../checks/check-ui.mjs';
 import { scanUiFolder, isUiMode, INVENTORY_FILE, UI_DIR } from '../lib/ui-inventory.mjs';
-import { ROUND_FOR_ARTIFACT } from '../lib/clarifications.mjs';
+import { ROUND_FOR_ARTIFACT, roundsFor } from '../lib/clarifications.mjs';
 import { checkAnswers } from '../checks/check-answers.mjs';
 import { checkTestCases } from '../checks/check-test-cases.mjs';
 import { checkTraceability } from '../checks/check-traceability.mjs';
@@ -40,6 +45,8 @@ import { checkTasks } from '../checks/check-tasks.mjs';
 import { TEST_CASES_FILE } from '../lib/test-cases.mjs';
 import { isMain } from '../lib/report.mjs';
 import { isMetarepo, readClones } from '../lib/clones.mjs';
+import { lockDifferences, describeDifferences, usesAnswersLock, LOCK_ORDER } from '../lib/answers-lock.mjs';
+import { taskCounts } from '../lib/markdown.mjs';
 
 const MAX_LISTED = 8;
 const GATED_PATH = /(?:^|[\s'"=(])((?:\.\/)?(?:[^\s'"]*\/)?openspec\/changes\/[^\s'"/]+\/(?:proposal\.md|design\.md|verification-plan\.md|specs\/[^\s'"]+\.md))/g;
@@ -58,6 +65,16 @@ function listErrors(report) {
   return lines;
 }
 
+/** A new-rules change (openspec/protocols/planning.md): the round is closed when no answer is blank; no summary. */
+function explainNew(change, artifact, report) {
+  const round = roundsFor(true).forArtifact[artifact];
+  return [
+    `sdd-kit answers-gate: ${artifact} of change "${change}" cannot be written yet — the ${round} round in clarifications.md is not closed.`,
+    ...listErrors(report),
+    `Continue the question rounds (openspec/protocols/planning.md): ask the developer and write the answers into clarifications.md. The round is closed when none of its answers is blank (a recommendation is not an answer), or when it holds the line "No questions." because there is nothing to ask. Do not write ${artifact} any other way.`,
+  ].join('\n');
+}
+
 function explain(change, artifact, report, duringTestCases) {
   const round = ROUND_FOR_ARTIFACT[artifact];
   const lines = [
@@ -73,6 +90,34 @@ function explain(change, artifact, report, duringTestCases) {
     `Continue the question protocol (openspec/protocols/questions.md): ask the user, write the answers into clarifications.md, analyse them, then get an explicit "Looks correct" on the ${round} round summary. Do not write ${artifact} any other way.`,
   );
   return lines.join('\n');
+}
+
+/**
+ * The answers lock of a new-rules change (lib/answers-lock.mjs): an artifact waits while an artifact written before
+ * it was based on an answer that has changed since; a check-off in tasks.md waits while any locked answer differs.
+ * Rewriting the artifact whose own entry differs is the update the developer asks for, so it passes.
+ */
+function lockGate(root, change, artifact, input, path) {
+  if (!LOCK_ORDER.includes(artifact) || !usesAnswersLock(root, change)) return null;
+  const checkOff = artifact === 'tasks' && isCheckOff(input, path);
+  const earlier = checkOff ? LOCK_ORDER : LOCK_ORDER.slice(0, LOCK_ORDER.indexOf(artifact));
+  if (!earlier.length) return null;
+  const diffs = lockDifferences(root, change, { artifacts: earlier });
+  if (!diffs.length) return null;
+  const what = checkOff ? `tasks of change "${change}" cannot be checked off yet` : `${artifact} of change "${change}" cannot be written yet`;
+  return [
+    `sdd-kit answers-gate: ${what} — an answer in clarifications.md changed after artifacts were written from the earlier answer:`,
+    ...describeDifferences(diffs).map((l) => `  - ${l}`),
+    'Warn the developer: name these questions and the artifacts written from their earlier answers, and wait (openspec/protocols/planning.md). Update those artifacts, in the order they were written, only when the developer tells you to; when the developer restores the earlier answer, go on. Do not write it any other way.',
+  ].join('\n');
+}
+
+/** Whether a write of tasks.md checks off a task (more checked tasks after it than before). */
+function isCheckOff(input, path) {
+  const after = contentAfter(input, path);
+  if (after === null) return false;
+  const before = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  return taskCounts(after).done > taskCounts(before).done;
 }
 
 function explainTestCases(change, report) {
@@ -328,6 +373,7 @@ export function gate(input) {
     if (isClarifyFamily(schema) && loc.artifact in ROUND_FOR_ARTIFACT) {
       const report = checkAnswers({ root, change: loc.change, artifact: loc.artifact });
       if (!report.ok) {
+        if (usesNewPlanning(root, loc.change)) return explainNew(loc.change, loc.artifact, report);
         const duringTestCases = loc.artifact === 'specs' && hasTestCases(schema) && existsSync(join(changeDir(root, loc.change), TEST_CASES_FILE));
         return explain(loc.change, loc.artifact, report, duringTestCases);
       }
@@ -336,6 +382,8 @@ export function gate(input) {
         if (!stage.ok) return explainTestCases(loc.change, stage);
       }
     }
+    const locked = lockGate(root, loc.change, loc.artifact, input, abs);
+    if (locked) return locked;
     if (loc.artifact === 'tasks') {
       const manual = manualGate(root, loc.change);
       if (manual) return manual;

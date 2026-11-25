@@ -307,3 +307,185 @@ describe('scenario markers (any language)', () => {
     assert.deepEqual(scanned(), ['NOTES.md', 'docs/guide.md', 'tests/fixtures_test.py', 'tests/test_export.py', 'tests/test_sales.py']);
   });
 });
+
+// The clarifications file of a change under the new planning rules (stamped 0.6.0 or later on clarify):
+// rounds Main, Technical and Apply without a summary, `Depth:` and `Answer mode:` lines, `Recommended:` lines.
+const NEW_RULES_CLAR = `# Clarifications — ${CHANGE}
+
+Depth: medium
+Answer mode: file
+
+## Sources
+
+- [desc] Developer description: "Sales export to Excel for accountants"
+- [D1] Client request — \`sources/D1.md\`
+
+## Main round
+
+### Q1. Who may download the sales export?
+Why this is asked: the file contains prices; this decides the permission rule.
+- A. Only accountants
+- B. Accountants and school administrators
+- C. Not yet defined
+- X. Other (please specify)
+
+Recommended: B — the existing export spec in openspec/specs lets accountants and school administrators export
+
+[Answer]: B
+
+### Q2. Which sales go into the file?
+Why this is asked: drafts and cancelled sales change the totals.
+- A. Only paid sales
+- B. All sales with a status column
+- C. Not yet defined
+- X. Other (please specify)
+
+[Answer]: A
+
+### Q3. Is the monthly email to the director part of this change?
+Why this is asked: this is the scope boundary.
+- A. Yes
+- B. No, later
+- C. Not yet defined
+- X. Other (please specify)
+
+[Answer]: B
+
+## Technical round
+
+### Q4. What happens when the chosen period has no paid sales?
+Why this is asked: an empty file and an error message are different behaviours.
+- A. A file with only the header row
+- B. An error message, no file
+- C. Not yet defined
+- X. Other (please specify)
+
+[Answer]: A
+`;
+
+/** The good project as a change stamped `stamp` on `schema`, with the new-rules clarifications file. */
+function newRulesProject({ stamp = '0.6.0', schema = 'clarify', clar = NEW_RULES_CLAR } = {}) {
+  const root = project();
+  writeFileSync(join(root, C, '.openspec.yaml'), `schema: ${schema}\ncreated: 2026-10-03\nx-sdd-kit: ${stamp}\n`);
+  if (clar !== null) writeFileSync(join(root, CLAR), clar);
+  return root;
+}
+const depthFindings = (r) => r.findings.filter((f) => /Depth/.test(f.message));
+
+describe('new planning rules: the clarifications file (check-answers)', () => {
+  test('a new-rules file passes in CI mode and before every artifact, without a summary confirmation', () => {
+    const root = newRulesProject();
+    for (const extra of [{}, { artifact: 'proposal' }, { artifact: 'specs' }, { artifact: 'design' }, { artifact: 'verification-plan' }, { round: 'Main' }, { round: 'Technical' }]) {
+      assert.deepEqual(run.answers(root, extra).findings, [], JSON.stringify(extra));
+    }
+  });
+
+  test('the specs, the design and the verification plan depend on the Technical round', () => {
+    const root = newRulesProject({ clar: NEW_RULES_CLAR.replace(/## Technical round[\s\S]*$/, '') });
+    for (const artifact of ['specs', 'design', 'verification-plan']) assertCaught(run.answers(root, { artifact }), /"## Technical round" is missing/);
+    assert.equal(run.answers(root, { artifact: 'proposal' }).ok, true);
+  });
+
+  test('a blank answer keeps its round open', () => {
+    const root = newRulesProject({ clar: NEW_RULES_CLAR.replace('[Answer]: A\n\n### Q3.', '[Answer]:\n\n### Q3.') });
+    assertCaught(run.answers(root, { artifact: 'proposal' }), /Q2 is not answered/);
+  });
+
+  test('a round with "No questions." is closed; a round with neither a question nor that line is not', () => {
+    const none = NEW_RULES_CLAR.replace(/## Technical round[\s\S]*$/, '## Technical round\n\nNo questions.\n');
+    assert.deepEqual(run.answers(newRulesProject({ clar: none }), { artifact: 'specs' }).findings, []);
+    const empty = NEW_RULES_CLAR.replace(/## Technical round[\s\S]*$/, '## Technical round\n');
+    assertCaught(run.answers(newRulesProject({ clar: empty }), { artifact: 'specs' }), /"Technical" round has no question and no "No questions\." line/);
+    const both = NEW_RULES_CLAR.replace('## Technical round\n', '## Technical round\n\nNo questions.\n');
+    assertCaught(run.answers(newRulesProject({ clar: both })), /"Technical" round has questions and the line "No questions\."/);
+  });
+
+  test('the answer mode must be chat, file or discussion', () => {
+    for (const mode of ['chat', 'file', 'discussion']) assert.deepEqual(run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('Answer mode: file', `Answer mode: ${mode}`) })).findings, [], mode);
+    assertCaught(run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('Answer mode: file', 'Answer mode: email') })), /Answer mode "email".*chat, file or discussion/);
+  });
+
+  test('the rounds of the earlier rules are unknown on a new-rules change', () => {
+    const r = run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('## Technical round', '## Specs round') }));
+    assert.ok(warnings(r).some((w) => /unknown round "Specs" \(expected Main, Technical, Apply\)/.test(w.message)), JSON.stringify(r.findings));
+  });
+
+  // @scenario questions/depth :: Missing level line
+  test('a missing Depth line is reported with the three levels', () => {
+    const r = run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('Depth: medium\n', '') }));
+    assertCaught(r, /"Depth:" line is missing.*low, medium or high/);
+  });
+
+  // @scenario questions/depth :: Unknown level
+  test('an unknown level is reported with the three levels', () => {
+    const r = run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('Depth: medium', 'Depth: extreme') }));
+    assertCaught(r, /Depth "extreme".*must be low, medium or high/);
+    for (const level of ['low', 'medium', 'high']) assert.deepEqual(depthFindings(run.answers(newRulesProject({ clar: NEW_RULES_CLAR.replace('Depth: medium', `Depth: ${level}`) }))), [], level);
+  });
+
+  // @scenario questions/depth :: Older change keeps its depth names
+  test('a change stamped 0.5.0 keeps its depth names and its rules', () => {
+    const root = newRulesProject({ stamp: '0.5.0', clar: null });
+    plant(root, CLAR, 'Depth: Standard', 'Depth: Comprehensive');
+    assert.deepEqual(run.answers(root).findings, []);
+    for (const artifact of ['proposal', 'specs', 'design', 'verification-plan']) assert.deepEqual(run.answers(root, { artifact }).findings, [], artifact);
+    // the earlier rules still need the summary confirmation
+    plantFirstSummary(root, '');
+    assertCaught(run.answers(root, { artifact: 'proposal' }), /summary is not confirmed/);
+  });
+
+  test('an unstamped change keeps its rules', () => {
+    const root = project();
+    plantFirstSummary(root, '');
+    assertCaught(run.answers(root, { artifact: 'proposal' }), /summary is not confirmed/);
+  });
+
+  // @scenario questions/depth :: Test-case schema keeps its depth names
+  test('a change created with 0.6.0 on clarify-qa keeps its depth names and its rules', () => {
+    const root = newRulesProject({ schema: 'clarify-qa', clar: null });
+    plant(root, CLAR, 'Depth: Standard', 'Depth: Comprehensive');
+    const r = run.answers(root);
+    assert.deepEqual(depthFindings(r), []);
+    assert.equal(r.ok, true, JSON.stringify(r.findings));
+    plantFirstSummary(root, '');
+    assertCaught(run.answers(root, { artifact: 'proposal' }), /summary is not confirmed/);
+  });
+
+  // @scenario questions/recommendations :: Recommendation in the file
+  test('a recommendation line under a question is accepted', () => {
+    const root = newRulesProject();
+    assert.deepEqual(run.answers(root).findings, []);
+    const multi = NEW_RULES_CLAR.replace('[Answer]: A\n\n### Q3.', 'Recommended: A, B — [D1] names paid sales\n\n[Answer]: A\n\n### Q3.');
+    assert.deepEqual(run.answers(newRulesProject({ clar: multi })).findings, []);
+  });
+
+  // @scenario questions/recommendations :: Recommendation names an unknown option
+  test('a recommendation that names an option the question does not have is reported', () => {
+    const root = newRulesProject({ clar: NEW_RULES_CLAR.replace('Recommended: B —', 'Recommended: D —') });
+    assertCaught(run.answers(root), /Q1: the recommended option D is not an option of the question/);
+  });
+
+  test('a recommendation without letters or without a reason is reported', () => {
+    for (const line of ['Recommended: accountants only', 'Recommended: B']) {
+      const root = newRulesProject({ clar: NEW_RULES_CLAR.replace(/Recommended: B — .*/, line) });
+      assertCaught(run.answers(root), /Q1: the recommendation must read "Recommended: <letters> — <reason>"/);
+    }
+  });
+});
+
+describe('new planning rules: a closed round is a valid source (check-grounding)', () => {
+  // @scenario questions/rounds :: Answer of a closed round is a valid source
+  test('the proposal cites Q3 of a Main round closed without a summary confirmation', () => {
+    const root = newRulesProject();
+    assert.match(readFileSync(join(root, C, 'proposal.md'), 'utf8'), /\[Q3\]/);
+    assert.deepEqual(run.grounding(root).findings, []);
+  });
+
+  // @scenario questions/rounds :: Answer of an open round is not a source
+  test('the design cites an answered question of a Technical round with a blank answer', () => {
+    const open = NEW_RULES_CLAR.concat('\n### Q5. Is the file name localised?\nWhy this is asked: the download name depends on it.\n- A. Yes\n- B. No\n- X. Other (please specify)\n\n[Answer]:\n');
+    const root = newRulesProject({ clar: open });
+    plant(root, `${C}/design.md`, 'fine for a synchronous response [Q2]', 'fine for a synchronous response [Q4]');
+    assertCaught(run.grounding(root), /\[Q4\] belongs to the Technical round, which is not closed/);
+  });
+});

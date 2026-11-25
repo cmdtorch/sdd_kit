@@ -430,3 +430,40 @@ describe('autonomous apply after install', () => {
     assert.ok(r.doctor.some((i) => i.check === 'hooks' && i.level === 'ok'), JSON.stringify(r.doctor));
   });
 });
+
+describe('automatic continuation of planning after install', () => {
+  const FILES = ['openspec/tooling/hooks/planning-continue.mjs', 'openspec/tooling/hooks/planning-prompt.mjs', 'openspec/tooling/bin/planning.mjs', 'openspec/tooling/lib/session-state.mjs'];
+  const kitGroups = (settings, event) => (settings.hooks?.[event] || []).filter((g) => (g.hooks || []).some((h) => /openspec\/tooling\/hooks\//.test(h.command || '')));
+
+  test('the Stop and UserPromptSubmit hooks and planning.mjs are installed, registered, allowed and removed again', async () => {
+    const root = pilot();
+    const r = await install(opts(root));
+    assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    for (const f of FILES) {
+      assert.ok(existsSync(join(root, f)), `${f} is installed`);
+      assert.ok(f in manifest.files, `${f} is tracked by the manifest`);
+    }
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    assert.match(JSON.stringify(kitGroups(settings, 'Stop')), /hooks\/planning-continue\.mjs/);
+    assert.match(JSON.stringify(kitGroups(settings, 'UserPromptSubmit')), /hooks\/planning-prompt\.mjs/);
+    assert.ok(settings.permissions.allow.includes('Bash(node openspec/tooling/bin/planning.mjs *)'));
+    await install(opts(root));
+    assert.deepEqual(JSON.parse(read(root, '.claude/settings.json')), settings, 'update keeps one registration of each hook');
+    uninstall({ target: root });
+    for (const f of FILES) assert.equal(existsSync(join(root, f)), false, `${f} is removed by uninstall`);
+    const after = existsSync(join(root, '.claude/settings.json')) ? read(root, '.claude/settings.json') : '';
+    assert.doesNotMatch(after, /planning-continue|planning-prompt|planning\.mjs/);
+  });
+
+  // @scenario workflow/planning-flow :: No notification hook is installed
+  test('the installed settings get no kit hook on the Notification event', async () => {
+    const root = pilot();
+    await install(opts(root));
+    const settings = JSON.parse(read(root, '.claude/settings.json'));
+    assert.ok(kitGroups(settings, 'Stop').length, 'the kit hooks are installed');
+    assert.deepEqual(kitGroups(settings, 'Notification'), []);
+    const fragment = JSON.parse(readFileSync(join(REPO, 'kit', 'claude-settings.fragment.json'), 'utf8'));
+    assert.equal(fragment.hooks.Notification, undefined, 'the kit fragment has no Notification hook');
+  });
+});
