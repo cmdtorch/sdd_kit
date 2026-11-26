@@ -62,8 +62,8 @@ No other dependencies: the kit is plain Node.js.
 
 ```bash
 npm i -g @fission-ai/openspec@2.2.0
-npx github:cmdtorch/sdd_kit#v0.8.0 install --dry-run   # show the plan, write nothing
-npx github:cmdtorch/sdd_kit#v0.8.0 install             # asks for the questions language, nothing else
+npx github:cmdtorch/sdd_kit#v0.8.1 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.8.1 install             # asks for the questions language, nothing else
 git add -A && git commit -m "chore: install sdd-kit 0.6.1"
 ```
 

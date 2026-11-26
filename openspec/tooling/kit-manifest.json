@@ -1,6 +1,6 @@
 {
   "kit": "sdd-kit",
-  "kitVersion": "0.8.0",
+  "kitVersion": "0.8.1",
   "files": {
     ".claude/agents/change-verifier.md": "78c29d55f3d21fd090ba91e0ca56e3deab6d274e39b9bdc5f52b49be5c24f325",
     ".claude/agents/spec-reviewer.md": "65d197257f15cdc1ef7d02b9f44b93185394844a0de7bc1dfaf466335053d77a",
@@ -76,7 +76,7 @@
     "openspec/tooling/hooks/session-start.mjs": "b9b197e60c700290dda98660b4885b132bbd103bc243e1d049624220a9712f5b",
     "openspec/tooling/hooks/test-cases-run-limit.mjs": "1118411ebd8fe70e4744dca72e835881414e3c5960076854a463bdd945ffcf87",
     "openspec/tooling/hooks/test-run-guard.mjs": "56897c9cccb31bba0c51ab230fa62375b01f6c922aaa5d6e5ea82e82241e0c64",
-    "openspec/tooling/kit.json": "45bad189ab17f968c6907e6c00c7cb6a486c433b8e61844dd3d2fcb2f7726963",
+    "openspec/tooling/kit.json": "f6116998de23ae6d72475b9e140823f2181913c1d01e4407a9525e8bb15aeb4d",
     "openspec/tooling/lib/answers-lock.mjs": "c954cbd31d4e0c687a0693d43b22409f4f773a43f1ebe02ab3e91849f55fdad9",
     "openspec/tooling/lib/apply-report.mjs": "385a87e1cfa01f16cf82ed46e9850d73fd039c82dbd91e21562674b61e725cc7",
     "openspec/tooling/lib/clarifications.mjs": "d5482c298835bac0f9af4a1f725ac6cbc341a08875ea942eb1d0b1791d6bce17",

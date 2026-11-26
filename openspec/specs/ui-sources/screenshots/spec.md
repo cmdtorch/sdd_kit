@@ -29,7 +29,7 @@ A change SHALL be in UI mode when its `sources/ui/` folder holds at least one sc
 - **THEN** the write is blocked with a message that says the UI inventory is missing
 
 ### Requirement: The AI asks whether the change has mockups
-When `sources/ui/` holds no screenshot, the AI SHALL ask whether the change has UI mockups: on the question-round schemas as the first Main round question, marked `(UI mockups)` in its heading; on `lean` in chat before the proposal, recording the answer in it. On "yes" it SHALL create `sources/ui/`, say which files to put there and stop until the developer continues, and ask once more (wait or continue without mockups) if the folder is still empty. On a change stamped 0.6.0 or later on `clarify` or `lean` the developer continues by saying the screenshots are in place; on others with the continue skill.
+With no screenshot in `sources/ui/`, the AI SHALL ask whether the change has UI mockups: as the first Main round question, marked `(UI mockups)`, on the question-round schemas; in chat before the proposal, recorded in it, on `lean`. On "yes" it SHALL create `sources/ui/`, name the files for it and stop until the developer says the screenshots are in place (`clarify` or `lean` stamped 0.6.0 or later) or runs the continue skill (others), asking once more if the folder is still empty.
 
 #### Scenario: Yes without screenshots stops until continue
 - **GIVEN** a `clarify` change stamped `x-sdd-kit: 0.5.0` with no screenshots, and the developer answers "yes" to the mockups question

@@ -18,7 +18,7 @@ On every kit schema (`clarify`, `lean`, `clarify-ai-qa`, `clarify-qa`), once the
 - **THEN** no task asks a human to check something by hand
 
 ### Requirement: Stops that remain
-After planning the agent SHALL stop and wait for the developer only: on a requirement gap; on a test that still fails after two fix attempts; when the start check fails or the project has no start instructions; when the environment blocks the start described by the project; when a command of the project's test-commands file does not start the tests; before an action that needs consent (outside the project, weakening a test); on a situation the plan and the kit's rules do not cover and that needs a decision; and for the consent list at the end.
+After planning the agent SHALL stop and wait for the developer only on: a requirement gap; a test still failing after two fix attempts; a failed start check or missing start instructions; an environment that blocks the start the project describes; a test-commands file command that does not start the tests; an action that needs consent (outside the project, weakening a test); a situation the plan and the kit's rules do not cover that needs a decision; and the consent list at the end.
 
 #### Scenario: Requirement gap during apply
 - **WHEN** the agent finds behaviour that no source, answer or spec decides
