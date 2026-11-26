@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "proposal": {
+      "hash": "38df5cbccc34dfc7841cf977939cc587a724ccf5f037efbe887f22e1a2a47b0d",
+      "rounds": {
+        "Main": "2b8f895260d726c2425e65c112842c6ae9c41cc7a3eb8ba1da5782b4d8a30c1b"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+      },
+      "revision": 1
+    },
+    "specs": {
+      "hash": "b9e396861e14ec51a6e3724802460b67277e1fd59cd18b180a539e57054be8f1",
+      "rounds": {
+        "Main": "2b8f895260d726c2425e65c112842c6ae9c41cc7a3eb8ba1da5782b4d8a30c1b",
+        "Technical": "e46d02eeb29d2750cd24c0961a3f3819b2dafe80e1b5b78c517d93acc77e403f"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q12": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q13": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q14": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q15": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+      },
+      "revision": 1
+    },
+    "design": {
+      "hash": "b9e396861e14ec51a6e3724802460b67277e1fd59cd18b180a539e57054be8f1",
+      "rounds": {
+        "Main": "2b8f895260d726c2425e65c112842c6ae9c41cc7a3eb8ba1da5782b4d8a30c1b",
+        "Technical": "e46d02eeb29d2750cd24c0961a3f3819b2dafe80e1b5b78c517d93acc77e403f"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q12": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q13": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q14": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q15": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+      },
+      "revision": 1
+    },
+    "tasks": {
+      "hash": "b9e396861e14ec51a6e3724802460b67277e1fd59cd18b180a539e57054be8f1",
+      "rounds": {
+        "Main": "2b8f895260d726c2425e65c112842c6ae9c41cc7a3eb8ba1da5782b4d8a30c1b",
+        "Technical": "e46d02eeb29d2750cd24c0961a3f3819b2dafe80e1b5b78c517d93acc77e403f"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q12": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q13": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q14": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q15": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+      },
+      "revision": 1
+    }
+  }
+}

@@ -22,7 +22,7 @@ export function starterMessage() {
     '  - `medium` (recommended) — read the touched area of the code first',
     '  - `high` — investigate the affected modules and check the consequences of each answer',
     'Then rerun the same command with `--schema clarify`, and write the chosen level as the line `Depth: <level>` of clarifications.md (e.g. `Depth: high`).',
-    'If the menu is dismissed: do not create the change; tell the developer to start again with /opsx:new <name>.',
+    'If the menu is dismissed: do not create the change; tell the developer to start again with /openspec-new-change <name>.',
     'If the answer is free text: explain the three levels and ask again.',
   ].join('\n');
 }

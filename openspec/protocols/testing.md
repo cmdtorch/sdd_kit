@@ -226,7 +226,7 @@ On a change stamped 0.5.0 or later the main agent runs the full suite itself and
    `node openspec/tooling/checks/check-traceability.mjs --change <change> --markers`, and when the change has
    `e2e.md`, `node openspec/tooling/checks/check-e2e.mjs --change <change> --mode archive`.
 6. Tell the developer the change is ready to archive (`openspec/protocols/apply.md` §9); the developer
-   archives it with `/opsx:archive`. The archive gate checks that every task is done, every
+   archives it with `/openspec-archive-change`. The archive gate checks that every task is done, every
    automated scenario has a marked test, the artifacts pass the kit checks and the test review is done; on
    the test-case schemas also that `test-cases.md` passes its check and every `automated` case has a test
    with its case reference; and that the E2E stage is complete (on the test-case schemas `e2e.md` with the

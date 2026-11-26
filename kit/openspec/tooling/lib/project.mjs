@@ -1,6 +1,8 @@
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
 // Locating the project root, changes and their schema.
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { parseYaml } from './yaml.mjs';
 
@@ -251,4 +253,50 @@ export const TEST_RUNS_VERSION = '0.7.0';
  */
 export function usesTestCommands(root, name) {
   return versionAtLeast(changeKitVersion(root, name), TEST_RUNS_VERSION);
+}
+
+/**
+ * First kit version whose `check-specs` blocks on the scenario-step and MODIFIED-length rules of `openspec validate`
+ * 2.2.0 (a scenario without a WHEN/GIVEN or a THEN step; a MODIFIED requirement over 500 characters that grew).
+ * Earlier and unstamped changes get the same findings as warnings, so a change in flight does not start failing.
+ */
+export const SPEC_STEPS_VERSION = '0.8.0';
+
+/**
+ * Environment of one OpenSpec process the kit starts (the installer, `bin/openspec.mjs`, the skill drift check).
+ * OpenSpec 2.x `update` refreshes the skills it finds in `~/.agents/skills/` and writes
+ * `~/.local/share/openspec/projects.json`, whatever the scope, so the process gets an empty temporary home:
+ * HOME (and USERPROFILE) point at a new folder, the XDG data, state and cache folders and LOCALAPPDATA lie inside
+ * it, CODEX_HOME is dropped, and XDG_CONFIG_HOME is the kit profile `xdgConfigHome`. Telemetry is off.
+ * Returns `{ env, home, cleanup }`; call `cleanup()` when the process has ended (it removes the folder).
+ */
+export function openspecEnv(xdgConfigHome, base = process.env) {
+  const home = mkdtempSync(join(tmpdir(), 'sdd-kit-openspec-home-'));
+  const env = {
+    ...base,
+    HOME: home,
+    USERPROFILE: home,
+    XDG_CONFIG_HOME: xdgConfigHome,
+    XDG_DATA_HOME: join(home, '.local', 'share'),
+    XDG_STATE_HOME: join(home, '.local', 'state'),
+    XDG_CACHE_HOME: join(home, '.cache'),
+    LOCALAPPDATA: join(home, 'AppData', 'Local'),
+    OPENSPEC_TELEMETRY: '0',
+    DO_NOT_TRACK: '1',
+  };
+  delete env.CODEX_HOME;
+  return { env, home, cleanup: () => rmSync(home, { recursive: true, force: true }) };
+}
+
+/**
+ * `spawnSync(bin, args, options)` with the environment of `openspecEnv(xdg, options.env)`; the temporary home is
+ * removed when the process has ended, also when it failed or timed out.
+ */
+export function runOpenspec(bin, args, { xdg, ...options }) {
+  const { env, cleanup } = openspecEnv(xdg, options.env || process.env);
+  try {
+    return spawnSync(bin, args, { ...options, env });
+  } finally {
+    cleanup();
+  }
 }

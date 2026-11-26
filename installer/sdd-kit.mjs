@@ -8,29 +8,33 @@
 //   sdd-kit uninstall [--target <dir>] [--force] [--dry-run] [--json]
 //
 // What install does (CLAUDE.md "Installer", D6, D9, D10, D12, D20, D22):
-//   1. runs `openspec init --tools claude` with the kit profile when the project has no openspec/ yet
+//   1. runs `openspec init --scope project --tools claude` with the kit profile when the project has no openspec/
+//      yet: the OpenSpec skills go to .agents/skills/ with links in .claude/skills/, never machine-wide
 //   2. copies kit/openspec/** into openspec/ (protocols, schemas, tooling); files edited locally
 //      are never overwritten (manifest of hashes; --force backs them up and replaces them)
-//   3. adds the kit block to openspec/config.yaml context and sets `schema: clarify` as the default
+//   3. adds the kit block to openspec/config.yaml context, sets `schema: clarify` as the default and
+//      `skillsScope: project` (so `openspec update` never asks where to keep the skills)
 //   4. merges the kit hooks into .claude/settings.json (project hooks are kept) and copies the thin
 //      agents and commands into .claude/
 //   5. patches .gitignore (openspec/ and the shared parts of .claude/ are versioned)
 //   6. runs `openspec update` through the kit wrapper, then lint-kit as a self-check
-//   7. meta-repository (openspec/protocols/metarepo.md): `--metarepo [<entries>]`, or the answers in a terminal
+//   7. on an update from a kit pinned to OpenSpec 1.x (the project's old kit.json, read before files are written),
+//      lists the active changes and names the skills that continue them (/openspec-continue-change,
+//      /openspec-apply-change): OpenSpec 2 has no /opsx commands
+//   8. meta-repository (openspec/protocols/metarepo.md): `--metarepo [<entries>]`, or the answers in a terminal
 //      (install only, never update), merge clone entries into `openspec/clones`. That list is a project file
 //      outside the kit manifest: update and uninstall never change it, and nothing is written inside a clone.
 // Everything is planned and validated first; nothing is written when a step cannot be done safely.
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync, rmdirSync, statSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { listFiles, readManifest, planFiles, nextManifest, sha256, MANIFEST } from './lib/manifest.mjs';
 import { patchGitignore, unpatchGitignore } from './lib/gitignore.mjs';
-import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, ConfigEditError } from './lib/config-edit.mjs';
+import { kitBlock, upsertKitBlock, removeKitBlock, currentQuestionsLanguage, currentSchema, setSchema, currentSkillsScope, setSkillsScope, removeSkillsScope, ConfigEditError } from './lib/config-edit.mjs';
 import { mergeSettings, removeKitHooks, formatSettings } from '../kit/openspec/tooling/lib/settings-merge.mjs';
 import { parseArgs } from '../kit/openspec/tooling/lib/report.mjs';
-import { KIT_SCHEMAS } from '../kit/openspec/tooling/lib/project.mjs';
+import { KIT_SCHEMAS, runOpenspec } from '../kit/openspec/tooling/lib/project.mjs';
 import { CLONES_FILE, mergeEntries } from '../kit/openspec/tooling/lib/clones.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -81,20 +85,17 @@ function writeFileEnsured(p, content) {
   writeFileSync(p, content);
 }
 
+// every OpenSpec process runs with the kit profile and an empty temporary HOME (runOpenspec in lib/project.mjs),
+// so nothing outside the project is read or written
 function openspecRun(args, { xdg, bin, cwd }) {
-  const r = spawnSync(bin, args, {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, XDG_CONFIG_HOME: xdg, OPENSPEC_TELEMETRY: '0', DO_NOT_TRACK: '1' },
-  });
+  const r = runOpenspec(bin, args, { xdg, cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   if (r.error) throw new InstallError(`cannot run "${bin}": ${r.error.message}`);
   if (r.status !== 0) throw new InstallError(`"openspec ${args.join(' ')}" failed:\n${r.stdout}\n${r.stderr}`);
   return r.stdout;
 }
 
-function checkOpenspec(bin, pinned, allowMismatch) {
-  const r = spawnSync(bin, ['--version'], { encoding: 'utf8', env: { ...process.env, OPENSPEC_TELEMETRY: '0' } });
+function checkOpenspec(bin, pinned, allowMismatch, xdg) {
+  const r = runOpenspec(bin, ['--version'], { xdg, encoding: 'utf8' });
   if (r.error || r.status !== 0) {
     throw new InstallError(`the openspec CLI was not found. Install the pinned version first:\n  npm i -g @fission-ai/openspec@${pinned}\n(or pass --skip-openspec)`);
   }
@@ -177,6 +178,9 @@ export function planInstall(opts) {
     const schema = currentSchema(cfgNew);
     if (!keepDefaultSchema && (schema === null || schema === 'spec-driven')) cfgNew = setSchema(cfgNew, 'clarify');
     else if (!keepDefaultSchema && !KIT_SCHEMAS.includes(schema)) plan.warnings.push(`default schema "${schema}" is kept (it is not spec-driven); new changes will not use "clarify" unless asked`);
+    const scope = currentSkillsScope(cfgNew);
+    if (scope !== null && scope !== 'project') plan.warnings.push(`skillsScope "${scope}" in openspec/config.yaml is replaced by "project": the kit keeps the OpenSpec skills in the project`);
+    cfgNew = setSkillsScope(cfgNew);
   } catch (e) {
     if (e instanceof ConfigEditError) throw new InstallError(e.message);
     throw e;
@@ -243,6 +247,34 @@ function pruneEmptyDirs(dir, stopAt) {
 
 const changed = (s) => s.old !== s.new;
 
+/**
+ * The active changes of a project whose installed kit was pinned to OpenSpec 1.x (`openspecVersion` of its old
+ * `openspec/tooling/kit.json`): every folder of `openspec/changes/` except `archive/`. Empty for any other project.
+ */
+export function activeChangesBeforeOpenspec2(root) {
+  let old;
+  try {
+    old = JSON.parse(readFileSync(join(root, 'openspec', 'tooling', 'kit.json'), 'utf8'));
+  } catch {
+    return [];
+  }
+  if (String(old?.openspecVersion ?? '').split('.')[0] !== '1') return [];
+  const dir = join(root, 'openspec', 'changes');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && e.name !== 'archive')
+    .map((e) => e.name)
+    .sort();
+}
+
+/** The message of an update from OpenSpec 1.x with active changes. */
+export function activeChangesMessage(names) {
+  return [
+    `active changes made with OpenSpec 1.x: ${names.join(', ')}.`,
+    'They go on with the OpenSpec skills: /openspec-continue-change <name> to plan, /openspec-apply-change <name> to implement.',
+  ].join('\n  ');
+}
+
 export async function install(opts) {
   const root = resolve(opts.target || process.cwd());
   if (!existsSync(root) || !statSync(root).isDirectory()) throw new InstallError(`target ${root} is not a directory`);
@@ -252,8 +284,11 @@ export async function install(opts) {
   const bin = process.env.OPENSPEC_BIN || 'openspec';
   const result = { command: 'install', root, kitVersion: kit.kitVersion, actions: [], warnings: [], dryRun: Boolean(opts.dryRun) };
 
-  if (!opts.skipOpenspec) result.openspecCli = checkOpenspec(bin, kit.openspecVersion, opts.allowVersionMismatch);
+  if (!opts.skipOpenspec) result.openspecCli = checkOpenspec(bin, kit.openspecVersion, opts.allowVersionMismatch, join(k.openspecSrc, 'tooling', 'xdg'));
   const willInit = !opts.skipOpenspec && !existsSync(join(root, 'openspec'));
+  // read before any kit file is written: the old kit.json names the OpenSpec version the project came from
+  const activeChanges = activeChangesBeforeOpenspec2(root);
+  if (activeChanges.length) result.activeChanges = { names: activeChanges, message: activeChangesMessage(activeChanges) };
 
   const interactive = !opts.yes && !opts.dryRun && !opts.json && (opts.interactive ?? process.stdin.isTTY);
   const io = opts.io || terminalIo();
@@ -284,8 +319,8 @@ export async function install(opts) {
     return result;
   }
   if (willInit) {
-    openspecRun(['init', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
-    result.actions.push({ step: 'openspec init --tools claude (kit profile)' });
+    openspecRun(['init', '--scope', 'project', '--tools', 'claude', '--no-animation'], { xdg: join(k.openspecSrc, 'tooling', 'xdg'), bin, cwd: root });
+    result.actions.push({ step: 'openspec init --scope project --tools claude (kit profile)' });
     plan = planInstall({ root, kitDir, force: opts.force, keepDefaultSchema: opts.keepDefaultSchema, questionsLanguage: lang });
   }
   result.files = applyFiles(root, plan.files).map(({ rel, op }) => ({ rel, op }));
@@ -317,7 +352,7 @@ export async function install(opts) {
 
 function summarise(plan, willInit, runOpenspec) {
   const s = { files: plan.files.map(({ rel, op }) => ({ rel, op })), config: changed(plan.config) ? 'update' : 'unchanged', settings: changed(plan.settings) ? 'update' : 'unchanged', gitignore: changed(plan.gitignore) ? 'update' : 'unchanged', warnings: plan.warnings };
-  if (willInit) s.openspec = 'init --tools claude, then update (kit profile)';
+  if (willInit) s.openspec = 'init --scope project --tools claude, then update (kit profile)';
   else if (runOpenspec) s.openspec = 'update (kit profile)';
   return s;
 }
@@ -368,7 +403,7 @@ export function uninstall(opts) {
   const cfgPath = join(root, 'openspec', 'config.yaml');
   const cfg = readText(cfgPath);
   if (cfg !== null) {
-    let out = removeKitBlock(cfg);
+    let out = removeSkillsScope(removeKitBlock(cfg));
     if (KIT_SCHEMAS.includes(currentSchema(out))) out = setSchema(out, 'spec-driven');
     edits.push(['openspec/config.yaml', cfgPath, cfg, out]);
   }
@@ -419,6 +454,7 @@ function printHuman(r) {
     out.push(`  openspec/config.yaml: ${r.plan.config}; .claude/settings.json: ${r.plan.settings}; .gitignore: ${r.plan.gitignore}`);
     if (r.plan.openspec) out.push(`  openspec CLI: ${r.plan.openspec}`);
     for (const w of r.plan.warnings) out.push(`  warning: ${w}`);
+    if (r.activeChanges) out.push(`  note: ${r.activeChanges.message}`);
     return console.log(out.join('\n'));
   }
   out.push(`sdd-kit ${r.kitVersion} installed in ${r.root}`);
@@ -433,6 +469,7 @@ function printHuman(r) {
   for (const a of r.actions) out.push(`  ${a.step}${a.op ? `: ${a.op}` : ''}`);
   out.push(`  questions language: ${r.questionsLanguage}`);
   for (const w of r.warnings) out.push(`  warning: ${w}`);
+  if (r.activeChanges) out.push(`  note: ${r.activeChanges.message}`);
   const lintErrors = r.lint.findings.filter((f) => f.level === 'error');
   out.push(`  self-check (lint-kit): ${lintErrors.length ? 'FAILED' : 'OK'}`);
   for (const f of r.lint.findings) out.push(`    ${f.level}: ${f.file ?? ''}${f.line ? `:${f.line}` : ''} ${f.message}`);
@@ -441,7 +478,7 @@ function printHuman(r) {
     '\nNext steps:',
     '  1. make sure CLAUDE.md or the README says how to run the tests and quality checks (the kit uses the project\'s own commands)',
     '  2. fix what the health check below reports; run it again with: node openspec/tooling/bin/doctor.mjs',
-    '  3. commit openspec/, .claude/settings.json, .claude/agents/, .claude/commands/, .claude/skills/openspec-* and .gitignore',
+    '  3. commit openspec/, .claude/settings.json, .claude/agents/, .claude/commands/, the skill links .claude/skills/openspec*, the skills in .agents/skills/ and .gitignore',
     '\nHealth check (node openspec/tooling/bin/doctor.mjs):',
     r.doctorText,
   );

@@ -20,7 +20,7 @@ to be installed into startup projects (2–3 developers each).
 
 ## Commands
 
-- Full suite: `npm test` (needs the pinned OpenSpec CLI, `npm i -g @fission-ai/openspec@1.15.0`;
+- Full suite: `npm test` (needs the pinned OpenSpec CLI, `npm i -g @fission-ai/openspec@2.2.0`;
   some tests run it for real).
 - One file: `node --import ./tests/helpers/isolate-tmp.mjs --test tests/<name>.test.mjs`.
 - No linter or type checker is configured; the suite is the quality gate.
@@ -28,7 +28,7 @@ to be installed into startup projects (2–3 developers each).
 
 ## The kit is installed in its own repository
 
-New work on the kit goes through the kit: `/opsx:new <name>` (schema `clarify`), or `--schema lean` for
+New work on the kit goes through the kit: `/openspec-new-change <name>` (schema `clarify`), or `--schema lean` for
 small, clear changes.
 
 - **Two copies.** `kit/` is the source: edit only there. `openspec/` and the kit parts of `.claude/` are the

@@ -6,7 +6,7 @@ bigger change, and open an issue first for anything that changes the workflow.
 ## Rules
 
 - **Stack- and layout-agnostic.** No presets, no framework-specific code, no role labels on questions.
-- **Zero dependencies.** Plain Node.js ≥ 20, ES modules (`.mjs`), `node:test`.
+- **Zero dependencies.** Plain Node.js ≥ 22.12, ES modules (`.mjs`), `node:test`.
 - **English** for everything that ships in the kit.
 - **Kit schemas are forks** of OpenSpec's `spec-driven`: the upstream instruction and template text stays
   verbatim at the start, kit rules are appended after it. `tests/schemas.test.mjs` checks this.
@@ -19,7 +19,7 @@ bigger change, and open an issue first for anything that changes the workflow.
 
 ```bash
 git clone https://github.com/cmdtorch/sdd_kit.git && cd sdd_kit
-npm i -g @fission-ai/openspec@1.15.0     # the pinned version: some tests run the real CLI
+npm i -g @fission-ai/openspec@2.2.0      # the pinned version: some tests run the real CLI
 npm test
 ```
 

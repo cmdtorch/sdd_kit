@@ -114,7 +114,7 @@ describe('planning goes on without a command', { skip: cliSkipReason() }, () => 
     assert.match(r.reason, new RegExp(`"${CHANGE}"`));
     assert.match(r.reason, /next artifact: specs/);
     assert.match(r.reason, /openspec\/protocols\/planning\.md/);
-    assert.match(r.reason, /Do not ask the developer to run \/opsx:continue/);
+    assert.match(r.reason, /Do not ask the developer to run \/openspec-continue-change/);
   });
 
   test('a Technical round without questions is closed: the specs come next', () => {

@@ -11,7 +11,7 @@ context: |
   - Questions language: English
   - Clarifying questions: openspec/protocols/questions.md (default depth: Comprehensive).
   - Planning of changes on `clarify` or `lean` stamped 0.6.0 or later: openspec/protocols/planning.md first
-    (no `/opsx:continue`, two rounds, recommendations, depth `low`, `medium` or `high`, default `medium`).
+    (no `/openspec-continue-change`, two rounds, recommendations, depth `low`, `medium` or `high`, default `medium`).
   - Source tags and assumptions: openspec/protocols/grounding.md
   - Tests and verification: openspec/protocols/testing.md (use the project's own test commands)
   - Test cases (`clarify-ai-qa`, `clarify-qa`): openspec/protocols/test-cases.md

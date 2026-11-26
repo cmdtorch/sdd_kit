@@ -24,7 +24,7 @@ artifacts:
       and record it as `Answer mode:` (planning.md §6); recommend an option
       only with a basis, on a `Recommended:` line (planning.md §12); close the
       Main round without a summary confirmation, or with the line
-      `No questions.`; never tell the developer to run `/opsx:continue`.
+      `No questions.`; never tell the developer to run `/openspec-continue-change`.
       Changes on `clarify-ai-qa` or `clarify-qa`, and changes stamped below
       0.6.0 or without the stamp, keep the rules below: no `Recommended:`
       line, `Depth:` `Minimal`, `Standard` or `Comprehensive` (default
@@ -50,7 +50,7 @@ artifacts:
       `## Main round` with only the question "Are there UI mockups for this
       change? (UI mockups)", ask it and end your turn. On "yes" create
       `sources/ui/`, say what to export there (PNG, JPG or WebP; no `.fig`,
-      SVG or PDF; optional `screens.md`) and that `/opsx:continue` goes on, and
+      SVG or PDF; optional `screens.md`) and that `/openspec-continue-change` goes on, and
       stop. Continued with the folder still empty: ask once more, wait or
       continue without mockups. On "no" go on with step 3
       (`openspec/protocols/ui-inventory.md` section 1).
@@ -198,6 +198,7 @@ artifacts:
       - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
       - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
       - Every requirement MUST have at least one scenario.
+      - Every scenario MUST have a WHEN/GIVEN step (its trigger) and a THEN step (its outcome). A scenario with only AND lines or plain prose still counts as a scenario, but `openspec validate` flags it as a warning: normal validation still passes, but `openspec validate --strict` fails on it.
       - Keep each requirement's description (the text between `### Requirement:` and its first scenario) to 500 characters or fewer. `openspec validate` flags longer descriptions in ADDED requirements and in the main spec. This is a warning: normal validation still passes, but `openspec validate --strict` fails on it. When writing a new requirement, state one behavior per requirement: move examples and edge cases into scenarios, and split a requirement that covers several behaviors into separate `### Requirement:` blocks, each with its own scenarios. Under MODIFIED, keep the existing requirement block whole; never split, trim or rewrite existing text just to meet the length. Split an existing long requirement only when the user asks for it, in a change made for that purpose: under MODIFIED, keep its header and every scenario and cut its description down to one behavior without changing its meaning, then add each behavior you removed as its own ADDED requirement with its own scenarios.
 
       New capabilities only: the delta spec's first section is `## Purpose` -

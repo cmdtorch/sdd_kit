@@ -5,6 +5,61 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
+## 0.8.0 — 2026-11-26
+
+OpenSpec 2.2.0: the kit runs on the current OpenSpec. The OpenSpec skills stay in the project and in git, the kit
+never writes outside the project, and `check-specs` catches what `openspec validate --strict` 2.2.0 would fail on.
+
+**Breaking:** the pinned OpenSpec CLI is 2.2.0 (was 1.15.0); the `/opsx:*` commands are gone, use the OpenSpec
+skills instead; the kit needs Node 22.12 or newer (was 20).
+
+The new blocking `check-specs` rules apply to changes stamped 0.8.0 or later; changes started with an older kit get
+the same findings as warnings.
+
+Upgrading from 0.7.0:
+
+1. Every developer: install Node 22.12 or newer and `npm i -g @fission-ai/openspec@2.2.0`.
+2. Team lead, in each project: `npx github:cmdtorch/sdd_kit#v0.8.0 update`. Read the list of active changes it
+   prints (changes started on OpenSpec 1.x continue with `/openspec-continue-change` and `/openspec-apply-change`),
+   review the diff and commit `.agents/skills/`, the new `.claude/skills/openspec*` links, the removed
+   `.claude/commands/opsx/` files, `.gitignore` and `openspec/config.yaml`.
+3. Run `node openspec/tooling/bin/doctor.mjs` and delete any `.claude/commands/opsx/` file it names.
+4. Rollback: reinstall kit 0.7.0 and OpenSpec 1.15.0, then `node openspec/tooling/bin/openspec.mjs update`, which
+   brings back the command files.
+
+- **Breaking: OpenSpec CLI pinned to 2.2.0.** Until a developer installs it, doctor reports an error and session
+  start a warning. The kit schemas are re-based on the 2.2.0 `spec-driven` text (kit rules unchanged); the agent is
+  now also told that every scenario needs a WHEN/GIVEN step and a THEN step. The kit profile no longer sets the
+  retired `delivery` field.
+- **Breaking: no `/opsx:*` commands.** OpenSpec 2.x writes no command files; every kit protocol, schema instruction,
+  hook message and document names the skills: `/openspec-new-change`, `/openspec-continue-change`,
+  `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`, `/openspec-explore`,
+  `/openspec-sync-specs`, `/openspec-update-change`. The kit ships no `/opsx:*` wrappers. doctor warns about every
+  file left in `.claude/commands/opsx/` (OpenSpec keeps the ones you edited) and says to delete it.
+- **Breaking: Node 22.12 or newer**, the minimum of the OpenSpec npm package: doctor reports an older Node as an
+  error (it compares the full version), `engines` is `>=22.12`, CI runs on Node 22 and 24.
+- **Skills in the project**: the installer runs `openspec init --scope project` and adds `skillsScope: project` at
+  the top level of `openspec/config.yaml`, so `openspec update` never asks where to keep the skills;
+  `bin/openspec.mjs` adds `--scope project` to an `init` that names no scope. `uninstall` removes the key only
+  when the installer added it.
+- **Nothing outside the project**: OpenSpec 2.2.0 `update` refreshes any skills in `~/.agents/skills/` and writes
+  `~/.local/share/openspec/projects.json`, so every OpenSpec process the kit starts (installer, `openspec.mjs`,
+  the drift check) runs with an empty temporary `HOME`, removed afterwards.
+- **Skills versioned with their links**: OpenSpec keeps each skill in `.agents/skills/` and links it from
+  `.claude/skills/`. The kit's `.gitignore` rules let in both, the `openspec` router skill included (the old rule
+  `!.claude/skills/openspec-*/` matched folders only, not links); a line that ignores `.agents/` as a whole is
+  disabled like the `.claude/` one, and `uninstall` restores it. The router skill stays as OpenSpec ships it.
+- **Update from OpenSpec 1.x lists the active changes**: `sdd-kit update` from a kit pinned to OpenSpec 1.x
+  names every folder of `openspec/changes/` except `archive/` and the skills that continue them, then updates.
+- **Skill drift by OpenSpec's dry run**: doctor and session start share one check, `openspec update --dry-run
+  --json` with the kit profile (about 0.8 s, 10 s timeout); every path it would change is reported. A dry run that
+  fails is a warning; a missing CLI or another version falls back to the old file check.
+- **check-specs mirrors `openspec validate` 2.2.0**: a scenario without a WHEN/GIVEN step or without a THEN step
+  (bold `**WHEN**`/`**GIVEN**`/`**THEN**` in any case, or the bare upper-case word) is an error; a MODIFIED
+  requirement over 500 characters and longer than the same requirement in the main spec is an error, one that did
+  not grow only warns. Both are errors on changes stamped 0.8.0 or later and warnings before. check-specs now also
+  runs when `design.md` is written.
+
 ## 0.7.0 — 2026-11-26
 
 Project test commands: one project file, `openspec/test-commands.md`, holds the commands that run one test file,

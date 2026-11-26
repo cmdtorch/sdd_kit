@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // sdd-kit: managed file. Do not edit; local changes are overwritten on kit update.
-// planning-continue — Stop hook. Planning goes on without /opsx:continue (openspec/protocols/planning.md): when the
-// agent tries to end its turn after it wrote an artifact of a change in this session, and nothing waits for the
+// planning-continue — Stop hook. Planning goes on without /openspec-continue-change (openspec/protocols/planning.md):
+// when the agent tries to end its turn after it wrote an artifact of a change in this session, and nothing waits for the
 // developer, the hook keeps the turn going and names the next step: the next artifact from
 // `openspec status --change <name> --json`, or, on clarify, the question round that artifact depends on when that
 // round is not prepared yet (the Technical round after the proposal).
@@ -126,7 +126,7 @@ export function reasonFor(change, step) {
     lines.push(`Write it now — next artifact: ${step.artifact} (openspec instructions ${step.artifact} --change "${change}" --json).`);
   }
   lines.push(
-    'Do not ask the developer to run /opsx:continue.',
+    'Do not ask the developer to run /openspec-continue-change.',
     `End the turn instead only where a human is needed: when you asked the developer something in the chat, or an artifact check still fails (or its write stays blocked) after your second fix attempt, run \`${PLANNING_CMD} wait --change ${change}\` and tell the developer what you need (the remaining errors, the cause only they can remove). When the developer asked to stop or pause, run \`${PLANNING_CMD} pause --change ${change}\`.`,
   );
   return lines.join('\n');

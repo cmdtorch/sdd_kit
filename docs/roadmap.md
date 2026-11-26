@@ -17,7 +17,7 @@
 - [x] **Meta-repositories.** One root with the kit and application clones in sub-folders, each with its own git.
 - [x] **Planning without stops.** Planning goes on to the next artifact by itself and stops only where a human is
   needed: two question rounds without `Looks correct`, recommended answers, depth levels, a digest after the
-  specs. Replaces "`/opsx:continue` from the menu".
+  specs. Replaces "`/openspec-continue-change` from the menu".
 
 ## Planned
 

@@ -45,9 +45,9 @@ describe('planning protocol: the automatic continuation and its stops', () => {
   });
 
   // @scenario workflow/planning-flow :: Developer still runs the command
-  test('the agent never tells the developer to run /opsx:continue and treats the command like no command', () => {
+  test('the agent never tells the developer to run /openspec-continue-change and treats the command like no command', () => {
     const s = section('Planning goes on by itself');
-    assert.match(s, /Never tell the developer to run `\/opsx:continue`, at any point of planning/);
+    assert.match(s, /Never tell the developer to run `\/openspec-continue-change`, at any point of planning/);
     assert.match(s, /When the developer runs it anyway, write the next artifact and go on with the ones after it as without the command/);
     assert.match(s, /`Stop` hook `openspec\/tooling\/hooks\/planning-continue\.mjs` keeps the turn going/);
   });
@@ -135,9 +135,9 @@ describe('planning protocol: the digest and the end of planning', () => {
   });
 
   // @scenario workflow/planning-flow :: Planning is complete
-  test('the end of planning names /opsx:apply, recommends /clear or a new chat and starts no task', () => {
+  test('the end of planning names /openspec-apply-change, recommends /clear or a new chat and starts no task', () => {
     const s = section('The end of planning');
-    assert.match(s, /When the last planning artifact \(`tasks\.md`\) is written, end the turn with a message that says apply can start, names `\/opsx:apply`, and strongly recommends running `\/clear` or opening a new chat before it/);
+    assert.match(s, /When the last planning artifact \(`tasks\.md`\) is written, end the turn with a message that says apply can start, names `\/openspec-apply-change`, and strongly recommends running `\/clear` or opening a new chat before it/);
     assert.match(s, /Do not start apply yourself and start no task of the change/);
   });
 });
@@ -228,10 +228,10 @@ describe('planning protocol: mockups and the UI decisions', () => {
   const ui = () => flat(prose(protocol('ui-inventory.md')));
 
   // @scenario ui-sources/screenshots :: Yes without screenshots stops until continue
-  test('earlier changes keep /opsx:continue after "yes"; changes under planning.md wait for the developer\'s word', () => {
+  test('earlier changes keep /openspec-continue-change after "yes"; changes under planning.md wait for the developer\'s word', () => {
     const s = ui();
-    assert.match(s, /tell the developer to export every screen and state as PNG, JPG or WebP into it .*?, and to run `\/opsx:continue` when all are there\. Then stop: write no other question and no artifact/);
-    assert.match(s, /On a change on `clarify` or `lean` stamped with kit version 0\.6\.0 or later, the developer says when the screenshots are in place instead of running `\/opsx:continue` \(`openspec\/protocols\/planning\.md` §8\)/);
+    assert.match(s, /tell the developer to export every screen and state as PNG, JPG or WebP into it .*?, and to run `\/openspec-continue-change` when all are there\. Then stop: write no other question and no artifact/);
+    assert.match(s, /On a change on `clarify` or `lean` stamped with kit version 0\.6\.0 or later, the developer says when the screenshots are in place instead of running `\/openspec-continue-change` \(`openspec\/protocols\/planning\.md` §8\)/);
   });
 
   // @scenario ui-sources/screenshots :: Empty folder on continue is asked again
@@ -247,8 +247,8 @@ describe('planning protocol: mockups and the UI decisions', () => {
   });
 
   // @scenario ui-sources/screenshots :: Yes on a new change waits for the developer's word
-  test('"yes" on a new change asks the developer to say when the screenshots are in place, without /opsx:continue', () => {
-    assert.match(section('Mockups and the UI decisions'), /"Yes" to the mockups question: create `sources\/ui\/`, name the accepted formats \(PNG, JPG or WebP[^)]*\), and ask the developer to put the screenshots there and to say when they are in place \("done"\)\. Do not name `\/opsx:continue`\. Write no other question and no artifact, and end the turn/);
+  test('"yes" on a new change asks the developer to say when the screenshots are in place, without /openspec-continue-change', () => {
+    assert.match(section('Mockups and the UI decisions'), /"Yes" to the mockups question: create `sources\/ui\/`, name the accepted formats \(PNG, JPG or WebP[^)]*\), and ask the developer to put the screenshots there and to say when they are in place \("done"\)\. Do not name `\/openspec-continue-change`\. Write no other question and no artifact, and end the turn/);
   });
 
   // @scenario ui-sources/screenshots :: Screenshots in place on a new change

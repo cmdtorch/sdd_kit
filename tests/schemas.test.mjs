@@ -14,7 +14,7 @@ import { parseYaml } from '../kit/openspec/tooling/lib/yaml.mjs';
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const KIT_OPENSPEC = join(REPO, 'kit', 'openspec');
 const SCHEMAS = join(KIT_OPENSPEC, 'schemas');
-const UPSTREAM = join(REPO, 'fixtures', 'upstream', 'spec-driven-1.15.0');
+const UPSTREAM = join(REPO, 'fixtures', 'upstream', 'spec-driven-2.2.0');
 
 const EXPECTED_GRAPH = {
   clarify: {
@@ -495,6 +495,6 @@ describe('planning protocol pointers (no CLI needed)', () => {
   test('the kit block of config.yaml points to planning.md and keeps the earlier depth default', () => {
     const frag = readFileSync(join(REPO, 'kit', 'config-fragment.yaml'), 'utf8');
     assert.match(frag, /Clarifying questions: openspec\/protocols\/questions\.md \(default depth: Comprehensive\)/);
-    assert.match(flatText(frag), /Planning of changes on `clarify` or `lean` stamped 0\.6\.0 or later: openspec\/protocols\/planning\.md first \(no `\/opsx:continue`, two rounds, recommendations, depth `low`, `medium` or `high`, default `medium`\)/);
+    assert.match(flatText(frag), /Planning of changes on `clarify` or `lean` stamped 0\.6\.0 or later: openspec\/protocols\/planning\.md first \(no `\/openspec-continue-change`, two rounds, recommendations, depth `low`, `medium` or `high`, default `medium`\)/);
   });
 });

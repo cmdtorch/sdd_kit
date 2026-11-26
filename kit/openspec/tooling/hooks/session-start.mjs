@@ -5,16 +5,17 @@
 // planning rules (openspec/protocols/planning.md) is reported with its open questions and its changed answers (the
 // answers lock, lib/answers-lock.mjs), never with a summary waiting for "Looks correct".
 // Warns when the OpenSpec CLI differs from the pinned version (D12) or the installed OpenSpec skills
-// drift from the kit's workflow profile (D20).
+// drift from the kit's workflow profile (D20): the drift check of lib/skills.mjs (OpenSpec's `update --dry-run` with
+// the pinned CLI, the file check otherwise), run when .claude/skills/ exists; a check that could not run is a warning.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { runHook, hookRoot, addContext } from '../lib/hook-io.mjs';
 import { listChanges, changeSchema, changeDir, isKitSchema, isClarifyFamily, readChangeFile, usesNewPlanning } from '../lib/project.mjs';
 import { lockDifferences } from '../lib/answers-lock.mjs';
 import { parseClarifications, roundStatus } from '../lib/clarifications.mjs';
 import { isMain } from '../lib/report.mjs';
 import { taskCounts } from '../lib/markdown.mjs';
+import { skillDrift, openspecCliVersion, SKILLS_FIX, SKILLS_CHECK_COMMAND } from '../lib/skills.mjs';
 
 export const ARTIFACT_ORDER = {
   clarify: ['clarifications', 'proposal', 'specs', 'design', 'verification-plan', 'tasks'],
@@ -66,11 +67,6 @@ export function changeLine(root, name, schema) {
   return `- ${name} [${schema}] — ${parts.join('; ')}`;
 }
 
-function openspecVersion() {
-  const r = spawnSync(process.env.OPENSPEC_BIN || 'openspec', ['--version'], { encoding: 'utf8', timeout: 8000, env: { ...process.env, OPENSPEC_TELEMETRY: '0' } });
-  return r.status === 0 ? r.stdout.trim() : null;
-}
-
 export function sessionContext(root) {
   const lines = [];
   const kitFile = join(root, 'openspec', 'tooling', 'kit.json');
@@ -90,18 +86,18 @@ export function sessionContext(root) {
   }
   if (otherChanges) lines.push(`sdd-kit: ${otherChanges} other change(s) use their own schema (e.g. spec-driven) and keep their old workflow.`);
 
+  let v;
   if (kit?.openspecVersion) {
-    const v = openspecVersion();
+    v = openspecCliVersion();
     if (v === null) lines.push(`sdd-kit WARNING: the openspec CLI was not found. The kit needs OpenSpec ${kit.openspecVersion}: npm i -g @fission-ai/openspec@${kit.openspecVersion}`);
     else if (v !== kit.openspecVersion) lines.push(`sdd-kit WARNING: openspec CLI is ${v}, the kit is pinned to ${kit.openspecVersion}. Install the pinned version: npm i -g @fission-ai/openspec@${kit.openspecVersion}`);
   }
   const skills = join(root, '.claude', 'skills');
   if (existsSync(skills) && kit) {
-    const drift = [];
-    if (existsSync(join(skills, 'openspec-propose'))) drift.push('openspec-propose is installed (creates all artifacts in one pass, skipping question rounds)');
-    if (!existsSync(join(skills, 'openspec-continue-change'))) drift.push('openspec-continue-change is missing');
-    if (drift.length) {
-      lines.push(`sdd-kit WARNING: OpenSpec skills differ from the kit profile: ${drift.join('; ')}. Probably a plain "openspec update" ran with a personal profile. Fix: node openspec/tooling/bin/openspec.mjs update`);
+    const { drift, failed } = skillDrift(root, kit, { version: v });
+    if (failed) lines.push(`sdd-kit WARNING: the OpenSpec skill check could not run: ${failed}. See why: ${SKILLS_CHECK_COMMAND}`);
+    else if (drift.length) {
+      lines.push(`sdd-kit WARNING: OpenSpec skills differ from the kit profile: ${drift.join('; ')}. Probably a plain "openspec update" ran with a personal profile. Fix: ${SKILLS_FIX}`);
     }
   }
   return lines.join('\n');
