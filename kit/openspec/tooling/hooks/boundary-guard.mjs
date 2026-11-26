@@ -15,38 +15,16 @@
 // during apply; the protocol rule stays as the second line for what the patterns miss.
 import { runHook, ask } from '../lib/hook-io.mjs';
 import { isMain } from '../lib/report.mjs';
+import { commandParts, words } from '../lib/command-line.mjs';
 
-const WRAPPERS = new Set(['env', 'nohup', 'time', 'exec', 'command', 'xargs', 'nice', 'stdbuf', 'timeout']);
+export { commandParts };
+
 const SYSTEM_PM = new Set(['apt', 'apt-get', 'aptitude', 'dnf', 'yum', 'zypper', 'pacman', 'apk', 'brew', 'port', 'snap', 'choco', 'winget']);
 const PM_ACTIONS = /^(install|reinstall|add|upgrade|remove|uninstall|purge|-S\w*|-R\w*|-U\w*|link|tap)$/;
 const KILLERS = new Set(['kill', 'pkill', 'killall']);
 const DOCKER_VERBS = new Set(['stop', 'kill', 'rm', 'rmi', 'prune', 'restart', 'pause']);
 const DOCKER_OBJECTS = new Set(['container', 'image', 'volume', 'network', 'system', 'builder', 'buildx']);
 const SERVICE_VERBS = /^(stop|start|restart|reload|disable|enable|mask|kill)$/;
-
-/** Parts of a command line, split at `;`, `&&`, `||`, `|`, `&`, newlines and `$(` / backticks. */
-export function commandParts(command) {
-  return String(command)
-    .split(/&&|\|\||[;|&\n`]|\$\(|\)/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
-
-/** Words of one part, quotes removed, leading VAR=value and wrappers (env, xargs, …) dropped. */
-function words(part) {
-  const w = (part.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((x) => x.replace(/^["']|["']$/g, ''));
-  let i = 0;
-  while (i < w.length) {
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w[i])) {
-      i++;
-      continue;
-    }
-    if (!WRAPPERS.has(w[i])) break;
-    i++;
-    while (i < w.length && (w[i].startsWith('-') || /^\d+[smhd]?$/.test(w[i]))) i++; // wrapper options, `timeout 30`
-  }
-  return w.slice(i);
-}
 
 const base = (p) => (p || '').replace(/^.*\//, '');
 

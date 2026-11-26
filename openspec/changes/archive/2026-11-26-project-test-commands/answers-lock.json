@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "proposal": {
+      "hash": "d7a92730d880fdb88202e76c33728837fcb3ff9893e0b77402c6cda11bea84ec",
+      "rounds": {
+        "Main": "cd651e8175368d06f2d3d06568c266a979ff0396a75a6c34f2abb7fe32656cc5"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "d5914327933bc6ee611938ac6c0c40e9a57ccf33175a108837daf94ea597b431"
+      },
+      "revision": 1
+    },
+    "design": {
+      "hash": "008a8177f4e2d4c1ad584c1df1599d739ce581e51f88681d6829b5c8a479f77f",
+      "rounds": {
+        "Main": "cd651e8175368d06f2d3d06568c266a979ff0396a75a6c34f2abb7fe32656cc5",
+        "Technical": "9f22bb71bbcba94d52d31274adcf6d66e8f83df98d8f15a6e05991db0c341314"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "d5914327933bc6ee611938ac6c0c40e9a57ccf33175a108837daf94ea597b431",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q12": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q13": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q14": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c"
+      },
+      "revision": 1
+    },
+    "tasks": {
+      "hash": "008a8177f4e2d4c1ad584c1df1599d739ce581e51f88681d6829b5c8a479f77f",
+      "rounds": {
+        "Main": "cd651e8175368d06f2d3d06568c266a979ff0396a75a6c34f2abb7fe32656cc5",
+        "Technical": "9f22bb71bbcba94d52d31274adcf6d66e8f83df98d8f15a6e05991db0c341314"
+      },
+      "answers": {
+        "Q1": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q2": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q3": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q4": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q5": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q6": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q7": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q8": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q9": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q10": "d5914327933bc6ee611938ac6c0c40e9a57ccf33175a108837daf94ea597b431",
+        "Q11": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q12": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+        "Q13": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+        "Q14": "df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c"
+      },
+      "revision": 1
+    }
+  }
+}

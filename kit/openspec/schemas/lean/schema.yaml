@@ -391,8 +391,9 @@ apply:
     - Start check first: when the verification plan's Environment says
       `Running application: yes`, start the application with the project's own
       commands before the first task: `node openspec/tooling/bin/start-check.mjs
-      --change <name> --start "<command>" --url <address>`. When it fails, stop
-      and let the developer choose (apply.md section 4).
+      --change <name> --start "<command>" --url <address>`. A `lean` change has
+      no early start check: run the start check before the first task. When it
+      fails, stop and let the developer choose (apply.md section 4).
     - TDD per task group: tests first (with scenario markers), see them fail,
       then implement. Run tests scoped to the work; the full suite runs at the
       end.

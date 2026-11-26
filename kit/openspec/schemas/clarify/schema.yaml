@@ -118,6 +118,10 @@ artifacts:
         `.openspec.yaml`), follow `openspec/protocols/planning.md` first; where
         it differs from these rules, it applies. Earlier changes and the
         `clarify-ai-qa` and `clarify-qa` schemas keep these rules.
+      - On a `clarify` change stamped 0.7.0 or later, before writing this file
+        do the steps after the Main round of `openspec/protocols/planning.md`
+        §14: the drafts of the missing project files and the early start
+        check. Other schemas and earlier changes have no such step.
       - Gate: before writing, read clarifications.md. The `## Main round` must
         have no blank `[Answer]:` and its summary confirmation answer must be
         exactly `Looks correct`. If not, continue the question protocol
@@ -531,10 +535,13 @@ apply:
       apply.md section 2. Change nothing outside the project without the
       developer's consent (section 5).
     - Start check first: when the verification plan's Environment says
-      `Running application: yes`, start the application with the project's own
-      commands before the first task: `node openspec/tooling/bin/start-check.mjs
-      --change <name> --start "<command>" --url <address>`. When it fails, stop
-      and let the developer choose (apply.md section 4).
+      `Running application: yes`, run `node openspec/tooling/bin/start-check.mjs
+      --change <name> --status`. When it prints `passed`, do not run it again:
+      the check already passed right after the Main round. Otherwise run the
+      start check before the first task, with the project's own commands:
+      `node openspec/tooling/bin/start-check.mjs --change <name> --start
+      "<command>" --url <address>`. When it fails, stop and let the developer
+      choose (apply.md section 4).
     - TDD per task group: tests first (with scenario markers), see them fail,
       then implement. Run tests scoped to the work; the full suite runs at the
       end.

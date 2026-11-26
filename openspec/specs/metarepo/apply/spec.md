@@ -34,12 +34,17 @@ In a meta-repository change every task group of `tasks.md` SHALL name exactly on
 - **THEN** the write is blocked with a message that names the group "Order API"
 
 ### Requirement: The agent works in the group's repository
-The meta-repository protocol `openspec/protocols/metarepo.md` SHALL tell the agent to do a group's tasks in the folder of the repository the group names and run that repository's tests with its own commands, found in the meta-repository's instructions and mise tasks. The kit stores no commands and does not switch or create branches.
+The meta-repository protocol `openspec/protocols/metarepo.md` SHALL tell the agent to do a group's tasks in the folder of the repository the group names and run that repository's tests with its own commands: first those of the repository's section in the root's `openspec/test-commands.md`, otherwise those found in the meta-repository's instructions and mise tasks. The kit stores no commands inside a clone and does not switch or create branches.
 
 #### Scenario: Protocol names the group's repository
 - **GIVEN** the installed kit
 - **WHEN** `openspec/protocols/metarepo.md` is read
-- **THEN** it says that the tasks of a group are done in the folder of the repository the group names, with that repository's own test commands from the meta-repository's instructions and mise tasks
+- **THEN** it says that the tasks of a group are done in the folder of the repository the group names, with that repository's own test commands, otherwise found in the meta-repository's instructions and mise tasks
+
+#### Scenario: Protocol names the commands file first
+- **GIVEN** the installed kit
+- **WHEN** `openspec/protocols/metarepo.md` is read
+- **THEN** it says that a repository's test commands are taken first from its section `## Repository: <name>` of the root's `openspec/test-commands.md`
 
 ### Requirement: Missing commands are proposed for AGENTS.md
 The meta-repository protocol SHALL tell the agent to ask the developer once when it cannot find how to run the tests, the quality checks or the application, and to suggest writing the commands into `AGENTS.md`, never into `CLAUDE.md`. In a project without clones the current suggestion stays.

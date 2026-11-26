@@ -1458,9 +1458,15 @@ describe('the meta-repository protocol', () => {
   test("the tasks of a group are done in the folder of its repository with that repository's own commands", () => {
     const text = protocol();
     assert.match(text, /do the tasks of a group in the folder of the repository the group names/i);
-    assert.match(text, /run that repository's tests with its own commands, found in the meta-repository's instructions and mise tasks/i);
-    assert.match(text, /The kit stores no commands and does not switch or create branches/);
+    assert.match(text, /run that repository's tests with its own test commands: first those of its section .*, otherwise those found in the meta-repository's instructions and mise tasks/i);
+    assert.match(text, /The kit stores no commands inside a clone and does not switch or create branches/);
     assert.match(text, /`## 2\. \[backend\] Order API`/);
+  });
+
+  // @scenario metarepo/apply :: Protocol names the commands file first
+  test("a repository's test commands come first from its section of the root's openspec/test-commands.md", () => {
+    const text = protocol();
+    assert.match(text, /first those of its section `## Repository: <name>` of the root's `openspec\/test-commands\.md` \(`openspec\/protocols\/testing\.md` §8\)/);
   });
 
   // @scenario metarepo/apply :: Protocol suggests AGENTS.md in a meta-repository

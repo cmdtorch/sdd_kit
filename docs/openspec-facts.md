@@ -127,6 +127,21 @@ method: a scratch project outside the repository whose `.claude/settings.json` r
 the `Stop` hook blocks a fixed number of times (a counter file) and then lets the turn end. Three `claude -p`
 runs; the official docs were not re-read, so these rows state only what was logged.
 
+Rows K19–K20 were added on 2026-11-26 with Claude Code 2.1.332 (change `project-test-commands`), by the same
+method: a scratch project outside the repository whose `.claude/settings.json` registers one `PreToolUse` command
+hook (matcher `Bash`) that appends its stdin to a log, and whose `.claude/agents/task-implementer.md` is a copy of
+the kit's definition. One run: `claude -p --model haiku --dangerously-skip-permissions "… 1) Run the Bash command
+'echo main-fg' yourself in the foreground. 2) Run the Bash command 'echo main-bg' yourself with run_in_background
+set to true. 3) Then use the Agent tool to start the task-implementer subagent with the message: '… Run only the
+Bash command echo sub-hi …'"`. The logged inputs, with `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`,
+`prompt_id` and `tool_use_id` shortened to `…`:
+
+```json
+{"session_id":"…","transcript_path":"…","cwd":"…","scratchpad_dir":"…","prompt_id":"…","permission_mode":"bypassPermissions","effort":{"level":"medium"},"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo main-fg","description":"Print main-fg in foreground"},"tool_use_id":"…"}
+{"session_id":"…","transcript_path":"…","cwd":"…","scratchpad_dir":"…","prompt_id":"…","permission_mode":"bypassPermissions","effort":{"level":"medium"},"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo main-bg","description":"Print main-bg in background","run_in_background":true},"tool_use_id":"…"}
+{"session_id":"…","transcript_path":"…","cwd":"…","scratchpad_dir":"…","prompt_id":"…","permission_mode":"bypassPermissions","agent_id":"ad7631ca222c1a585","agent_type":"task-implementer","effort":{"level":"medium"},"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo sub-hi","description":"Print sub-hi via echo"},"tool_use_id":"…"}
+```
+
 | # | Claim | Status | Evidence |
 |---|---|---|---|
 | K1 | Common stdin fields: `session_id, transcript_path, cwd, prompt_id, permission_mode, effort, hook_event_name` | VERIFIED | logged input |
@@ -136,7 +151,7 @@ runs; the official docs were not re-read, so these rows state only what was logg
 | K7 | PostToolUse input has `tool_response` (Write: `{type, filePath, content, structuredPatch, originalFile, userModified}`) and `duration_ms`; `additionalContext` reaches Claude | VERIFIED | agent repeated the code word |
 | K8 | `${CLAUDE_PROJECT_DIR}` is expanded inside `command` and exported as env var; hook cwd = project dir | VERIFIED | logged env and cwd |
 | K9 | Matcher `Write\|Edit\|MultiEdit\|Bash` matches the listed tools exactly | VERIFIED | logged events for Edit, Write, Bash |
-| K10 | All matching hooks run in parallel; default timeout 600 s for command hooks; hooks also fire inside subagents (input carries `agent_id`, `agent_type`) | DOCS ONLY | from the official docs; not exercised |
+| K10 | All matching hooks run in parallel; default timeout 600 s for command hooks; hooks also fire inside subagents (input carries `agent_id`, `agent_type`) | DOCS ONLY *(the subagent part: VERIFIED, K19)* | from the official docs; the subagent fields were exercised in 2.1.332, see K19 |
 | K11 | UserPromptSubmit input has `prompt` | VERIFIED | logged input |
 | K12 | `Stop` input fields: `session_id, transcript_path, cwd, scratchpad_dir, prompt_id, permission_mode, effort, hook_event_name, stop_hook_active, last_assistant_message, background_tasks, session_crons`. `stop_hook_active` is a boolean; `last_assistant_message` is the text of the reply that ended the turn; `transcript_path` is the session's `.jsonl` under the Claude Code config folder, `<config>/projects/<cwd with separators replaced by ->/<session_id>.jsonl` | VERIFIED *(2.1.330)* | run 1: `claude -p "Use the Write tool to create the file a.txt … Then reply with the single word done." --output-format json --permission-mode acceptEdits`; logged `{"hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"done","background_tasks":[],"session_crons":[], …}` |
 | K13 | A `Stop` command hook that exits 0 with `{"decision":"block","reason":"…"}` on stdout keeps the agent working, and the reason reaches it: it is added to the conversation as a user message `Stop hook feedback:\n<reason>` (transcript: an `isMeta` user entry plus a `hook_blocking_error` attachment) | VERIFIED *(2.1.330)* | run 1: the first `Stop` was answered with a block whose reason asked for the code word `PINEAPPLE-71`; the next `Stop` logged `last_assistant_message: "PINEAPPLE-71"`. The transcript holds `Stop hook feedback:\nProbe hook: you are not done. Reply with the code word PINEAPPLE-71 and nothing else.` |
@@ -145,6 +160,8 @@ runs; the official docs were not re-read, so these rows state only what was logg
 | K16 | After a block the agent can use tools before it stops again: `PostToolUse` fires between the two `Stop` events | VERIFIED *(2.1.330)* | run 3: `claude -p "Reply with the single word hello." --output-format json --permission-mode acceptEdits`, the block reason asked to write `b.txt` and reply `written`. Logged order: `UserPromptSubmit`, `Stop` (`"hello"`, blocked), `PostToolUse` (`Write`), `Stop` (`"written"`, `stop_hook_active: true`); `b.txt` was created; `"result":"written", "num_turns":3` |
 | K17 | `session_id` is the same in `UserPromptSubmit`, `PostToolUse` and `Stop` of one session, equals the `session_id` of the `claude -p` JSON result, and stays the same when the session is resumed with `--resume`. `prompt_id` is the same in all hook events of one prompt and differs for the next prompt | VERIFIED *(2.1.330)* | run 1: `748bdbdd-…` in all five logged events and in the result. Run 2 (resumed): the same `session_id` in `UserPromptSubmit` and both `Stop` events, a new `prompt_id`. Run 3: `4af70eee-…` in all four events and in the result |
 | K18 | In 2.1.330 every logged event also carries `scratchpad_dir`; `UserPromptSubmit` carried no `effort` (`PostToolUse` and `Stop` did, as `{"level":"medium"}`), so `effort` of K1 is not in every event | VERIFIED *(2.1.330)* | `UserPromptSubmit` keys in runs 1–3: `session_id, transcript_path, cwd, scratchpad_dir, prompt_id, permission_mode, hook_event_name, prompt` |
+| K19 | A `PreToolUse` hook of the project's settings fires for a tool call made inside a subagent, and its input then carries `agent_id` and `agent_type`; `agent_type` is the subagent's `name` from its definition (`task-implementer`). A call of the main agent carries neither field. The kit's `test-run-guard` hook tells a `task-implementer` call by `agent_type` alone (no `hooks:` block in the subagent definition) | VERIFIED *(2.1.332)* | the third logged input above: `"agent_id":"ad7631ca222c1a585","agent_type":"task-implementer"`; the first two (main agent) have no such keys |
+| K20 | A `Bash` call started in the background carries `"run_in_background":true` in `tool_input`; a foreground call has no `run_in_background` key at all (not `false`) | VERIFIED *(2.1.332)* | the second logged input above has `"run_in_background":true`; the first and third have no such key |
 
 ## 10. Kit hooks end-to-end (phase 3)
 

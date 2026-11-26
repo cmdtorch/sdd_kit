@@ -10,19 +10,24 @@
 // the change root (lib/start-check.mjs); the archive gate asks for it when the plan needs a running
 // application. Exit code 0 when the check passed, 1 otherwise. The script changes nothing outside the
 // project: the start and stop commands are the project's own.
+//   node openspec/tooling/bin/start-check.mjs --change <name> --status
+// prints the state of the change's record and starts nothing: `passed`, `failed`, or `none` (no record, or one
+// that cannot be read). Apply does not repeat a check that passed right after the Main round.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from '../lib/report.mjs';
 import { findRoot, changeDir } from '../lib/project.mjs';
-import { START_CHECK_FILE } from '../lib/start-check.mjs';
+import { START_CHECK_FILE, startCheckStatus } from '../lib/start-check.mjs';
 
 const NAME = 'sdd-kit start-check';
 const USAGE = `Usage: start-check.mjs --change <name> --start "<command>" --url <url> [--stop "<command>"]
                       [--timeout <seconds>] [--interval <seconds>] [--root <dir>]
+       start-check.mjs --change <name> --status [--root <dir>]
 
 Starts the application with the project's command, requests <url> every 2 seconds for up to 2 minutes
-(a status below 500 passes), stops it again and writes ${START_CHECK_FILE} in the change root.`;
+(a status below 500 passes), stops it again and writes ${START_CHECK_FILE} in the change root.
+--status prints the state of that record and starts nothing: passed, failed or none.`;
 const OUTPUT_LINES = 30;
 
 function fail(message) {
@@ -70,9 +75,17 @@ async function endGroup(child) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), ['help']);
+  const args = parseArgs(process.argv.slice(2), ['help', 'status']);
   if (args.help) {
     console.log(USAGE);
+    return 0;
+  }
+  if (args.status) {
+    if (!args.change) fail(`--change is required\n\n${USAGE}`);
+    const root = args.root || findRoot();
+    if (!root) fail('no openspec/ directory found (run inside the project or pass --root)');
+    if (!existsSync(changeDir(root, args.change))) fail(`change "${args.change}" not found`);
+    console.log(startCheckStatus(root, args.change));
     return 0;
   }
   for (const k of ['change', 'start', 'url']) if (!args[k]) fail(`--${k} is required\n\n${USAGE}`);
