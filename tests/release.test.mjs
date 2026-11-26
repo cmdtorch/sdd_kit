@@ -76,7 +76,7 @@ describe('doctor', () => {
     const root = mkdtempSync(join(tmpdir(), 'sdd-kit-doctor-'));
     await install({ target: root, skipOpenspec: true, yes: true, json: true });
     const bin = join(mkdtempSync(join(tmpdir(), 'bin-')), 'openspec');
-    writeFileSync(bin, '#!/bin/sh\necho 1.12.0\n');
+    writeFileSync(bin, '#!/bin/sh\necho 1.15.0\n');
     chmodSync(bin, 0o755);
     const saved = process.env.OPENSPEC_BIN;
     process.env.OPENSPEC_BIN = bin;
@@ -84,7 +84,7 @@ describe('doctor', () => {
       const items = doctor(root);
       const by = (c) => items.find((i) => i.check === c);
       assert.equal(by('openspec').level, 'error');
-      assert.match(by('openspec').fix, /npm i -g @fission-ai\/openspec@1\.15\.0/);
+      assert.match(by('openspec').fix, /npm i -g @fission-ai\/openspec@2\.2\.0/);
       assert.equal(by('hooks').level, 'ok');
     } finally {
       if (saved === undefined) delete process.env.OPENSPEC_BIN;
@@ -92,7 +92,7 @@ describe('doctor', () => {
     }
     const cli = spawnSync('node', [join(root, 'openspec/tooling/bin/doctor.mjs')], { cwd: root, encoding: 'utf8', env: { ...process.env, OPENSPEC_BIN: bin } });
     assert.equal(cli.status, 1);
-    assert.match(cli.stdout, /✗ openspec: openspec 1\.12\.0 is installed, the kit needs 1\.15\.0/);
+    assert.match(cli.stdout, /✗ openspec: openspec 1\.15\.0 is installed, the kit needs 2\.2\.0/);
   });
 
   test('a repository without the kit', () => {

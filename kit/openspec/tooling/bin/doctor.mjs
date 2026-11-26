@@ -14,12 +14,17 @@
 // nothing is said about clones. Nothing is ever written inside a clone.
 // Subagent model (`x-sdd-kit-subagent-model` in openspec/config.yaml): an unknown value is a warning; without the
 // key nothing is said.
+// Node: 22.12.0 or newer (the minimum of the OpenSpec 2 npm package), compared by the full version.
+// Skills: the drift check of lib/skills.mjs (OpenSpec's `update --dry-run` with the pinned CLI, the file check
+// otherwise); drift and a check that could not run are warnings. Every file left in `.claude/commands/opsx/` (OpenSpec
+// 1.x wrote them; OpenSpec 2 has none) is a warning naming it.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { findRoot, subagentModel, subagentModelWarning } from '../lib/project.mjs';
+import { findRoot, subagentModel, subagentModelWarning, versionAtLeast } from '../lib/project.mjs';
+import { skillDrift, openspecBin, SKILLS_FIX, SKILLS_CHECK_COMMAND } from '../lib/skills.mjs';
 import { parseArgs, isMain } from '../lib/report.mjs';
 import { CLONES_FILE, readClones, mergeEntries, cloneLine } from '../lib/clones.mjs';
 
@@ -121,7 +126,39 @@ export function formatDoctor(items) {
   return out.join('\n');
 }
 
-export function doctor(root) {
+export const NODE_MINIMUM = '22.12.0';
+
+/** Files under .claude/commands/opsx/, relative to the root, sorted. */
+function leftoverCommandFiles(root) {
+  const out = [];
+  const walk = (rel) => {
+    let entries;
+    try {
+      entries = readdirSync(join(root, rel), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) walk(`${rel}/${e.name}`);
+      else out.push(`${rel}/${e.name}`);
+    }
+  };
+  walk('.claude/commands/opsx');
+  return out.sort();
+}
+
+/** Doctor items about the skills: drift, a check that could not run, or ok. */
+function skills(root, kit, version, add) {
+  const d = skillDrift(root, kit, { bin: openspecBin(), version });
+  if (d.failed) add('warning', 'skills', `the skill check could not run: ${d.failed}`, `run ${SKILLS_CHECK_COMMAND} to see why`);
+  else if (d.drift.length) add('warning', 'skills', `OpenSpec skills differ from the kit profile: ${d.drift.join('; ')}`, SKILLS_FIX);
+  else add('ok', 'skills', 'OpenSpec skills follow the kit profile');
+}
+
+/**
+ * The health check items. `nodeVersion` replaces the running Node's version (tests).
+ */
+export function doctor(root, { nodeVersion = process.versions.node } = {}) {
   const items = []; // {level: ok|warning|error, check, message, fix?}
   const add = (level, check, message, fix) => {
     const item = { level, check, message, ...(fix ? { fix } : {}) };
@@ -129,9 +166,8 @@ export function doctor(root) {
     return item;
   };
 
-  const major = Number(process.versions.node.split('.')[0]);
-  if (major >= 20) add('ok', 'node', `Node ${process.versions.node}`);
-  else add('error', 'node', `Node ${process.versions.node} is too old`, 'install Node 20 or newer');
+  if (versionAtLeast(nodeVersion, NODE_MINIMUM)) add('ok', 'node', `Node ${nodeVersion}`);
+  else add('error', 'node', `Node ${nodeVersion} is too old`, 'install Node 22.12 or newer');
 
   const kitFile = join(root, 'openspec', 'tooling', 'kit.json');
   const kit = existsSync(kitFile) ? JSON.parse(readFileSync(kitFile, 'utf8')) : null;
@@ -141,7 +177,7 @@ export function doctor(root) {
   }
   add('ok', 'kit', `sdd-kit ${kit.kitVersion}`);
 
-  const os = run(process.env.OPENSPEC_BIN || 'openspec', ['--version']);
+  const os = run(openspecBin(), ['--version']);
   if (os.status !== 0) add('error', 'openspec', 'the openspec CLI was not found', `npm i -g @fission-ai/openspec@${kit.openspecVersion}`);
   else if (os.stdout.trim() !== kit.openspecVersion) add('error', 'openspec', `openspec ${os.stdout.trim()} is installed, the kit needs ${kit.openspecVersion}`, `npm i -g @fission-ai/openspec@${kit.openspecVersion}`);
   else add('ok', 'openspec', `openspec ${kit.openspecVersion}`);
@@ -165,11 +201,8 @@ export function doctor(root) {
   if (hooks.length) add('error', 'hooks', `kit hooks missing in .claude/settings.json: ${hooks.join(', ')}`, `npx github:cmdtorch/sdd_kit#v${kit.kitVersion} update`);
   else add('ok', 'hooks', 'kit hooks registered in .claude/settings.json');
 
-  const skills = join(root, '.claude', 'skills');
-  const names = existsSync(skills) ? readdirSync(skills) : [];
-  if (names.includes('openspec-propose') || !names.includes('openspec-continue-change')) {
-    add('warning', 'skills', 'OpenSpec skills differ from the kit profile (propose installed or continue missing)', 'node openspec/tooling/bin/openspec.mjs update');
-  } else add('ok', 'skills', 'OpenSpec skills follow the kit profile');
+  skills(root, kit, os.status === 0 ? os.stdout.trim() : null, add);
+  for (const file of leftoverCommandFiles(root)) add('warning', 'commands', `${file} is left from OpenSpec 1.x`, 'delete it: OpenSpec 2 has no /opsx commands');
 
   const model = subagentModel(root);
   if (!model.known) add('warning', 'subagent model', subagentModelWarning(model.value), 'fix the value in openspec/config.yaml; until then implementation subagents run on the main chat\'s model');

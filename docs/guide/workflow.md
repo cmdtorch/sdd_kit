@@ -12,14 +12,14 @@ the specs and before the design, reviewed by an AI QA reviewer (and, on `clarify
 > stable.
 
 **Planning rules since 0.6.0.** A change on `clarify` or `lean` created with kit 0.6.0 or later (stamped
-`x-sdd-kit: 0.6.0` in its `.openspec.yaml`) plans without `/opsx:continue`, with two question rounds and no
+`x-sdd-kit: 0.6.0` in its `.openspec.yaml`) plans without `/openspec-continue-change`, with two question rounds and no
 `Looks correct` (`openspec/protocols/planning.md`). Changes started before 0.6.0, and every change on
 `clarify-ai-qa` or `clarify-qa`, keep the earlier rules: see
 [Earlier changes and the test-case schemas](#earlier-changes-and-the-test-case-schemas).
 
 ## Starting a change: the depth level
 
-When the agent creates a change without naming a schema (as `/opsx:new <name>` does), the **schema starter** hook
+When the agent creates a change without naming a schema (as `/openspec-new-change <name>` does), the **schema starter** hook
 stops it and the agent asks you one question: how deep the questions about this change should go.
 
 | Level | The agent investigates | It settles itself | It asks you |
@@ -37,7 +37,7 @@ the level at any time by telling the agent or editing the `Depth:` line; it appl
 yet.
 
 The project's default schema does not count as a choice. If you dismiss the menu, no change is created; start
-again with `/opsx:new <name>`. The menu offers no schema: name one to skip it, `/opsx:new <name> --schema lean`
+again with `/openspec-new-change <name>`. The menu offers no schema: name one to skip it, `/openspec-new-change <name> --schema lean`
 or `--schema clarify-qa` (the test-case schemas are no longer in the menu; such a change gets no depth level). A
 change you create yourself in a terminal gets the default schema without a menu.
 
@@ -46,7 +46,7 @@ change you create yourself in a terminal gets the default schema without a menu.
 ### 1. Start and answer the Main round
 
 ```
-/opsx:new add-sales-export
+/openspec-new-change add-sales-export
 ```
 
 Give the agent the request: your description, and the client's text or file. The file goes to the change's
@@ -124,11 +124,11 @@ proposal → Technical round → specs → spec review → digest → design →
   addition.
 - **tasks** — each group starts with its failing tests; the final group runs the test review and the full suite.
 
-At the end the agent says that apply can start and recommends `/clear` or a new chat before `/opsx:apply`: apply
+At the end the agent says that apply can start and recommends `/clear` or a new chat before `/openspec-apply-change`: apply
 works from the artifacts, not from the planning conversation. It does not start apply itself.
 
 **How it keeps going.** After an artifact is written, a `Stop` hook (`planning-continue`) keeps the agent's turn
-going and names the next artifact or round. You never need `/opsx:continue`; running it anyway does no harm. The
+going and names the next artifact or round. You never need `/openspec-continue-change`; running it anyway does no harm. The
 agent stops only where you are needed:
 
 - a question with a blank answer, in the file or in the chat;
@@ -160,7 +160,7 @@ Need more questions at any stage? `/sdd:clarify`.
 
 On the test-case schemas a `test-cases` artifact comes right after the specs; the design waits for it.
 The rules are in `openspec/protocols/test-cases.md`. These schemas keep the earlier planning rules (four rounds,
-`Looks correct`, `/opsx:continue`; see [Earlier changes and the test-case schemas](#earlier-changes-and-the-test-case-schemas)).
+`Looks correct`, `/openspec-continue-change`; see [Earlier changes and the test-case schemas](#earlier-changes-and-the-test-case-schemas)).
 
 **For the developer:**
 
@@ -207,7 +207,7 @@ one. A test that proves a case carries a reference next to its scenario marker:
 The agent's first question in a change is whether it has UI mockups (on `lean`: asked in chat before the
 proposal). Answer "yes" and it creates `openspec/changes/<change>/sources/ui/` and waits: export the mockups from
 your design tool as PNG (JPG and WebP work too), put them there and say "done" (on changes started before 0.6.0
-and on the test-case schemas: run `/opsx:continue`). With the folder still empty the agent asks once more: wait,
+and on the test-case schemas: run `/openspec-continue-change`). With the folder still empty the agent asks once more: wait,
 or go on without mockups. Screenshots already in the folder skip the question. One file per screen and variant, named in
 screen order: `01-orders-list.png`, `02-orders-list-mobile.png`. An optional `sources/ui/screens.md` may say
 what each one shows. Any other file there (SVG, PDF, a Figma file) blocks the next artifact until it is exported
@@ -234,7 +234,7 @@ Screenshots stay in git with the change and are archived with it.
 
 ```
 /clear
-/opsx:apply
+/openspec-apply-change
 ```
 
 Start apply after `/clear` or in a new chat: it works from the artifacts, and a planning conversation only fills
@@ -323,7 +323,7 @@ so: the agent sets `Mode: skipped` and puts the `e2e` cases under "Not verified 
 ### 4. Archive
 
 ```
-/opsx:archive add-sales-export
+/openspec-archive-change add-sales-export
 ```
 
 You archive the change; the agent does not. The archive gate allows this only when:
@@ -349,7 +349,7 @@ Changes created before the kit version that brought `apply-report.md` (no `x-sdd
 ## A small change (`lean`)
 
 ```
-/opsx:new fix-rounding --schema lean
+/openspec-new-change fix-rounding --schema lean
 ```
 
 The flow is proposal → specs → verification-plan → tasks → apply, with no question rounds. If the agent would have to
@@ -357,7 +357,7 @@ guess behaviour, it stops and suggests `clarify`. Tests, markers and the gates a
 the agent asks whether the change needs E2E (section 3a).
 
 Since 0.6.0 a `lean` change also plans by itself: the agent asks about mockups in the chat, writes the proposal
-and goes on to the tasks without `/opsx:continue`, with the same stops, pause and end message as `clarify`
+and goes on to the tasks without `/openspec-continue-change`, with the same stops, pause and end message as `clarify`
 (section 2). It has no depth level, no answer mode, no spec review and no digest.
 
 ## Earlier changes and the test-case schemas
@@ -372,7 +372,7 @@ A change created before 0.6.0 (no `x-sdd-kit` stamp, or one below 0.6.0), and ev
 - **A summary per round.** After the answers the agent writes a summary with the assumptions it will make;
   reply **Looks correct** or **Request changes**. Until it says exactly `Looks correct`, the next artifact is
   blocked.
-- **`/opsx:continue`** after each artifact; nothing goes on by itself, and there is no digest.
+- **`/openspec-continue-change`** after each artifact; nothing goes on by itself, and there is no digest.
 - **Spec review:** you decide what to do with each finding of the `spec-reviewer`: fix the spec, ask a
   follow-up, or accept it.
 

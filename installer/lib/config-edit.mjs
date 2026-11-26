@@ -1,6 +1,7 @@
 // Text-level edits of openspec/config.yaml. The file is user-authored (comments, examples), so it is
-// never re-serialised: the kit only replaces or inserts its marked block inside `context: |` and the
-// value of the top-level `schema:` line. Every result is re-parsed to prove it is still valid YAML.
+// never re-serialised: the kit only replaces or inserts its marked block inside `context: |`, the
+// value of the top-level `schema:` line and its own marked `skillsScope: project` line. Every result is
+// re-parsed to prove it is still valid YAML.
 import { readFileSync } from 'node:fs';
 import { parseYaml } from '../../kit/openspec/tooling/lib/yaml.mjs';
 
@@ -86,6 +87,42 @@ export function removeKitBlock(text) {
   if (end === -1) throw new ConfigEditError(`config.yaml has "${BEGIN}" but no "${END}" marker; fix it by hand`);
   lines.splice(begin, end - begin + 1);
   const out = lines.join('\n');
+  verify(out);
+  return out;
+}
+
+// OpenSpec 2.x keeps a project's skills in the project when the config says so; without it `openspec update`
+// asks once in a terminal where to keep them (design decision 1 of upgrade-openspec-2). The comment marks the
+// line as the installer's: uninstall removes only a marked line, never one the team wrote.
+export const SKILLS_SCOPE_LINE = 'skillsScope: project # added by sdd-kit: OpenSpec skills stay in the project';
+const SKILLS_SCOPE = /^skillsScope:[^\n]*$/m;
+const MARKED_SKILLS_SCOPE = /^skillsScope: project # added by sdd-kit\b[^\n]*(\n|$)/m;
+
+/** Current top-level `skillsScope:` value, or null. */
+export function currentSkillsScope(text) {
+  const m = text.match(/^skillsScope:\s*['"]?([^'"#\s]+)['"]?\s*(#.*)?$/m);
+  return m ? m[1] : null;
+}
+
+/**
+ * Sets the top-level `skillsScope: project`: a text that already says `project` is returned as it is; another
+ * value is replaced; a missing key is added after the `schema:` line (at the top when there is none).
+ */
+export function setSkillsScope(text) {
+  if (currentSkillsScope(text) === 'project') return text;
+  let out;
+  if (SKILLS_SCOPE.test(text)) out = text.replace(SKILLS_SCOPE, SKILLS_SCOPE_LINE);
+  else if (/^schema:.*$/m.test(text)) out = text.replace(/^schema:.*$/m, (line) => `${line}\n${SKILLS_SCOPE_LINE}`);
+  else out = `${SKILLS_SCOPE_LINE}\n${text}`;
+  const v = verify(out);
+  if (v.skillsScope !== 'project') throw new ConfigEditError('could not set "skillsScope" in config.yaml; nothing was changed');
+  return out;
+}
+
+/** Removes the `skillsScope` line the installer added; a line the team wrote is kept. */
+export function removeSkillsScope(text) {
+  if (!MARKED_SKILLS_SCOPE.test(text)) return text;
+  const out = text.replace(MARKED_SKILLS_SCOPE, '');
   verify(out);
   return out;
 }

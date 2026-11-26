@@ -4,8 +4,8 @@
 
 | Tool | Why | Install |
 |---|---|---|
-| Node.js ≥ 20 | the kit's tooling and the OpenSpec CLI | your usual way (nvm, package manager) |
-| OpenSpec CLI **1.15.0** (pinned) | specs and changes | `npm i -g @fission-ai/openspec@1.15.0` |
+| Node.js ≥ 22.12 | the kit's tooling and the OpenSpec CLI | your usual way (nvm, package manager) |
+| OpenSpec CLI **2.2.0** (pinned) | specs and changes | `npm i -g @fission-ai/openspec@2.2.0` |
 | Claude Code | the agent; the kit's hooks run inside it | https://code.claude.com |
 | git | the kit finds test markers through git | — |
 
@@ -53,15 +53,17 @@ What the installer does:
 3. Adds the kit block to `context` in `openspec/config.yaml` and makes `clarify` the default schema. In-flight
    changes keep their own schema.
 4. Merges the kit's hooks and permissions into `.claude/settings.json`. Your own hooks and plugins stay as they are.
-5. Edits `.gitignore` so that `openspec/` and the shared parts of `.claude/` (settings.json, agents, commands, OpenSpec
-   skills) are versioned, while `settings.local.json`, plugin data and worktrees are not.
+5. Edits `.gitignore` so that `openspec/`, the shared parts of `.claude/` (settings.json, agents, commands, the
+   OpenSpec skill links) and `.agents/skills/openspec*/` are versioned, while `settings.local.json`, plugin data and
+   worktrees are not.
 6. Runs `openspec update` with the kit profile: `new`, `continue`, `apply`, `verify`, … but not `propose`, which writes
-   every artifact in one pass and so skips the question rounds.
+   every artifact in one pass and so skips the question rounds. The skills go into the project only: one copy in
+   `.agents/skills/<skill>/` and a link `.claude/skills/<skill>` to it. Nothing is written into your home folder.
 7. Ends with a self-check (`lint-kit`).
 
 Nothing is written if a step cannot be done safely (e.g. invalid `settings.json`). Review the diff, then commit:
-`openspec/`, `.claude/settings.json`, `.claude/agents/`, `.claude/commands/`, `.claude/skills/openspec-*`,
-`.gitignore`.
+`openspec/`, `.claude/settings.json`, `.claude/agents/`, `.claude/commands/`, `.agents/skills/openspec*/`, the links
+`.claude/skills/openspec*`, `.gitignore`.
 
 ## Meta-repositories
 
@@ -99,7 +101,7 @@ How changes work in a meta-repository: [workflow](workflow.md#meta-repositories)
 
 The kit is committed with the repository; nothing is installed per developer except the prerequisites.
 
-1. `npm i -g @fission-ai/openspec@1.15.0` (and Node 20+, Claude Code).
+1. `npm i -g @fission-ai/openspec@2.2.0` (and Node 22.12+, Claude Code).
 2. Clone the repository.
 3. `node openspec/tooling/bin/doctor.mjs` — checks Node, the OpenSpec version, Claude Code, hooks, skills and edited
    kit files, and says how to fix each problem. In a meta-repository it also checks `openspec/clones`, warns about
@@ -119,6 +121,24 @@ npx github:cmdtorch/sdd_kit#v<version> status      # version, edited files, hook
 - Kit files you edited are kept and reported. `--force` replaces them and keeps a `.sdd-kit-backup` copy.
 - Files that are not the kit's are never touched.
 - Read the [changelog](../../CHANGELOG.md) before a MAJOR update.
+
+### Upgrading from kit 0.7.0 (OpenSpec 1.x)
+
+Kit 0.8.0 is pinned to OpenSpec 2.2.0 and needs Node 22.12 or newer. OpenSpec 2 has no commands in
+`.claude/commands/opsx/` any more: use the skills (`/openspec-new-change`, `/openspec-continue-change`,
+`/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`, `/openspec-explore`,
+`/openspec-sync-specs`, `/openspec-update-change`).
+
+1. Every developer installs Node 22.12+ and `npm i -g @fission-ai/openspec@2.2.0`.
+2. In the project: `npx github:cmdtorch/sdd_kit#v<version> update`. It lists the active changes; they go on with
+   `/openspec-continue-change` and `/openspec-apply-change`.
+3. Commit `.agents/skills/` (the skills now live there), the `.claude/skills/openspec*` folders that became links
+   to it, the removed `.claude/commands/opsx/` files, `.gitignore` and `openspec/config.yaml`.
+4. Run `node openspec/tooling/bin/doctor.mjs` and delete any `.claude/commands/opsx/` file it names (update removes
+   only the command files that OpenSpec generated and nobody edited).
+5. Rollback: install the OpenSpec version that kit 0.7.0 pins (`openspecVersion` in its
+   `openspec/tooling/kit.json`), update the project to kit 0.7.0, then run
+   `node openspec/tooling/bin/openspec.mjs update`, which brings back the command files.
 
 **Never run a plain `openspec update`.** It applies your personal OpenSpec profile, which puts `propose` back. If the
 global config has no profile, it even rewrites your machine-wide settings. Use

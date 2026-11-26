@@ -4,7 +4,8 @@
 // written it runs the matching check and hands the errors back to Claude, so they are fixed now
 // instead of failing in CI:
 //   clarifications.md → check-answers (format + rounds of existing artifacts)
-//   proposal.md / design.md → check-grounding      specs/**.md → check-specs
+//   proposal.md → check-grounding      specs/**.md → check-specs
+//   design.md → check-grounding + check-specs (a spec error still open stops planning before the next artifact)
 //   verification-plan.md → check-traceability (plan + trace; markers are checked at archive)
 //   ui-inventory.md → check-ui, stage base (openspec/protocols/ui-inventory.md)
 //   tasks.md → check-ui, stage archive, only the findings in tasks.md (screenshot links of UI tasks,
@@ -51,8 +52,10 @@ function checksFor(artifact, schema, root, change, rel) {
     case 'clarifications':
       return isClarifyFamily(schema) ? [checkAnswers({ root, change })] : [];
     case 'proposal':
-    case 'design':
       return isClarifyFamily(schema) ? [checkGrounding({ root, change, file: rel })] : [];
+    case 'design':
+      // check-specs again: a spec error found late still stops planning before the next artifact.
+      return [...(isClarifyFamily(schema) ? [checkGrounding({ root, change, file: rel })] : []), checkSpecs({ root, change })];
     case 'specs':
       return [checkSpecs({ root, change })];
     case 'verification-plan':

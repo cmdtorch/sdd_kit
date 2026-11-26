@@ -53,9 +53,9 @@ screenshot; then go straight to §2.
 - **`lean`:** ask the same in chat before the proposal and record it under `## Clarifications` of the proposal.
 - **"Yes":** create `openspec/changes/<change>/sources/ui/`, tell the developer to export every screen and state
   as PNG, JPG or WebP into it (no `.fig`, SVG or PDF; optional notes in `screens.md`; names that sort in screen
-  order), and to run `/opsx:continue` when all are there. Then stop: write no other question and no artifact.
-  On a change on `clarify` or `lean` stamped with kit version 0.6.0 or later, the developer says when the screenshots
-  are in place instead of running `/opsx:continue` (`openspec/protocols/planning.md` §8).
+  order), and to run `/openspec-continue-change` when all are there. Then stop: write no other question and no
+  artifact. On a change on `clarify` or `lean` stamped with kit version 0.6.0 or later, the developer says when the screenshots
+  are in place instead of running `/openspec-continue-change` (`openspec/protocols/planning.md` §8).
 - **Continued with an empty folder:** ask once more — wait for the screenshots, or continue without mockups.
   Record the reply as a follow-up question in the same round.
 - **"No"** (or "continue without mockups"): go on with the other questions; nothing else here applies.

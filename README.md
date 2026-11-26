@@ -48,8 +48,8 @@ flowchart LR
 
 | | |
 |---|---|
-| Node.js | ≥ 20 |
-| OpenSpec CLI | **1.15.0** exactly (`npm i -g @fission-ai/openspec@1.15.0`) |
+| Node.js | ≥ 22.12 |
+| OpenSpec CLI | **2.2.0** exactly (`npm i -g @fission-ai/openspec@2.2.0`) |
 | Claude Code | any current version |
 | git | the kit finds test markers through git |
 | OS | Linux, macOS, WSL (native Windows is not supported) |
@@ -61,7 +61,7 @@ No other dependencies: the kit is plain Node.js.
 **Team lead, once per repository:**
 
 ```bash
-npm i -g @fission-ai/openspec@1.15.0
+npm i -g @fission-ai/openspec@2.2.0
 npx github:cmdtorch/sdd_kit#v0.7.0 install --dry-run   # show the plan, write nothing
 npx github:cmdtorch/sdd_kit#v0.7.0 install             # asks for the questions language, nothing else
 git add -A && git commit -m "chore: install sdd-kit 0.6.1"
@@ -72,18 +72,18 @@ Make sure `CLAUDE.md` or the README of your project says how to run the tests an
 
 **Every developer** (the kit is already committed):
 
-1. Install Node 20+, Claude Code and `npm i -g @fission-ai/openspec@1.15.0`.
+1. Install Node 22.12+, Claude Code and `npm i -g @fission-ai/openspec@2.2.0`.
 2. Clone the repository and run `node openspec/tooling/bin/doctor.mjs`.
 3. Open Claude Code in the repository and accept the workspace trust dialog.
 
 ## Daily work
 
 ```
-/opsx:new <change-name>      start a feature (schema clarify) and its first question round
-/opsx:continue               next artifact (each one starts with its own question round)
-/sdd:clarify                 continue or add questions for the current stage
-/opsx:apply                  implement with TDD; finish with the test review and the full suite
-openspec archive <change>    when everything is done (the archive gate checks)
+/openspec-new-change <change-name>  start a feature (schema clarify) and its first question round
+/openspec-continue-change           next artifact (each one starts with its own question round)
+/sdd:clarify                        continue or add questions for the current stage
+/openspec-apply-change              implement with TDD; finish with the test review and the full suite
+openspec archive <change>           when everything is done (the archive gate checks)
 ```
 
 The walkthrough, including small changes (`lean`), is in [docs/guide/workflow.md](docs/guide/workflow.md).
@@ -111,6 +111,7 @@ Useful commands in a project:
 | `openspec/config.yaml` | a marked kit block in `context`; `clarify` becomes the default schema |
 | `.claude/settings.json` | the kit hooks and read-only permissions, merged with yours |
 | `.claude/agents/`, `.claude/commands/sdd/` | the spec, test and test-case reviewers, `/sdd:clarify` |
+| `.agents/skills/openspec*/`, `.claude/skills/openspec*` | the OpenSpec skills of the kit profile (`/openspec-new-change`, …): one copy, and links to it for Claude Code |
 
 The installer keeps a hash manifest: updates never overwrite files you edited, and `uninstall` restores
 `config.yaml`, `settings.json` and `.gitignore`.

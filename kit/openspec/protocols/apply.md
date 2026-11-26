@@ -228,8 +228,8 @@ entry has none.
 
 When every task is done, the consent list is answered and the archive checks pass, tell the developer that the
 change is ready to archive, name `apply-report.md` (the manual checks for QA and what was not verified
-automatically) and give the command `/opsx:archive`. Do not archive the change yourself: the developer archives
-it.
+automatically) and give the command `/openspec-archive-change`. Do not archive the change yourself: the
+developer archives it.
 
 On a change stamped 0.7.0 or later, unless `openspec/test-commands.md` holds `none`, the ready message also proposes
 the test commands you used that the file lacks (a missing file, section or line); write them only after the

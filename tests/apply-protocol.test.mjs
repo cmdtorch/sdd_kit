@@ -114,7 +114,7 @@ describe('autonomous apply: running without the developer', () => {
     const s = section(protocol('apply.md'), 9);
     assert.match(s, /the change is ready to archive/);
     assert.match(s, /`apply-report\.md`/);
-    assert.match(s, /`\/opsx:archive`/);
+    assert.match(s, /`\/openspec-archive-change`/);
     assert.match(s, /Do not archive the change yourself/);
   });
 });

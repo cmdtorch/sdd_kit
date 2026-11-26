@@ -2,7 +2,7 @@
 // conflicts, dry run, uninstall. One suite runs the real pinned OpenSpec CLI.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, rmSync, lstatSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -279,35 +279,87 @@ describe('text editing helpers', () => {
 });
 
 describe('install with the real OpenSpec CLI', { skip: cliSkipReason() }, () => {
-  test('new project: init + kit profile skills; the developer’s global config is untouched', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-real-'));
-    const home = mkdtempSync(join(tmpdir(), 'sdd-kit-xdg-'));
-    const saved = process.env.XDG_CONFIG_HOME;
-    process.env.XDG_CONFIG_HOME = home;
+  /** Runs `fn` with HOME and XDG_CONFIG_HOME pointed at fresh folders: the CLI the installer starts sees no developer files. */
+  async function isolatedHome(fn) {
+    const home = mkdtempSync(join(tmpdir(), 'sdd-kit-home-'));
+    const xdg = mkdtempSync(join(tmpdir(), 'sdd-kit-xdg-'));
+    const keys = ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME'];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    process.env.HOME = home;
+    process.env.XDG_CONFIG_HOME = xdg;
+    delete process.env.XDG_DATA_HOME;
     try {
+      return await fn({ home, xdg });
+    } finally {
+      for (const k of keys) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  }
+
+  test('new project: init + kit profile skills in the project; the developer’s global config is untouched', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'sdd-kit-real-'));
+    await isolatedHome(async ({ home, xdg }) => {
       const r = await install({ target: root, yes: true, json: true });
       assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
       const skills = readdirSync(join(root, '.claude/skills'));
-      assert.ok(skills.includes('openspec-continue-change') && skills.includes('openspec-new-change') && skills.includes('openspec-verify-change'));
+      for (const name of ['openspec-continue-change', 'openspec-new-change', 'openspec-verify-change', 'openspec']) {
+        assert.ok(skills.includes(name), `.claude/skills/${name}`);
+        assert.ok(lstatSync(join(root, '.claude/skills', name)).isSymbolicLink(), `.claude/skills/${name} is a link`);
+        assert.ok(existsSync(join(root, '.agents/skills', name, 'SKILL.md')), `.agents/skills/${name}/SKILL.md`);
+      }
       assert.ok(!skills.includes('openspec-propose'), 'propose is not part of the kit profile');
-      assert.deepEqual(readdirSync(home), [], 'nothing written to the global config dir');
+      assert.match(read(root, 'openspec/config.yaml'), /^skillsScope: project\b/m);
+      assert.deepEqual(readdirSync(xdg), [], 'nothing written to the global config dir');
+      assert.ok(!existsSync(join(home, '.agents')) && !existsSync(join(home, '.claude')), 'no skills in the home folder');
       assert.deepEqual(JSON.parse(read(root, 'openspec/tooling/xdg/openspec/config.json')), JSON.parse(read(REPO, 'kit/openspec/tooling/xdg/openspec/config.json')));
-    } finally {
-      if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
-      else process.env.XDG_CONFIG_HOME = saved;
-    }
+    });
   });
 
   test('pilot-shaped project: openspec update switches skills to the kit profile', async () => {
     const root = pilot();
-    // real generated skills instead of the fixture stubs
-    execFileSync('openspec', ['init', '--tools', 'claude', '--no-animation', '--profile', 'core'], { cwd: root, env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'x-')), OPENSPEC_TELEMETRY: '0' }, stdio: 'ignore' });
-    assert.ok(existsSync(join(root, '.claude/skills/openspec-propose')));
-    const r = await install({ target: root, yes: true, json: true });
-    assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
-    assert.ok(!existsSync(join(root, '.claude/skills/openspec-propose')));
-    assert.ok(existsSync(join(root, '.claude/skills/openspec-continue-change')));
-    assert.ok(existsSync(join(root, '.claude/skills/django-tdd/SKILL.md')), 'project skills are untouched');
+    await isolatedHome(async () => {
+      // real generated skills instead of the fixture stubs
+      execFileSync(process.env.OPENSPEC_BIN || 'openspec', ['init', '--scope', 'project', '--tools', 'claude', '--no-animation', '--profile', 'core'], { cwd: root, env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'x-')), OPENSPEC_TELEMETRY: '0' }, stdio: 'ignore' });
+      assert.ok(existsSync(join(root, '.claude/skills/openspec-propose')));
+      const r = await install({ target: root, yes: true, json: true });
+      assert.equal(r.lint.ok, true, JSON.stringify(r.lint.findings));
+      assert.ok(!existsSync(join(root, '.claude/skills/openspec-propose')));
+      assert.ok(existsSync(join(root, '.claude/skills/openspec-continue-change')));
+      assert.ok(existsSync(join(root, '.claude/skills/django-tdd/SKILL.md')), 'project skills are untouched');
+    });
+  });
+});
+
+describe('skillsScope in openspec/config.yaml', () => {
+  test('install adds the marked skillsScope line, update keeps it, uninstall removes it', async () => {
+    const root = pilot();
+    await install(opts(root));
+    const cfg = read(root, 'openspec/config.yaml');
+    assert.equal(parseYaml(cfg).value.skillsScope, 'project');
+    assert.equal(cfg.match(/^skillsScope:/gm).length, 1);
+    await install(opts(root));
+    assert.equal(read(root, 'openspec/config.yaml'), cfg, 'update keeps the line as it is');
+    uninstall({ target: root });
+    assert.equal(parseYaml(read(root, 'openspec/config.yaml')).value.skillsScope, undefined);
+  });
+
+  test('a skillsScope: project the team wrote is kept by install and uninstall', async () => {
+    const root = pilot();
+    writeFileSync(join(root, 'openspec/config.yaml'), read(root, 'openspec/config.yaml').replace(/^schema: spec-driven$/m, 'schema: spec-driven\nskillsScope: project'));
+    await install(opts(root));
+    assert.equal(read(root, 'openspec/config.yaml').match(/^skillsScope:.*$/gm).join('|'), 'skillsScope: project');
+    uninstall({ target: root });
+    assert.match(read(root, 'openspec/config.yaml'), /^skillsScope: project$/m);
+  });
+
+  test('another skillsScope value is replaced by project, with a warning', async () => {
+    const root = pilot();
+    writeFileSync(join(root, 'openspec/config.yaml'), read(root, 'openspec/config.yaml').replace(/^schema: spec-driven$/m, 'schema: spec-driven\nskillsScope: global'));
+    const r = await install(opts(root));
+    assert.equal(parseYaml(read(root, 'openspec/config.yaml')).value.skillsScope, 'project');
+    assert.ok(r.warnings.some((w) => /skillsScope "global"/.test(w)), JSON.stringify(r.warnings));
   });
 });
 
