@@ -53,3 +53,5 @@ context: |
   AI QA reviewer / by it and a human QA; small, clear changes use `lean`. Always name the schema.
   Changes on other schemas (e.g. spec-driven) keep their own workflow.
   # <<< sdd-kit <<<
+
+x-sdd-kit-subagent-model: opus

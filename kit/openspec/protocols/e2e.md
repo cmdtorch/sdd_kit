@@ -103,7 +103,11 @@ Note: —
     refuses a run made with retries;
   - one project, Chromium only;
   - `baseURL` from the environment variable `E2E_BASE_URL` (set by the script when the developer starts the
-    application), otherwise the `webServer` that runs the start command.
+    application), otherwise the `webServer` that runs the start command;
+  - `reuseExistingServer: true` — an application that already answers at the address is used, not started a
+    second time;
+  - no `workers` setting: `e2e-run.mjs` runs Playwright with two workers, or with the number in the environment
+    variable `E2E_WORKERS` (§7).
 
   ```js
   const { defineConfig, devices } = require('@playwright/test');
@@ -113,7 +117,7 @@ Note: —
     retries: 0,
     projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
     use: { baseURL: url || 'http://localhost:3000' },
-    webServer: url ? undefined : { command: 'npm run e2e:serve', cwd: '..', url: 'http://localhost:3000', reuseExistingServer: false },
+    webServer: url ? undefined : { command: 'npm run e2e:serve', cwd: '..', url: 'http://localhost:3000', reuseExistingServer: true },
   });
   ```
 
@@ -177,19 +181,24 @@ node openspec/tooling/bin/e2e-run.mjs --change <change> -- export.spec.ts    # o
 node openspec/tooling/bin/e2e-run.mjs --change <change> -- -g "two sales"    # by title
 ```
 
-- It runs `npx playwright test --reporter=json` in the `Tests:` folder (arguments after `--` go to Playwright),
-  sets `E2E_BASE_URL` for `Start: developer at <url>`, and appends the run to `e2e-runs.json` in the change:
+- It runs `npx playwright test --reporter=json` in the `Tests:` folder (arguments after `--` go to Playwright)
+  with two workers, so the machine does not lag; the developer sets another number with `E2E_WORKERS` (`4`,
+  `50%`) or with `--workers` after `--`. It sets `E2E_BASE_URL` for `Start: developer at <url>`, and appends the
+  run to `e2e-runs.json` in the change:
   each test with its file, title, status and references, the retries setting, and fingerprints of the project.
   A failing run is recorded too.
 - **Never edit `e2e-runs.json`** and never record a result another way: the archive trusts only this file, and
   it is reviewed in the pull request. Do not run `npx playwright test` directly for results that should count.
-- A rerun of only the fixed test is enough when the fix touched only that test's file (§10).
+- **The E2E tests never run at the same time as another test suite**: start them only after the full suite and
+  every subagent's tests have ended.
 
 ## 8. Failing tests
 
-On a change stamped 0.5.0 or later each fix attempt is made by a new subagent, and you run the tests again
-(`openspec/protocols/subagents.md` §8).
+On a change stamped 0.5.0 or later the failing tests of one run go to one subagent, which reruns only its tests;
+you make the full run afterwards (`openspec/protocols/subagents.md` §8).
 
+- **Only the failing tests run again.** After the first full run, while tests are fixed, run only the failing
+  tests again, by file or by title (§7). When they pass, make one full run: it proves the stage.
 - **At most three fix attempts per test**, in the application code or in how the test performs its steps. A
   flaky test is fixed like any failing one; each attempt counts. After the third failed attempt stop and show
   the developer the failure and what you tried.

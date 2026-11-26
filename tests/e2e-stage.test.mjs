@@ -16,6 +16,8 @@ import { playwrightReport, runE2e, fakeEnv } from './helpers/e2e.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CHANGE = 'add-sale-export';
+// The worker limit of e2e-run.mjs reads E2E_WORKERS: a value of the developer's shell must not reach the tests.
+delete process.env.E2E_WORKERS;
 const C = `openspec/changes/${CHANGE}`;
 
 const GOOD = `# E2E Stage
@@ -305,6 +307,21 @@ const pwReport = (root, results, opts) => playwrightReport(join(root, 'e2e'), Ob
 
 /** Runs e2e-run.mjs as a process in `root`; the fake npx prints `report` (an object), if given. */
 const e2eRun = (root, report, args = []) => runE2e(E2E_RUN, root, CHANGE, report, args);
+/** The same with E2E_WORKERS set to `workers` for that process only. */
+function e2eRunWith(workers, root, report, args = []) {
+  process.env.E2E_WORKERS = workers;
+  try {
+    return e2eRun(root, report, args);
+  } finally {
+    delete process.env.E2E_WORKERS;
+  }
+}
+/** The arguments of the only Playwright call of a run; fails when Playwright was not started exactly once. */
+function pwArgsOf(r) {
+  assert.equal(r.calls.length, 1, `expected one Playwright call, got ${r.calls.length}: ${r.err}`);
+  return r.calls[0].args;
+}
+const workerArgs = (args) => args.filter((a) => /^(--workers|-j)/.test(a));
 const runsOf = (root) => JSON.parse(readFileSync(join(root, C, RUNS_FILE), 'utf8')).runs;
 const archive = (root) => run(root, 'archive');
 function assertNoError(report, re) {
@@ -402,7 +419,7 @@ describe('e2e-run.mjs (design D3)', () => {
     assert.equal(r.code, 1, 'the exit code of Playwright passes through');
     assert.deepEqual(r.calls.map(({ cwd, args, baseUrl }) => ({ cwd, args, baseUrl })), [
       // a child process reports its working folder by the real path (macOS: /var → /private/var)
-      { cwd: realpathSync(join(root, 'e2e')), args: ['playwright', 'test', '--reporter=json', '--project', 'chromium'], baseUrl: null },
+      { cwd: realpathSync(join(root, 'e2e')), args: ['playwright', 'test', '--reporter=json', '--workers=2', '--project', 'chromium'], baseUrl: null },
     ]);
     const runs = runsOf(root);
     assert.equal(runs.length, 1);
@@ -456,6 +473,84 @@ describe('e2e-run.mjs (design D3)', () => {
     assert.deepEqual(r.calls, []);
     const nofolder = e2eProject({ record: e2eMd().replace('Tests: e2e/', 'Tests: web/e2e/') });
     assert.match(e2eRun(nofolder, pwReport(nofolder, { two: 'expected' })).err, /"web\/e2e\/" does not exist/);
+  });
+
+  // @scenario e2e/tests :: Two workers by default
+  test('Playwright gets --workers=2 when E2E_WORKERS is not set', () => {
+    const root = e2eProject();
+    const r = e2eRun(root, pwReport(root, { two: 'expected', empty: 'expected' }));
+    assert.equal(r.code, 0, r.err);
+    assert.deepEqual(pwArgsOf(r), ['playwright', 'test', '--reporter=json', '--workers=2']);
+    assert.equal(runsOf(root).length, 1);
+  });
+
+  test('an empty E2E_WORKERS counts as not set', () => {
+    const root = e2eProject();
+    const r = e2eRunWith('', root, pwReport(root, { two: 'expected', empty: 'expected' }));
+    assert.equal(r.code, 0, r.err);
+    assert.deepEqual(workerArgs(pwArgsOf(r)), ['--workers=2']);
+  });
+
+  // @scenario e2e/tests :: Worker number from the environment
+  test('E2E_WORKERS replaces the two workers', () => {
+    const root = e2eProject();
+    const r = e2eRunWith('4', root, pwReport(root, { two: 'expected', empty: 'expected' }));
+    assert.equal(r.code, 0, r.err);
+    assert.deepEqual(pwArgsOf(r), ['playwright', 'test', '--reporter=json', '--workers=4']);
+    assert.equal(pwArgsOf(r).includes('--workers=2'), false);
+
+    const percent = e2eProject();
+    const p = e2eRunWith('50%', percent, pwReport(percent, { two: 'expected', empty: 'expected' }));
+    assert.equal(p.code, 0, p.err);
+    assert.deepEqual(workerArgs(pwArgsOf(p)), ['--workers=50%']);
+  });
+
+  // @scenario e2e/tests :: Worker argument of the developer wins
+  test('a --workers argument after -- wins over E2E_WORKERS and the default', () => {
+    const root = e2eProject();
+    const r = e2eRunWith('4', root, pwReport(root, { two: 'expected', empty: 'expected' }), ['--', '--workers=1']);
+    assert.equal(r.code, 0, r.err);
+    assert.deepEqual(pwArgsOf(r), ['playwright', 'test', '--reporter=json', '--workers=1']);
+
+    const spaced = e2eProject();
+    const s = e2eRun(spaced, pwReport(spaced, { two: 'expected', empty: 'expected' }), ['--', '--workers', '3', 'two-sales.spec.ts']);
+    assert.equal(s.code, 0, s.err);
+    assert.deepEqual(pwArgsOf(s), ['playwright', 'test', '--reporter=json', '--workers', '3', 'two-sales.spec.ts']);
+  });
+
+  // @scenario e2e/tests :: Short worker argument wins
+  test('a -j argument after -- wins: no --workers is added', () => {
+    const root = e2eProject();
+    const r = e2eRun(root, pwReport(root, { two: 'expected', empty: 'expected' }), ['--', '-j', '1']);
+    assert.equal(r.code, 0, r.err);
+    assert.deepEqual(pwArgsOf(r), ['playwright', 'test', '--reporter=json', '-j', '1']);
+    assert.deepEqual(pwArgsOf(r).filter((a) => a.startsWith('--workers')), []);
+
+    const joined = e2eProject();
+    const j = e2eRunWith('4', joined, pwReport(joined, { two: 'expected', empty: 'expected' }), ['--', '-j1']);
+    assert.equal(j.code, 0, j.err);
+    assert.deepEqual(pwArgsOf(j), ['playwright', 'test', '--reporter=json', '-j1']);
+  });
+
+  // @scenario e2e/tests :: Invalid worker number is refused
+  test('an invalid E2E_WORKERS ends with an error before Playwright starts', () => {
+    for (const value of ['many', '0', '-1', '1.5', '0%', '2 workers']) {
+      const root = e2eProject();
+      const r = e2eRunWith(value, root, pwReport(root, { two: 'expected', empty: 'expected' }));
+      assert.notEqual(r.code, 0, `E2E_WORKERS=${value} was accepted`);
+      assert.notEqual(r.code, null);
+      assert.ok(r.err.includes('E2E_WORKERS'), `the error does not name E2E_WORKERS: ${r.err}`);
+      assert.ok(r.err.includes(`"${value}"`), `the error does not name the value "${value}": ${r.err}`);
+      assert.deepEqual(r.calls, [], 'Playwright was started');
+      assert.equal(existsSync(join(root, C, RUNS_FILE)), false, 'a run was recorded');
+    }
+  });
+
+  test('--help names the worker limit', () => {
+    const r = spawnSync('node', [E2E_RUN, '--help'], { encoding: 'utf8' });
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /--workers=2/);
+    assert.match(r.stdout, /E2E_WORKERS/);
   });
 
   test('a report that is not JSON records no run', () => {

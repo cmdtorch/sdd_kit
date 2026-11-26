@@ -256,40 +256,68 @@ describe('subagents protocol: stops', () => {
 
 describe('subagents protocol: the final group', () => {
   // @scenario workflow/subagent-apply :: Final group
-  test('the main agent runs the final group: test reviewer and apply-report.md itself, the full suite in a subagent', () => {
+  test('the main agent runs the final group: the test reviewer, the full suite and apply-report.md', () => {
     const s = section(8);
     assert.match(s, /You run the final group yourself/);
-    assert.match(s, /Start the `test-reviewer` subagent/);
-    assert.match(s, /Hand the full suite to a new subagent/);
-    assert.match(s, /Write `apply-report\.md`/);
+    assert.match(s, /1\. Start the `test-reviewer` subagent/);
+    assert.match(s, /2\. Run the project's full test suite and quality checks yourself/);
+    assert.match(s, /4\. Write `apply-report\.md`/);
+    assert.doesNotMatch(s, /Hand the full suite to a new subagent/);
   });
 
-  // @scenario workflow/subagent-apply :: End-of-apply suite
-  test('the full-suite subagent runs the suite and quality checks, fixes failures and reports commands and result', () => {
-    assert.match(section(8), /it runs the project's full test suite and quality checks \(`openspec\/protocols\/testing\.md` §6\), fixes what fails and reports the commands and their result/);
+  // @scenario workflow/subagent-apply :: End-of-apply suite passes
+  test('the main agent runs the full suite and quality checks itself and starts no subagent when they pass', () => {
+    const s = section(8);
+    assert.match(s, /Run the project's full test suite and quality checks yourself \(`openspec\/protocols\/testing\.md` §6\) and report the commands and their result to the developer/);
+    assert.match(s, /When they pass, start no subagent/);
+  });
+
+  // @scenario workflow/subagent-apply :: End-of-apply suite fails
+  test('a failing command goes to one subagent with the failing output; the main agent reruns it and stops after the second failed fix', () => {
+    const s = section(8);
+    assert.match(s, /When a command fails, hand the fix to one new subagent together with the failing output, then run the failed commands again yourself/);
+    assert.match(s, /after the second failed fix attempt stop and show the developer the failures/);
+  });
+
+  // @scenario workflow/subagent-apply :: Testing protocol agrees
+  test('testing.md §6 says the main agent runs the full suite and the fixes run in subagents', () => {
+    assert.match(protoSection('testing.md', 6), /On a change stamped 0\.5\.0 or later the main agent runs the full suite itself and the fixes run in subagents \(`openspec\/protocols\/subagents\.md` §8\)/);
+    // apply.md, where apply starts, agrees
+    assert.match(protoSection('apply.md', 1), /every fix and verify run in subagents, and you run the full suite yourself/);
   });
 
   // @scenario workflow/subagent-apply :: Fix after the test review
   test('a fix after the test review goes to a new subagent; the main agent edits no test or code', () => {
     const s = section(8);
-    assert.match(s, /Hand the fix of each blocker or major finding to a new subagent; edit no test or code file yourself/);
+    assert.match(s, /to one new subagent together; edit no test or code file yourself/);
     assert.match(s, /You write only the change's own files: `tasks\.md` check marks, `apply-report\.md`, `e2e\.md`, `clarifications\.md`\. Every other edit, including a small fix after the test review, after a check or in the E2E stage, goes to a new subagent/);
+  });
+
+  // @scenario workflow/subagent-apply :: Several review findings go to one subagent
+  test('every blocker and major finding of one test review goes to one subagent together', () => {
+    assert.match(section(8), /Hand every blocker and major finding of one review to one new subagent together/);
+  });
+
+  // @scenario workflow/subagent-apply :: Failing tests of one E2E run go to one subagent
+  test('the failing tests of one E2E run go to one subagent that reruns them, and the main agent makes the full run', () => {
+    const s = section(8);
+    assert.match(s, /Hand the failing tests of one run to one new subagent together: it fixes the application code or the test, reruns only its tests through `e2e-run\.mjs`, makes at most three fix attempts per test \(`openspec\/protocols\/e2e\.md` §8\) and reports what still fails/);
+    assert.match(s, /Afterwards make the full run yourself/);
+    assert.doesNotMatch(s, /Each E2E fix subagent makes one fix attempt/);
   });
 
   // @scenario workflow/subagent-apply :: Failing E2E test
   test('a failing E2E test is fixed by a new subagent and the main agent runs the E2E tests again', () => {
-    assert.match(section(8), /every fix of a failing E2E test, in the application code or in the test, goes to a new subagent; after the fix, run the E2E tests again yourself/);
-    assert.match(protoSection('e2e.md', 8), /On a change stamped 0\.5\.0 or later each fix attempt is made by a new subagent, and you run the tests again \(`openspec\/protocols\/subagents\.md` §8\)/);
-    // each fix subagent makes one attempt; the attempts per test of e2e.md §8 are counted across subagents
-    assert.match(section(8), /Each E2E fix subagent makes one fix attempt; the up to three attempts per test of `openspec\/protocols\/e2e\.md` §8 are counted across subagents/);
+    assert.match(section(8), /Hand the failing tests of one run to one new subagent together: it fixes the application code or the test/);
+    assert.match(section(8), /Afterwards make the full run yourself/);
+    assert.match(protoSection('e2e.md', 8), /On a change stamped 0\.5\.0 or later the failing tests of one run go to one subagent, which reruns only its tests; you make the full run afterwards \(`openspec\/protocols\/subagents\.md` §8\)/);
     // writing the E2E tests also goes to a task-implementer, and e2e.md §6 says so where the tests are written
     assert.match(protoSection('e2e.md', 6), /On a change stamped 0\.5\.0 or later the E2E tests are written by a `task-implementer` subagent \(`openspec\/protocols\/subagents\.md` §8\)/);
-    assert.match(section(9), /\(a task group, a replacement, a collision fix, a review fix, the full suite, writing the E2E tests, an E2E fix\) is a `task-implementer` subagent/);
+    assert.match(section(9), /\(a task group, a replacement, a collision fix, a review fix, a full-suite fix, writing the E2E tests, an E2E fix\) is a `task-implementer` subagent/);
   });
 
-  test('testing.md points to the subagents protocol during apply and at its end', () => {
+  test('testing.md points to the subagents protocol during apply', () => {
     assert.match(protoSection('testing.md', 5), /On a change stamped 0\.5\.0 or later each task group is done by a subagent that follows this section \(`openspec\/protocols\/subagents\.md`\)/);
-    assert.match(protoSection('testing.md', 6), /On a change stamped 0\.5\.0 or later the fixes and the full suite run in subagents \(`openspec\/protocols\/subagents\.md` §8\)/);
   });
 });
 
@@ -301,26 +329,26 @@ describe('subagents protocol: models and the progress line', () => {
   });
 
   // @scenario workflow/subagent-apply :: Full-suite subagent ignores the setting
-  test('only task groups and collision fixes get the model setting; the full suite runs on the main model', () => {
+  test('only task groups and collision fixes get the model setting; every other subagent runs on the main model', () => {
     const s = section(9);
     assert.match(s, /run `node openspec\/tooling\/bin\/subagent-model\.mjs`/);
     assert.match(s, /pass that model to the subagents of task groups, their replacements and collision fixes/);
     assert.match(s, /`inherit` means: pass no model, the subagent runs on the main chat's model/);
     assert.match(s, /When it also prints a `warning:` line, repeat it in the chat/);
-    assert.match(s, /Every other subagent, among them the full suite, review fixes, E2E fixes and verify, runs on the main chat's model, whatever the setting/);
+    assert.match(s, /Every other subagent, among them full-suite fixes, review fixes, E2E fixes and verify, runs on the main chat's model, whatever the setting/);
   });
 
   // @scenario workflow/subagent-apply :: Group finished, tests pass
   test('after each subagent one chat line names the group, tasks, model and test result', () => {
     const s = section(9);
-    assert.match(s, /After each subagent ends, write one line in the chat: the group number and name \(for a subagent without a group `fix: <what>` or `full suite`\), the tasks done, the model it ran on, and whether its tests pass or which fail/);
+    assert.match(s, /After each subagent ends, and after your own full-suite run, write one line in the chat: the group number and name \(for a subagent without a group `fix: <what>`, for your full-suite run `full suite`\), the tasks done, the model it ran on, and whether its tests pass or which fail/);
     assert.match(s, /`2\. Order API — 2\.1–2\.4 — sonnet — tests pass`/);
     assert.match(s, /`## Subagent runs` of `apply-report\.md`/);
   });
 
   // @scenario workflow/subagent-apply :: Full-suite subagent finished
-  test('the full-suite line starts with full suite and names the model and the result', () => {
-    assert.match(section(9), /`full suite — — opus — every test passes`/);
+  test('the line of the main agent own full-suite run starts with full suite and names the main chat model and the result', () => {
+    assert.match(section(9), /`full suite — — opus — every test passes` \(your own run, so the model is the main chat's model\)/);
   });
 
   // @scenario workflow/subagent-apply :: Group finished, tests fail
@@ -405,6 +433,15 @@ describe('subagent definitions', () => {
     assert.match(body, /On any stop of `openspec\/protocols\/apply\.md` §2 \(requirement gap, test still failing after two attempts, environment, consent, outside the plan\), stop and write a stop report: what, why, what you need/);
     assert.match(fm.description, /writing the E2E tests/);
     assert.match(body, /`Changed files:`/);
+  });
+
+  // @scenario workflow/subagent-apply :: Subagent definition allows running its E2E tests
+  test('task-implementer reruns only its failing E2E tests through e2e-run.mjs and stops after the third failed attempt', async () => {
+    const { fm, body } = await installed('task-implementer');
+    assert.match(body, /On an E2E fix, rerun only your failing tests, by file or by title, through `node openspec\/tooling\/bin\/e2e-run\.mjs --change <change> -- <file or -g "title">`/);
+    assert.match(body, /at most three fix attempts per test \(`openspec\/protocols\/e2e\.md` §8\); after the third failed attempt on a test stop and report it as still failing/);
+    assert.match(fm.description, /a full-suite fix/);
+    assert.doesNotMatch(fm.description, /the full suite,/);
   });
 
   // @scenario workflow/subagent-delegation :: Verify subagent changes nothing

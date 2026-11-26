@@ -276,7 +276,9 @@ After the last task the agent runs the stage (`openspec/protocols/e2e.md`) and r
 3. It writes one Playwright test per `e2e` test case (on `clarify` and `lean`: per scenario it lists and shows
    you), each tagged `@case` or `@scenario`. Tests create their own users and data; passwords stay out of git.
 4. It runs them only with `node openspec/tooling/bin/e2e-run.mjs --change <name>`, which records every run in
-   `e2e-runs.json`. A failing test gets at most three fix attempts, then it is yours to decide: fix, or accept the
+   `e2e-runs.json`, with two Playwright workers so the machine does not lag (set `E2E_WORKERS`, for example `4`
+   or `50%`, for another number), and never beside another test suite. While tests are fixed only the failing
+   ones run again, then one full run. A failing test gets at most three fix attempts, then it is yours to decide: fix, or accept the
    case with a reason (its test stays as a skipped test, and the case goes under "Not verified automatically" in
    `apply-report.md` with your acceptance).
 5. With screenshots in `sources/ui/`, it opens every screen at the screenshot's size and state and compares the two

@@ -5,7 +5,33 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
-## 0.6.0 — unreleased
+## 0.6.1 — 2026-11-26
+
+A faster end of apply: E2E runs that do not lag the machine, and fewer subagent starts.
+
+The rules apply to every change stamped 0.5.0 or later, changes already in flight included: they only remove work,
+so there is no new version gate.
+
+Upgrading: team lead runs `npx github:cmdtorch/sdd_kit#v0.6.1 update`, reviews the diff (changed protocols, the
+`task-implementer` agent and `e2e-run.mjs`) and commits. An existing project `playwright.config` keeps working
+unchanged; it may set `reuseExistingServer: true` in its `webServer` by hand so that a running application is used
+instead of a second one.
+
+- **Two Playwright workers by default**: `e2e-run.mjs` passes `--workers=2`; the developer sets another number
+  with `E2E_WORKERS` (`4`, `50%`) or with `--workers` / `-j` after `--`. An invalid `E2E_WORKERS` ends the script
+  before Playwright starts, without a recorded run.
+- **A running application is reused**: the Playwright config of the protocol sets `reuseExistingServer: true`;
+  E2E never runs at the same time as another test suite.
+- **Only the failing tests rerun while they are fixed**, by file or by title; one full run at the end proves the
+  stage.
+- **One fix subagent per E2E run and per test review**: the failing tests of one E2E run go to one subagent, which
+  reruns only its tests through `e2e-run.mjs`, with at most three fix attempts per test; every blocker and major
+  finding of one test review goes to one subagent.
+- **The main agent runs the full suite** and quality checks itself, no longer a subagent, and writes the
+  `full suite` progress line; a subagent is started only when a command fails, with the failing output, and after the second failed fix
+  attempt the main agent stops and shows the developer the failures.
+
+## 0.6.0 — 2026-11-25
 
 Planning without stops: after the first answers the agent writes the rest of planning by itself and stops only
 where a human is needed.

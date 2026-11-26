@@ -168,3 +168,15 @@ protocol.
 | R64 | **The starter menu asks the depth level**: `schema-starter.mjs` keeps blocking an unnamed `openspec new change` and tells the agent to ask `low`, `medium` (recommended) or `high`, rerun with `--schema clarify` and write `Depth: <level>`. The test-case schemas leave the menu but still work when named. Replaces R16's three choices (change `streamline-planning`). |
 | R65 | **Two spec reviewer runs**: `test-cases-run-limit.mjs` also counts `spec-reviewer` runs of covered `clarify` changes in `reviews/spec-review-runs.json`, blocks a third run on the same specs and a second one after a first review without findings, and allows one more run when the specs' entry of the answers lock changed (specs rewritten after a changed answer) (change `streamline-planning`). |
 | R66 | **Agent behaviour stays protocol text**: the digest, the UI decisions shown before the proposal, fixing spec review findings, the investigation per depth level, `Why this is asked:` naming what depends on the answer, recommendations only with a basis and the end-of-planning message are rules in `planning.md` without scripts; tests assert that the protocol and the instructions state them. No waiting notification ships with the kit; the guide recommends Claude Code's built-in notifications (change `streamline-planning`). |
+
+## 2026-11-26 — A faster end of apply
+
+Why: on a measured feature the end of apply (full suite, test review fixes, E2E stage) took about three hours,
+half of it E2E: 18 tests, a second application start and a new subagent for every fix. E2E runs made developers'
+machines lag, full E2E reruns were made while one test was fixed, and a subagent started for a
+command run or for each single fix cost a cold start every time. Change `faster-test-stage`. Narrows R56: the
+full suite is no longer a `task-implementer` run.
+
+| # | Decision |
+|---|---|
+| R67 | **Two Playwright workers** passed by `e2e-run.mjs` (`E2E_WORKERS` or a `--workers` / `-j` argument of the developer wins; an invalid value records no run), `reuseExistingServer: true` in the protocol's config, E2E never beside another suite, and only the failing tests rerun while they are fixed, with one full run at the end. **The main agent runs the full suite itself**; a subagent is started only for a failing command, with its output, two fix attempts. **One fix subagent per test review and per E2E run**, the E2E one rerunning its own tests, three attempts per test. No version gate: the rules only remove work and apply to every change stamped 0.5.0 or later. Rejected: a worker setting in the project's `playwright.config` (existing configs would need an edit). A narrower E2E selection (only scenarios where a business rule crosses the interface and the backend) was considered and rejected by the owner: it removes interface-to-backend checks; every scenario that goes through the interface keeps its E2E test (change `faster-test-stage`). |
