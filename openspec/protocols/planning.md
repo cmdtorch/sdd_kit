@@ -47,6 +47,7 @@ End the turn, and write no further artifact of the change, only while the change
 | an answer that changed after artifacts were written from it (§7) | warn the developer and wait for the instruction |
 | an artifact check that still fails, or a write that stays blocked, after your second fix attempt (§4) | run `planning.mjs wait` and show the remaining errors or the cause |
 | a pause the developer asked for (§3) | run `planning.mjs pause` |
+| the developer's answer to the drafts of the project files, or the choice after a failed early start check (§14) | run `planning.mjs wait` |
 
 Nothing else is a reason to stop: not "shall I go on", not a detail an answer, a source or a spec already settles.
 Say in your last message what the change waits for.
@@ -153,7 +154,8 @@ No questions.
   question in it has a blank answer (follow-ups included). No summary confirmation is asked.
 - Analyse the answers as `questions.md` §5 says. A follow-up goes into the same round with the next free number and
   opens the round again until it is answered.
-- As soon as the round is closed, write the artifact that depends on it, in the same turn.
+- As soon as the round is closed, write the artifact that depends on it, in the same turn; after the Main round of
+  a `clarify` change stamped 0.7.0 or later, do the steps of §14 first.
 - **A round without questions.** When you find nothing to ask in a round, write its section with the single line
   `No questions.`: the round is closed, go on. Never write that line in a round that has a question.
 - A round whose section is missing is not closed: the answers gate blocks the spec files while there is no
@@ -376,3 +378,46 @@ because of it, and never rewrite or remove a question already asked, answered or
   prepared on `high`.
 - Lowered to `low` while two questions of the round are unanswered: every question stays as it is and the Technical
   round is prepared on `low`.
+
+## 14. After the Main round (`clarify`)
+
+Applies only to `clarify` changes stamped with kit version 0.7.0 or later (a pre-release such as `0.7.0-beta.1`
+counts as its base version). A `lean` change, a change on `clarify-ai-qa` or `clarify-qa`, and a change stamped
+below 0.7.0 or without the stamp get none of these steps: write the proposal right after the Main round, propose no
+project file during planning, and leave the start check to the beginning of apply
+(`openspec/protocols/apply.md` §4). Example: a change stamped 0.6.1 in a project without
+`openspec/test-commands.md`: write the proposal without proposing the file.
+
+As soon as the Main round is closed, before you write the proposal, do these steps in order. None of them is a gate:
+a missing file never blocks the work, and a skipped check is legitimate.
+
+1. **The project files.** When `openspec/project-tools` (`openspec/protocols/apply.md` §10) or
+   `openspec/test-commands.md` (`openspec/protocols/testing.md` §8) is missing, draft the missing ones from the
+   project's instructions; run none of the project's test commands while you draft. When both are missing, show
+   both drafts in one chat message, with one question: confirm, correct or decline. Run `planning.mjs wait` and end
+   the turn. Write no file before the answer. From the answer write each file: the confirmed draft with the
+   developer's corrections and the durations the developer named, or on a decline the single line `none`. When a
+   file exists, with commands or with the line `none`, do not propose it; when both exist, skip this step. The tool
+   list is settled here, right after the Main round, also when the early start check is skipped. After the
+   developer's answer to the drafts, go on with the early start check, before the proposal.
+2. **The early start check.** When the project's instructions name both the command that starts the application
+   and an address it serves, run the start check
+   (`node openspec/tooling/bin/start-check.mjs --change <name> --start "<command>" --url <address> [--stop "<command>"]`,
+   as `openspec/protocols/apply.md` §4 *How* says), even when the change may not need a running application (a
+   change that only renames a field in a report). It writes `start-check.json` in the change. When the instructions
+   name no start command or no address, skip the check without a question: ask nothing about it and go on with the
+   proposal. In a meta-repository use the one command the instructions name to start, from the root, every clone
+   the application needs, and run it from the root.
+3. **Passed or skipped:** write the proposal and go on with planning in the same turn.
+
+**A failed early start check.** Write no further artifact. Report what failed, from the script's output (for example
+the published ports are refused), and offer two ways: fix the cause and run the check again, or go on with planning
+without a passed check. Never pick a way yourself: run `planning.mjs wait` and end the turn. The ways about E2E and
+the integration checks (`openspec/protocols/apply.md` §4 *Failed start*) belong to a failed check before the first
+task only; do not offer them here.
+
+- **Fix the cause:** when the developer says the cause is fixed, run the start check again; when it passes, write
+  the proposal. When it fails again, report it and offer the two ways again. A fix outside the project needs the
+  developer's consent to that specific change (`openspec/protocols/apply.md` §5).
+- **Go on:** write the proposal. The record stays failed, so before the first task of apply the start check runs
+  again when the plan needs a running application (`openspec/protocols/apply.md` §4).

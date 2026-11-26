@@ -97,6 +97,11 @@ Then judge each file of the subagent's group:
 - In the area of a group not started yet: accept the group, and tell that group's subagent, when you start it,
   which of its files were changed and by which group.
 
+On a change stamped 0.7.0 or later the tests of both groups are the own test files of each group
+(`openspec/protocols/testing.md` §5), each run with the one-file command, with no folder or full-suite run. Example:
+group 3 changed a file in the area of the accepted group 2: run the own test files of group 2 and group 3 with the
+one-file command.
+
 A group with an open collision is not accepted.
 
 ## 6. Accepting a group
@@ -127,6 +132,14 @@ reports the stop to you; you ask the developer.
   stopped group, then show the developer the stop. Example: a test of group 2 still fails after two fix
   attempts and group 4 does not depend on group 2: complete group 4 through a subagent, then show the failing
   test.
+- **Test command.** A subagent that meets a command of `openspec/test-commands.md` that does not start the tests
+  ends and reports the stop. Handle it like the environment stop: let the running subagents finish, complete
+  through subagents the groups that do not need that command and do not depend on the stopped group, then show the
+  developer the command and its output. Example: in a meta-repository the one-file command of the `backend`
+  section does not work and a `[frontend]` group does not depend on the stopped `[backend]` group: complete the
+  frontend group through a subagent, then show the developer the backend command and its output. When every
+  remaining group needs the command, for example in a project with one repository where the one-file command does
+  not work, start no further group and ask the developer.
 - **Failed start check.** The start check runs before any subagent starts. When it fails, no implementation
   subagent starts: report what failed and offer the ways of `openspec/protocols/apply.md` §4.
 
@@ -141,7 +154,10 @@ You run the final group yourself:
 2. Run the project's full test suite and quality checks yourself (`openspec/protocols/testing.md` §6) and report
    the commands and their result to the developer. When they pass, start no subagent. When a command fails, hand
    the fix to one new subagent together with the failing output, then run the failed commands again yourself;
-   after the second failed fix attempt stop and show the developer the failures.
+   after the second failed fix attempt stop and show the developer the failures. Start the full suite in the
+   background when it is long (`openspec/protocols/testing.md` §5) and read its result when the run has ended. On
+   a change stamped 0.7.0 or later the fix subagent reruns only the failing tests, never the full suite; you run it
+   again.
 3. The E2E stage (`openspec/protocols/e2e.md`), when the change needs it: you write `e2e.md` and make the full
    runs with `e2e-run.mjs`; writing the E2E tests goes to a new subagent. Hand the failing tests of one run to
    one new subagent together: it fixes the application code or the test, reruns only its tests through

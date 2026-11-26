@@ -5,6 +5,50 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
+## 0.7.0 — 2026-11-26
+
+Project test commands: one project file, `openspec/test-commands.md`, holds the commands that run one test file,
+only the failed tests and the full suite. Apply runs fewer and shorter test runs without leaving a test out, and a
+broken environment is found before the proposal is written.
+
+The rules apply to changes stamped 0.7.0 or later; changes started with an older kit keep their planning and their
+test runs ("run tests scoped"). The new hook works from the project file alone, so it holds on every change once the
+file exists.
+
+Upgrading: team lead runs `npx github:cmdtorch/sdd_kit#v0.7.0 update`, reviews the diff (a new `PreToolUse` hook
+`test-run-guard` in `.claude/settings.json`, changed protocols and schemas, the `task-implementer` agent) and
+commits. No project file has to be written by hand: the agent proposes `openspec/test-commands.md` on the first
+`clarify` change; review the draft and commit the file.
+
+- **New project file `openspec/test-commands.md`**: list items such as ``- One file: `make test FILE=<file>` ``,
+  ``- Failed only: `make test-failed` `` and ``- Full suite: `make test` — 12 min``, the duration optional; test
+  commands only, no quality checks or start commands; `none` after a decline; one `## Repository: <name>` section
+  per repository in a meta-repository's root file. Like `openspec/project-tools`, the kit's install and update never
+  touch it and doctor says nothing about it.
+- **Drafted, never guessed**: the agent drafts the file from the project's instructions and writes it only after
+  the developer confirms; a duration comes from the instructions or the developer, never from a test run. A missing
+  file or command never blocks: the agent uses the instructions and the ready message proposes what the file
+  lacks.
+- **Own test files only**: a task group and every fix subagent run only the test files of their work with the
+  one-file or failed-only command, never a folder or the full suite; wider runs happen once, in the main agent's
+  full suite at the end, which still covers every test.
+- **Long runs in the background**: a run of 2 minutes or more, or a failed-only or full-suite run without a
+  duration, starts in the background and the agent waits for the notice that it ended, without sleep-and-check
+  loops.
+- **New hook `test-run-guard`** (before Bash): blocks the file's `Full suite` command inside a `task-implementer`
+  subagent, with the one-file command in the message, and blocks a long full suite started in the foreground. It
+  matches the command line part by part (wrappers, variable assignments, redirections and extra spaces dropped),
+  names no test tool and fails open without the file.
+- **A command of the file that does not work is a stop**: when the shell or its tool rejects the command before any
+  test runs, the agent shows the command and its output and waits; failing tests and import errors stay failing
+  tests. Independent groups are finished first, as for the environment stop.
+- **Early start check right after the Main round** of a `clarify` change, together with the drafts of the missing
+  project files (`openspec/project-tools`, `openspec/test-commands.md`) in one message; a failed check stops
+  planning with two ways: fix and run it again, or go on.
+- **The start check is not repeated at apply** when the early check passed:
+  `start-check.mjs --change <name> --status` prints `passed`, `failed` or `none`. A failed or skipped early check,
+  a `lean` change and a test-case schema change get the start check at the beginning of apply as before.
+
 ## 0.6.1 — 2026-11-26
 
 A faster end of apply: E2E runs that do not lag the machine, and fewer subagent starts.

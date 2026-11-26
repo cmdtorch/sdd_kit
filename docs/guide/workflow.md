@@ -76,6 +76,33 @@ Once the Main round is closed the agent writes the rest of planning without a co
 proposal → Technical round → specs → spec review → digest → design → verification plan → tasks
 ```
 
+**Right after the Main round** (changes started on kit 0.7.0 or later), before the proposal:
+
+- **Project files.** When the project has no `openspec/test-commands.md` (how to run one test file, only the
+  failed tests and the full suite, each with an optional duration) or no `openspec/project-tools`, the agent shows
+  drafts of the missing ones from your README, CLAUDE.md, Makefile, package scripts and CI configuration, in one
+  message, and waits. Confirm, correct (for example "the full suite needs `--reuse-db` and takes about 12
+  minutes") or decline; a declined file gets the single line `none` and is never proposed again. The agent runs
+  no tests to measure a duration. You can edit both files by hand at any time; the kit never overwrites them.
+
+  ```markdown
+  # Test commands
+
+  - One file: `make test FILE=<file>` — 1 min
+  - Failed only: `make test-failed`
+  - Full suite: `make test` — 12 min
+  ```
+
+  Only test commands go there: lint, type checks and build stay in your instructions. In a meta-repository the
+  root's file has a section `## Repository: <name>` per clone.
+- **Early start check.** When your instructions name the command that starts the application and its address,
+  the agent starts it once and stops it again, even when the change may not need it, so a broken environment
+  shows up before the proposal. Without those instructions it skips the check and asks nothing. When the check
+  fails, it writes nothing further and you choose: fix the cause and run it again, or go on with planning (apply
+  then runs the check again before the first task). A passed check is not repeated at the start of apply.
+
+`lean` changes, the test-case schemas and changes started on an earlier kit version have no such step.
+
 - **proposal** — every statement cites `[Q3]`, `[D1]` or `[desc]`; the agent's own decisions are listed as
   assumptions.
 - **Technical round** — the second and last round before the code: errors, edge cases, permissions, rules,
@@ -105,6 +132,7 @@ going and names the next artifact or round. You never need `/opsx:continue`; run
 agent stops only where you are needed:
 
 - a question with a blank answer, in the file or in the chat;
+- the drafts of the project files, or your choice after a failed early start check;
 - screenshots you said you will add (2b);
 - an answer you changed after artifacts were written from it (below);
 - an artifact check that still fails, or a write that stays blocked, after two fix attempts: the agent shows the
@@ -218,8 +246,9 @@ consent), a situation the plan does not cover, and the consent list at the end. 
 options, but carries out none until you choose. When a stop concerns one test, it first finishes the tasks that
 do not depend on it.
 
-**Start check.** When the verification plan says `Running application: yes`, the agent first starts the
-application with the project's own commands and requests one address
+**Start check.** When the verification plan says `Running application: yes` and the check did not already pass
+right after the Main round, the agent first starts the application with the project's own commands and requests
+one address
 (`node openspec/tooling/bin/start-check.mjs`; up to 2 minutes, any status below 500 passes), then stops it.
 When the start fails — for example the published ports are refused — it stops before the first task and you
 choose: for E2E switch it off, fix the cause or skip it deliberately; for integration checks through the stack fix

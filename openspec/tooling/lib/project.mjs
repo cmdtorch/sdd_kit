@@ -239,3 +239,16 @@ export function subagentModel(root) {
 export function subagentModelWarning(value) {
   return `${SUBAGENT_MODEL_KEY} "${value}" in openspec/config.yaml is not a known model — allowed: ${SUBAGENT_MODELS.join(', ')}, or a full model ID starting with claude-`;
 }
+
+/** First kit version whose changes follow the test-command and test-run rules (openspec/protocols/testing.md). */
+export const TEST_RUNS_VERSION = '0.7.0';
+
+/**
+ * True for a change that follows the test-command and test-run rules (the project file `openspec/test-commands.md`,
+ * each task group runs only its own test files, long runs in the background): stamped 0.7.0 or later (a
+ * pre-release counts as its base version), whatever the schema. A missing stamp or an older one keeps the rules the
+ * change started with.
+ */
+export function usesTestCommands(root, name) {
+  return versionAtLeast(changeKitVersion(root, name), TEST_RUNS_VERSION);
+}

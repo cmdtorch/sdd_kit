@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { install, status, uninstall } from '../installer/sdd-kit.mjs';
+import { doctor, formatDoctor } from '../kit/openspec/tooling/bin/doctor.mjs';
 import { patchGitignore, unpatchGitignore } from '../installer/lib/gitignore.mjs';
 import { upsertKitBlock, removeKitBlock, kitBlock } from '../installer/lib/config-edit.mjs';
 import { parseYaml } from '../kit/openspec/tooling/lib/yaml.mjs';
@@ -465,5 +466,37 @@ describe('automatic continuation of planning after install', () => {
     assert.deepEqual(kitGroups(settings, 'Notification'), []);
     const fragment = JSON.parse(readFileSync(join(REPO, 'kit', 'claude-settings.fragment.json'), 'utf8'));
     assert.equal(fragment.hooks.Notification, undefined, 'the kit fragment has no Notification hook');
+  });
+});
+
+describe('the project test-commands file and the kit', () => {
+  const CONTENT = '# Test commands\n\n- One file: `nosuchtool-sdd test <file>` — 1 min\n- Full suite: `nosuchtool-sdd test` — 12 min\n';
+
+  // @scenario workflow/test-commands :: Update keeps the file
+  test('install does not create the file, and an update to a newer kit keeps it unchanged', async () => {
+    const root = pilot();
+    await install(opts(root));
+    assert.ok(!existsSync(join(root, 'openspec/test-commands.md')), 'the test-commands file is a project file, not installed');
+    writeFileSync(join(root, 'openspec/test-commands.md'), CONTENT);
+    const kit = mkdtempSync(join(tmpdir(), 'sdd-kit-src-'));
+    cpSync(join(REPO, 'kit'), kit, { recursive: true });
+    const p = join(kit, 'openspec/protocols/testing.md');
+    writeFileSync(p, readFileSync(p, 'utf8') + '\n<!-- newer kit -->\n');
+    const r = await install(opts(root, { kitDir: kit }));
+    assert.ok(!r.files.some((f) => f.rel.includes('test-commands.md')), JSON.stringify(r.files.filter((f) => f.rel.includes('test-commands'))));
+    assert.equal(read(root, 'openspec/test-commands.md'), CONTENT);
+    const manifest = JSON.parse(read(root, 'openspec/tooling/kit-manifest.json'));
+    assert.ok(!('openspec/test-commands.md' in manifest.files), 'the file is not tracked by the manifest');
+  });
+
+  // @scenario workflow/test-commands :: Health check ignores the file
+  test('the health check says nothing about the file, even when its command is not on the path', async () => {
+    const root = pilot();
+    await install(opts(root));
+    writeFileSync(join(root, 'openspec/test-commands.md'), CONTENT);
+    const items = doctor(root);
+    const out = JSON.stringify(items) + formatDoctor(items);
+    assert.doesNotMatch(out, /test-commands|nosuchtool-sdd/);
+    assert.equal(read(root, 'openspec/test-commands.md'), CONTENT);
   });
 });

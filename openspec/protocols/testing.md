@@ -9,9 +9,10 @@ Every spec scenario is a promise. A test exists to prove one promise — never j
 count. A test that would still pass with the feature broken is worse than no test: it gives false confidence.
 
 The kit does not know the project's stack and never runs the project's tests itself, except the E2E tests of
-the E2E stage, which it runs through its own script (`openspec/protocols/e2e.md`). Use the project's own commands
-(README, CLAUDE.md, Makefile, package scripts, CI config). Say which commands you used. If you cannot
-find how to run the tests, ask the developer once and suggest writing the commands into CLAUDE.md.
+the E2E stage, which it runs through its own script (`openspec/protocols/e2e.md`). Use the project's own commands:
+first those of `openspec/test-commands.md` (§8), then the project's instructions (README, CLAUDE.md, Makefile,
+package scripts, CI config). Say which commands you used. If you cannot find how to run the tests, ask the
+developer once and suggest writing the commands into CLAUDE.md.
 
 ## 1. Verification levels
 
@@ -166,7 +167,35 @@ On a change stamped 0.5.0 or later each task group is done by a subagent that fo
 
 - **TDD per task group:** write the tests for the group's scenarios first and watch them fail for the
   right reason, then implement and watch them pass, then refactor.
-- **Run tests scoped** to what you are changing. The full suite runs at the end.
+- **Own test files only.** On a change stamped 0.7.0 or later a task group runs only its own test files: the test
+  files it creates or changes and the existing test files of the code it changes, each with the one-file command
+  of `openspec/test-commands.md` (§8), or with the project's instructions when the file has none. It never runs a
+  whole folder of tests or the full suite. Example: a group that changes `api/orders.py` and writes
+  `api/tests/test_orders.py`, in a folder `api/tests/` of 40 test files, runs `api/tests/test_orders.py` and the
+  existing test file of `api/orders.py`, each with the one-file command, and neither the folder `api/tests/` nor
+  the full suite. After a fix for a failing own test, rerun that test file, or only the failed tests with the
+  failed-only command, and no wider run.
+- **Fix subagents too.** On the same changes every other implementation subagent of apply (a replacement, a
+  collision fix, a review fix, a full-suite fix) runs only the test files of its work, with the one-file or the
+  failed-only command, and no folder or full-suite run: a subagent that strengthens the assertions of
+  `api/tests/test_orders.py` after the test review runs `api/tests/test_orders.py` with the one-file command and no
+  wider run. The subagents of the E2E stage keep running the E2E tests through `e2e-run.mjs`
+  (`openspec/protocols/e2e.md`).
+- **Wider runs at the end.** The tests outside the groups' own files (the rest of a folder, the whole suite) run
+  only in the main agent's full-suite run at the end of apply (§6). No test is left out: the full suite at the end
+  covers every test of the project. The kit's hook `test-run-guard` blocks the file's `Full suite` command inside
+  a `task-implementer` subagent.
+- **Earlier changes.** A change stamped below 0.7.0 or without the stamp keeps the earlier rule: run tests scoped
+  to what you are changing; the full suite runs at the end.
+- **Long runs in the background**, on every change. A test run is long when its command's duration in
+  `openspec/test-commands.md` is 2 minutes or more, or when it is wider than single test files (the failed-only
+  command, the full suite) and no duration is written. Start a long run with the Bash tool's background mode, end
+  your step and read the result when the notice that it ended arrives. Never start it as a foreground command, and
+  never wait for it with repeated sleep-and-check commands. Examples: a full suite written as `— 12 min` starts in
+  the background, and its result is read when the run has ended; a failed-only command without a duration starts
+  in the background; a one-file command written as `— 3 min` starts in the background; a one-file command written
+  as `— 1 min` is not long and runs in the foreground. The hook `test-run-guard` blocks a long `Full suite`
+  command of the file started in the foreground.
 - Gaps in requirements found while coding → `## Apply round` in `clarifications.md` (see `questions.md`).
   Do not guess.
 
@@ -178,7 +207,13 @@ On a change stamped 0.5.0 or later the main agent runs the full suite itself and
 1. Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and
    major findings.
 2. Run the project's **full test suite and quality checks**. Fix what fails (§7). Report the commands
-   and their result to the developer.
+   and their result to the developer. Start the full suite in the background when it is long (§5). On a change
+   stamped 0.7.0 or later this is the only wider run: when it fails, the fix subagent reruns only the failing
+   tests (that test file or the failed-only command), never the full suite, and you run the failed commands again
+   yourself. Example: group 2 breaks a test in `api/tests/test_invoices.py`, a file that is not its own: your
+   full-suite run reports the failing test, and one fix subagent gets it with the failing output. Apply ends
+   without a stop only when the full suite has run at least once and its last run covered every test of the
+   project and passed.
 3. Write `apply-report.md` (`openspec/protocols/apply.md` §7): every `manual` row and every test case labelled
    `manual` under "Manual checks", with its steps, expected outcome and reason, dangerous checks first. QA
    performs them after the archive; they are not tasks.
@@ -210,3 +245,77 @@ On a change stamped 0.5.0 or later the main agent runs the full suite itself and
   `openspec/protocols/e2e.md` §8). Then stop and ask the human. Give the options and their
   consequences (cost, risk, what stays unverified). Giving up on a target is the human's decision,
   never yours.
+
+## 8. The test commands file
+
+`openspec/test-commands.md` holds the project's test commands. It is a project file, like
+`openspec/project-tools`: the kit's install and update never create, change or delete it, and the kit's health
+check says nothing about it.
+
+```markdown
+# Test commands
+
+- One file: `make test FILE=<file>` — 1 min
+- Failed only: `make test-failed`
+- Full suite: `make test` — 12 min
+```
+
+- A command is a list item ``- <label>: `<command>` `` with the label `One file`, `Failed only` or `Full suite`,
+  optionally followed by ` — <n> min`, a whole number of minutes. The one-file command holds the placeholder
+  `<file>`: with the file above, the test file `tests/orders.test` runs with `make test FILE=tests/orders.test`.
+- Every other line is free text and is ignored: a heading, notes, and an item without backticks
+  (`- Full suite: make test` is no full-suite command). A duration in another form (`— 90 s`) counts as no
+  duration. When a label appears twice in one section, the first item counts.
+- A command without a duration is a run of unknown duration: above, the full suite is a run of 12 minutes and the
+  failed-only run a run of unknown duration.
+- The file holds test commands only: no quality-check command (lint, types, build), no start or stop command and
+  no address of the application; those stay in the project's instructions. A draft for a project whose README
+  names `make test` and `make lint` holds `make test` and no line for `make lint`.
+- The single line `none` means the developer declined the file: it holds no command.
+- In a meta-repository the file is the root's, with one section `## Repository: <name>` per repository (a declared
+  clone name or `root`), each with its own command items; items outside a section are ignored
+  (`openspec/protocols/metarepo.md`). A draft has a section for every declared clone, and a `## Repository: root`
+  section only when the root's instructions name test commands of the root itself. Never write a commands file
+  inside a clone.
+
+**Draft and confirmation.** When the file is missing, draft it from the project's instructions (README, CLAUDE.md,
+Makefile, package scripts, CI configuration), show the draft to the developer and write it only after the developer
+confirms: until the developer answers, the file does not exist. Write exactly the confirmed commands, with the
+developer's corrections: when the developer answers that the full suite needs the flag `--reuse-db`, the
+`Full suite:` command carries `--reuse-db`. When the developer declines, write the single line `none` and do not
+propose the file in a later change. On a `clarify` change stamped 0.7.0 or later the draft is shown right after the
+Main round (`openspec/protocols/planning.md` §14). A change stamped below 0.7.0 or without the stamp gets no
+proposal of the file: find the commands in the project's instructions.
+
+**Where a duration comes from.** A duration comes from the project's instructions or from the developer's words at
+the confirmation: when the developer says that the full suite takes about 12 minutes, the `Full suite:` line ends
+with `— 12 min`. When neither names a duration, the line has none. Run none of the project's test commands while
+you draft the file, not even to measure a duration. A duration is written once: never update it from a real run.
+A full suite written as `— 12 min` that takes 20 minutes stays `— 12 min`.
+
+**A missing file or command never blocks.** When the file is missing, holds `none`, or lacks the command you need,
+find the command in the project's instructions, as before, and go on: never stop for the file. In a meta-repository
+a repository without a section is a missing command: a `[frontend]` group in a root file with a section for
+`backend` only takes its commands from the meta-repository's instructions and goes on, and the ready message
+proposes a `## Repository: frontend` section with the commands it used. On a change stamped 0.7.0 or later, unless
+the file holds `none`, the ready message proposes the commands you used that the file lacks: a missing file, section
+or line (`openspec/protocols/apply.md` §9); write them only after the developer confirms. Example: a file with a
+`Full suite:` line and no `One file:` line, and a README that runs one file with `make test FILE=<path>`: run the
+file with the README's command, and the ready message proposes adding ``One file: `make test FILE=<file>` `` to the
+file. A file with the single line `none` gets no proposal.
+
+**A command that does not work.** A command of the file does not work when the shell or the tool it calls rejects
+the command itself before the project's tests are loaded: the command is not found, an option is unknown, a task or
+target is missing. Then stop (`openspec/protocols/apply.md` §2): show the developer the command and its output, and
+wait. Do not replace the command and do not edit the file on your own. Example: the one-file command ends with the
+error "unknown option --reuse-db" before any test runs: stop and show the developer the command and that error;
+`openspec/test-commands.md` stays unchanged. When the developer answers with the corrected command, write it into
+the file and go on with the stopped work. A `task-implementer` subagent that meets such a command ends with a stop
+report; the main agent asks the developer (`openspec/protocols/subagents.md` §7).
+
+- When the command runs the tests and some of them fail, those are failing tests, handled with the fix attempts of
+  §7, not this stop.
+- An error in the project's code or tests (an import, syntax or collection error), for example an import error in
+  the file the group has just changed, is a failing test too: fix the code, not the command.
+- A command found in the project's instructions, not in the file, that does not work is handled as before: look
+  for the right command in the instructions, and ask the developer once when you find none.

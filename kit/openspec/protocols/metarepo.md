@@ -75,9 +75,11 @@ Every task group of `tasks.md` starts its heading with exactly one repository in
 ## 4. Working in the group's repository
 
 Do the tasks of a group in the folder of the repository the group names, and run that repository's tests with
-its own commands, found in the meta-repository's instructions and mise tasks (`AGENTS.md`, `CLAUDE.md`,
-`mise.toml` / `.mise.toml` tasks, the clone's README). The kit stores no commands and does not switch or create
-branches. TDD per group stays as in `openspec/protocols/testing.md` §5: the tests of the group's scenarios first,
+its own test commands: first those of its section `## Repository: <name>` of the root's `openspec/test-commands.md`
+(`openspec/protocols/testing.md` §8), otherwise those found in the meta-repository's instructions and mise tasks
+(`AGENTS.md`, `CLAUDE.md`, `mise.toml` / `.mise.toml` tasks, the clone's README). A repository without a section is
+handled as a missing command: take its commands from the meta-repository's instructions, go on, and propose the
+section in the ready message. The kit stores no commands inside a clone and does not switch or create branches. TDD per group stays as in `openspec/protocols/testing.md` §5: the tests of the group's scenarios first,
 in its repository.
 
 **Missing commands.** When you cannot find how to run the tests, the quality checks or the application of a
