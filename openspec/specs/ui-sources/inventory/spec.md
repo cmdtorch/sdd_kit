@@ -38,7 +38,7 @@ Screenshots of variants of one screen (desktop and mobile, different user roles)
 - **THEN** it reports an error that names the element
 
 ### Requirement: Every element has a decision
-Every inventory element SHALL have exactly one decision: `in scope`, `mock`, `out of scope`, `decoration` or `existing`; "not yet defined" is not a decision. While an element has no decision or an unknown one, writing the next artifact and the archive SHALL be blocked with a message that names the element and lists the allowed decisions. The developer sees all decisions in the round summary; on a `clarify` change stamped 0.6.0 or later, which has no round summary, in a short message the AI writes before the proposal, without waiting for a reply.
+Every inventory element SHALL have exactly one decision: `in scope`, `mock`, `out of scope`, `decoration` or `existing`; "not yet defined" is not one. While an element has none or an unknown one, the next artifact and the archive SHALL be blocked with a message naming the element and the allowed decisions. The developer sees all decisions in the round summary, or, on a `clarify` change stamped 0.6.0 or later, in a short message the AI writes before the proposal without waiting for a reply.
 
 #### Scenario: Element without a decision blocks the proposal
 - **GIVEN** a confirmed Main round and an inventory element "bulk-delete" with no decision

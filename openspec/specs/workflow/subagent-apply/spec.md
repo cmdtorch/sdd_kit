@@ -45,7 +45,7 @@ The main agent SHALL run the final group itself: it runs the test reviewer, runs
 - **THEN** the main agent starts the test reviewer, runs the full suite itself and writes `apply-report.md`
 
 ### Requirement: Every code edit goes through a subagent
-During apply of a change stamped 0.5.0 or later the main agent SHALL NOT edit the project's code or tests itself. Every edit, including a small fix after the test review, after a check or during the E2E stage, SHALL be done by a subagent. The main agent writes only the change's own files (`tasks.md` check marks, `apply-report.md`, `e2e.md`, `clarifications.md`). Every blocker and major finding of one test review SHALL go to one subagent, and the failing tests of one E2E run SHALL go to one subagent, which reruns its tests through `e2e-run.mjs` and makes at most three fix attempts per test.
+In apply of a change stamped 0.5.0 or later the main agent SHALL NOT edit project code or tests: a subagent makes every edit, small fixes after a test review, a check or in the E2E stage included; the main agent writes only the change's own files (`tasks.md` check marks, `apply-report.md`, `e2e.md`, `clarifications.md`). One test review's blocker and major findings SHALL go to one subagent, and so SHALL one E2E run's failing tests, rerun via `e2e-run.mjs`, at most three fix attempts each.
 
 #### Scenario: Fix after the test review
 - **GIVEN** the test reviewer reports a blocker finding in one test

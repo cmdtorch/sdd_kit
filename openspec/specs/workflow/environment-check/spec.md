@@ -40,7 +40,7 @@ The kit's health check SHALL report each command of `openspec/project-tools` tha
 - **THEN** its output ends with the health check's result, including that warning
 
 ### Requirement: Start check at the beginning of apply
-When the verification plan's Environment section says that the checks need a running application (integration checks through the stack, or the E2E stage) and the change has no record of a passed start check, the agent SHALL, before the first task, start it with the project's own instructions, request an address from those instructions (the main page or a health check), and stop it again. The start succeeds when that address returns an HTTP status below 500 within 2 minutes. A change with a record of a passed start check, made right after the Main round, SHALL NOT repeat the check before the first task.
+When the verification plan's Environment says the checks need a running application (integration checks through the stack, or the E2E stage), the agent SHALL, before the first task, start it with the project's own instructions, request an address they give (the main page or a health check) and stop it again; it succeeds when that address returns a status below 500 within 2 minutes. A change with a record of a start check that passed right after the Main round SHALL NOT repeat it.
 
 #### Scenario: Application starts
 - **WHEN** the plan needs the running application, the change has no record of a passed start check, and the chosen address returns status 200 within 2 minutes
