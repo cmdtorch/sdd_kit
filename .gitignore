@@ -10,7 +10,7 @@ __pycache__/
 sources/
 
 # >>> sdd-kit >>>
-# openspec/ and the shared parts of .claude/ are versioned (sdd-kit D6)
+# openspec/, the shared parts of .claude/ and the OpenSpec skills are versioned (sdd-kit D6)
 .claude/settings.local.json
 .claude/tdd-guard/
 .claude/worktrees/

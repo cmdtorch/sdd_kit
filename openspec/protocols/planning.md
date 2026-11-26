@@ -7,7 +7,7 @@ first answer to the end of the tasks without a command from the developer, and s
 
 A change without the stamp, a change stamped below 0.6.0, and every change on `clarify-ai-qa` or `clarify-qa` keep
 their rules: the rounds and the `Looks correct` summary confirmation of `openspec/protocols/questions.md`,
-`/opsx:continue` after each artifact, and the spec review findings shown to the developer, who decides
+`/openspec-continue-change` after each artifact, and the spec review findings shown to the developer, who decides
 (`openspec/protocols/review-specs.md`). Nothing in this protocol applies to them.
 
 On `lean` these parts apply: the automatic continuation and its stops (§1–§4), the mockups (§8) and the end of
@@ -23,8 +23,8 @@ planning (§11). `lean` has no question rounds, no answer mode, no answers lock,
   the chat (§8).
 - **After every artifact, write the next one.** When an artifact is written and nothing waits for the developer (§2),
   go on with the next artifact of `openspec status --change <name>` in the same turn.
-- **Never tell the developer to run `/opsx:continue`, at any point of planning.** When the developer runs it anyway,
-  write the next artifact and go on with the ones after it as without the command.
+- **Never tell the developer to run `/openspec-continue-change`, at any point of planning.** When the developer runs it
+  anyway, write the next artifact and go on with the ones after it as without the command.
 - No setting switches this off.
 
 The kit holds you to it. When you try to end your turn after you wrote an artifact of the change in this session,
@@ -212,8 +212,8 @@ text differs, spaces at its ends ignored.
   turn, and record the answer under `## Clarifications` of the proposal.
 - **"Yes" to the mockups question:** create `sources/ui/`, name the accepted formats (PNG, JPG or WebP; no `.fig`, SVG
   or PDF), and ask the developer to put the screenshots there and to say when they are in place ("done"). Do not
-  name `/opsx:continue`. Write no other question and no artifact, and end the turn. The `Stop` hook lets the turn end
-  while the folder holds no screenshot.
+  name `/openspec-continue-change`. Write no other question and no artifact, and end the turn. The `Stop` hook lets
+  the turn end while the folder holds no screenshot.
 - **"Done" with the screenshots in place:** go on with the UI inventory (`openspec/protocols/ui-inventory.md` §2–§5)
   and the planning after it.
 - **"Done" with the folder still empty:** ask once more whether to wait for the screenshots or to continue without
@@ -272,8 +272,8 @@ print a digest in the chat and go on to the design in the same turn, without wai
 ## 11. The end of planning
 
 When the last planning artifact (`tasks.md`) is written, end the turn with a message that says apply can start, names
-`/opsx:apply`, and strongly recommends running `/clear` or opening a new chat before it: apply works from the
-artifacts, not from the planning conversation. Do not start apply yourself and start no task of the change.
+`/openspec-apply-change`, and strongly recommends running `/clear` or opening a new chat before it: apply works from
+the artifacts, not from the planning conversation. Do not start apply yourself and start no task of the change.
 
 ## 12. Recommendations (`clarify`)
 

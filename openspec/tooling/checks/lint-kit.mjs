@@ -23,7 +23,7 @@ OpenSpec ignores silently.`;
 export const SCHEMA_KEYS = ['name', 'version', 'description', 'artifacts', 'apply'];
 export const ARTIFACT_KEYS = ['id', 'generates', 'description', 'template', 'instruction', 'requires'];
 export const APPLY_KEYS = ['requires', 'tracks', 'instruction'];
-export const CONFIG_KEYS = ['schema', 'context', 'rules', 'operations', 'store', 'references', 'githubCopilot', 'x-sdd-kit-subagent-model'];
+export const CONFIG_KEYS = ['schema', 'context', 'rules', 'operations', 'store', 'references', 'githubCopilot', 'skillsScope', 'x-sdd-kit-subagent-model'];
 export const CHANGE_KEYS = ['schema', 'created', 'goal', 'affected_areas', 'initiative', 'skip_specs', 'retire_capabilities'];
 // OpenSpec's extension keys (dist/utils/change-metadata.js EXTENSION_KEY_PATTERN): lowercase `x-` + a name
 const EXTENSION_KEY = /^x-\S+$/;
