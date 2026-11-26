@@ -136,16 +136,17 @@ After the developer's answer, hand the rest of the stopped group to a new subage
 
 You run the final group yourself:
 
-1. Start the `test-reviewer` subagent (`openspec/protocols/review-tests.md`). Hand the fix of each blocker or
-   major finding to a new subagent; edit no test or code file yourself.
-2. Hand the full suite to a new subagent: it runs the project's full test suite and quality checks
-   (`openspec/protocols/testing.md` §6), fixes what fails and reports the commands and their result. Pass the
-   result on to the developer.
-3. The E2E stage (`openspec/protocols/e2e.md`), when the change needs it: you write `e2e.md` and run the tests
-   with `e2e-run.mjs`; writing the E2E tests and every fix of a failing E2E test, in the application code or in
-   the test, goes to a new subagent; after the fix, run the E2E tests again yourself. Each E2E fix subagent makes
-   one fix attempt; the up to three attempts per test of `openspec/protocols/e2e.md` §8 are counted across
-   subagents.
+1. Start the `test-reviewer` subagent (`openspec/protocols/review-tests.md`). Hand every blocker and major
+   finding of one review to one new subagent together; edit no test or code file yourself.
+2. Run the project's full test suite and quality checks yourself (`openspec/protocols/testing.md` §6) and report
+   the commands and their result to the developer. When they pass, start no subagent. When a command fails, hand
+   the fix to one new subagent together with the failing output, then run the failed commands again yourself;
+   after the second failed fix attempt stop and show the developer the failures.
+3. The E2E stage (`openspec/protocols/e2e.md`), when the change needs it: you write `e2e.md` and make the full
+   runs with `e2e-run.mjs`; writing the E2E tests goes to a new subagent. Hand the failing tests of one run to
+   one new subagent together: it fixes the application code or the test, reruns only its tests through
+   `e2e-run.mjs`, makes at most three fix attempts per test (`openspec/protocols/e2e.md` §8) and reports what
+   still fails. Afterwards make the full run yourself.
 4. Write `apply-report.md` (`openspec/protocols/apply.md` §7), then the consent list and the ready message.
 
 You write only the change's own files: `tasks.md` check marks, `apply-report.md`, `e2e.md`, `clarifications.md`.
@@ -155,23 +156,24 @@ subagent.
 ## 9. Subagents, models and the progress line
 
 **The subagent.** Every implementation subagent of apply (a task group, a replacement, a collision fix, a review
-fix, the full suite, writing the E2E tests, an E2E fix) is a `task-implementer` subagent. Give it the change name, its tasks or its fix,
-and what it must know (files changed by another group, the developer's answer). It starts no other subagent,
-asks the developer nothing, edits no planning artifact and no `tasks.md`, and ends with a stop report or its
-tasks done, its test result and its `Changed files:` list.
+fix, a full-suite fix, writing the E2E tests, an E2E fix) is a `task-implementer` subagent. Give it the change
+name, its tasks or its fix, and what it must know (files changed by another group, the developer's answer). It
+starts no other subagent, asks the developer nothing, edits no planning artifact and no `tasks.md`, and ends
+with a stop report or its tasks done, its test result and its `Changed files:` list.
 
 **Model.** Before the first group, run `node openspec/tooling/bin/subagent-model.mjs` and pass that model to the
 subagents of task groups, their replacements and collision fixes. `inherit` means: pass no model, the subagent
 runs on the main chat's model. When it also prints a `warning:` line, repeat it in the chat (for example that
-`sonet` is unknown); those subagents then run on the main chat's model. Every other subagent, among them the full
-suite, review fixes, E2E fixes and verify, runs on the main chat's model, whatever the setting.
+`sonet` is unknown); those subagents then run on the main chat's model. Every other subagent, among them
+full-suite fixes, review fixes, E2E fixes and verify, runs on the main chat's model, whatever the setting.
 
-**Progress line.** After each subagent ends, write one line in the chat: the group number and name (for a
-subagent without a group `fix: <what>` or `full suite`), the tasks done, the model it ran on, and whether its
-tests pass or which fail. Examples: `2. Order API — 2.1–2.4 — sonnet — tests pass`;
+**Progress line.** After each subagent ends, and after your own full-suite run, write one line in the chat: the
+group number and name (for a subagent without a group `fix: <what>`, for your full-suite run `full suite`), the
+tasks done, the model it ran on, and whether its tests pass or which fail. Examples:
+`2. Order API — 2.1–2.4 — sonnet — tests pass`;
 `3. Order screen — 3.1–3.3 — sonnet — 2 tests fail: shows total, hides empty cart`;
-`full suite — — opus — every test passes`. The same line goes into `## Subagent runs` of `apply-report.md`
-(`openspec/protocols/apply.md` §7).
+`full suite — — opus — every test passes` (your own run, so the model is the main chat's model). The same line
+goes into `## Subagent runs` of `apply-report.md` (`openspec/protocols/apply.md` §7).
 
 ## 10. Verify
 

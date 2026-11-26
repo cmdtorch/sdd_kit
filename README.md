@@ -62,9 +62,9 @@ No other dependencies: the kit is plain Node.js.
 
 ```bash
 npm i -g @fission-ai/openspec@1.15.0
-npx github:cmdtorch/sdd_kit#v0.6.0 install --dry-run   # show the plan, write nothing
-npx github:cmdtorch/sdd_kit#v0.6.0 install             # asks for the questions language, nothing else
-git add -A && git commit -m "chore: install sdd-kit 0.5.0"
+npx github:cmdtorch/sdd_kit#v0.6.1 install --dry-run   # show the plan, write nothing
+npx github:cmdtorch/sdd_kit#v0.6.1 install             # asks for the questions language, nothing else
+git add -A && git commit -m "chore: install sdd-kit 0.6.1"
 ```
 
 Make sure `CLAUDE.md` or the README of your project says how to run the tests and quality checks. Details:

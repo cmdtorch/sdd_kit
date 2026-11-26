@@ -21,8 +21,8 @@ the E2E stage: `openspec/protocols/e2e.md`.
 6. **Ready message** (§9).
 
 On a change stamped 0.5.0 or later, every task group before the final group is handed to a new subagent, and this
-cannot be switched off; you orchestrate and edit no project code, and the full suite, every fix and verify run in
-subagents too. How: `openspec/protocols/subagents.md`.
+cannot be switched off; you orchestrate and edit no project code: every fix and verify run in subagents, and
+you run the full suite yourself. How: `openspec/protocols/subagents.md`.
 
 ## 2. Stops
 
@@ -185,10 +185,11 @@ None.
   after the fix attempts, and, when E2E is skipped, every case labelled `e2e`. Each entry has its reason; the
   entries agreed by the developer carry `Consent:`.
 - **Weakened tests**: §6.
-- **Subagent runs**: on a change implemented through subagents, one line per subagent run, in the order they
-  finished: `- <group | fix: <what> | full suite> — <tasks> — <model> — <test result>`. The group is its number
-  and name; a replacement subagent gets its own line. The section is optional: it is never checked and never
-  blocks the archive.
+- **Subagent runs**: on a change implemented through subagents, one line per subagent run and one for your
+  full-suite run, in the order they finished:
+  `- <group | fix: <what> | full suite> — <tasks> — <model> — <test result>`. The group is its number and name; a
+  replacement subagent gets its own line. The section is optional: it is never checked and never blocks the
+  archive.
 - An empty section says `None.`. Entries are `### <capability-path> :: <scenario or case name>` (for weakened
   tests `### <test file> :: <test name>` or `### <file> :: lint rule <rule>`) with the lines `Reason:`,
   `Steps:`, `Expected:`, `Change:` and `Consent:` as above.

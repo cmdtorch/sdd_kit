@@ -172,7 +172,7 @@ On a change stamped 0.5.0 or later each task group is done by a subagent that fo
 
 ## 6. End of apply
 
-On a change stamped 0.5.0 or later the fixes and the full suite run in subagents
+On a change stamped 0.5.0 or later the main agent runs the full suite itself and the fixes run in subagents
 (`openspec/protocols/subagents.md` §8).
 
 1. Run the `test-reviewer` subagent (`openspec/protocols/review-tests.md`) and fix its blocker and

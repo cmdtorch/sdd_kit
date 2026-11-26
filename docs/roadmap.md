@@ -28,8 +28,10 @@
 - [ ] **Parallel subagents.** Tests and code are written by separate subagents in parallel to speed up apply.
 - [ ] **Tests for the kit itself.** Decide how to test sdd-kit end to end.
 - [ ] **Stage indicator.** A Claude Code plugin that shows the current stage.
-- [ ] **A lighter apply.** Make the implementation stage faster and simpler.
-- [ ] **QA stage and E2E rework.** Remove the test-case schemas and rework the E2E stage.
+- [ ] **A lighter apply.** Make the implementation stage faster and simpler. *Partly done in 0.6.1: the main
+  agent runs the full suite itself, and one fix subagent takes every finding of a test review.*
+- [ ] **QA stage and E2E rework.** Remove the test-case schemas and rework the E2E stage. *Partly done in 0.6.1:
+  two Playwright workers, a running application reused, only failing tests rerun while they are fixed, one fix subagent per E2E run.*
 - [ ] **Early environment check.** Find environment problems before the implementation starts.
 
 ## Raw ideas
