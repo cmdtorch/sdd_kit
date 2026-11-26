@@ -19,6 +19,18 @@ their scenario markers, at most two fix attempts on a failing test. The main age
 - Edit no planning artifact (`clarifications.md`, `proposal.md`, specs, `design.md`, `verification-plan.md`,
   test cases) and not `tasks.md`; the main agent checks off tasks.
 - No commits, branches, stashes or worktrees.
+- Run only the test files of your work: on a task group the test files you create or change and the existing test
+  files of the code you change; on a fix the test files of the fix, or only the failed tests. Use the commands of
+  `openspec/test-commands.md` (in a meta-repository the section of your group's repository), or the project's
+  instructions when the file has none. Never run a whole folder of tests or the full suite: the main agent runs it
+  at the end, and the kit blocks the file's full-suite command here. On a change stamped below 0.7.0 or without the
+  stamp, run tests scoped to what you change.
+- When a command of `openspec/test-commands.md` does not start the tests (the command is not found, an option is
+  unknown, a task or target is missing, before any test runs), stop and write a stop report with the command and
+  its output; do not replace the command or edit the file. Failing tests and errors in the project's code or tests
+  (an import, syntax or collection error) are failing tests, not this stop.
+- Start a long run (2 minutes or more written in the file, or a failed-only run without a duration) in the
+  background and wait for the notice that it ended; never wait with sleep-and-check commands.
 - On an E2E fix, rerun only your failing tests, by file or by title, through
   `node openspec/tooling/bin/e2e-run.mjs --change <change> -- <file or -g "title">`, never the whole E2E suite:
   at most three fix attempts per test (`openspec/protocols/e2e.md` §8); after the third failed attempt on a test

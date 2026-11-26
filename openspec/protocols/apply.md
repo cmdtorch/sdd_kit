@@ -13,7 +13,8 @@ the E2E stage: `openspec/protocols/e2e.md`.
 
 ## 1. Order of work
 
-1. **Start check** (§4), before the first task, when the verification plan needs a running application.
+1. **Start check** (§4), before the first task, when the verification plan needs a running application, unless
+   the change's start check already passed right after the Main round.
 2. **Tasks**, group by group, test first (`openspec/protocols/testing.md` §5).
 3. **Test review and full suite** (`openspec/protocols/testing.md` §6).
 4. **E2E stage**, when the change needs it (`openspec/protocols/e2e.md`).
@@ -39,6 +40,11 @@ Stop and wait for the developer only in these cases:
 - **Environment**: during a task the application or the stack no longer starts with the project's own
   instructions — for example a container is unreachable, Docker does not see the project folders or a port is
   closed. Stop, describe what blocks you and wait for the developer's decision.
+- **Test command**: a command of the project's `openspec/test-commands.md` does not start the tests: the shell or
+  the tool rejects the command itself before any test runs, for example the one-file command ends with "no rule to
+  make target 'test'". Stop, show the developer the command and that output, and wait instead of running another
+  command; do not edit the file. A run that loads the tests and fails is a failing test, not this stop
+  (`openspec/protocols/testing.md` §8).
 - **Consent**: before an action outside the project (§5) or before weakening a test (§6).
 - **Outside the plan**: a situation that the plan and the kit's rules do not cover and that needs a decision —
   for example a library version that the design relies on has been withdrawn from the package registry. Do not
@@ -53,7 +59,8 @@ which test level to use (the verification plan says it).
 
 **Independent work first.** When a stop concerns a single test or the environment, first finish the tasks that
 do not depend on it, then stop. Example: a test of task group 3 still fails after two attempts and group 4 does
-not depend on it: finish group 4, then show the failing test. A failed start check stops before the first task.
+not depend on it: finish group 4, then show the failing test. The same holds for a test command that does not work
+(`openspec/protocols/subagents.md` §7). A failed start check stops before the first task.
 A requirement gap stops at once: ask before you start any other task.
 
 **Options are suggested, not carried out.** In a stop you may suggest options — for example port 5432 is taken
@@ -74,6 +81,14 @@ When the application itself no longer starts with the project's instructions, th
 
 **When.** The verification plan's Environment section says `Running application: yes` — integration checks
 through the running stack, or the E2E stage. Otherwise do not start the application before the first task.
+
+**A check that already passed.** On a `clarify` change stamped 0.7.0 or later the start check runs right after
+the Main round (`openspec/protocols/planning.md`) and writes the same record. Before the first task run
+`node openspec/tooling/bin/start-check.mjs --change <name> --status`. When it prints `passed`, do not run the
+start check again: go on with the first task. When it prints `failed` or `none` (the early check failed, was
+skipped or never ran), run the start check as below, including the question when the instructions do not say how
+to start the application. Only a `clarify` change stamped 0.7.0 or later can have a check from right after the
+Main round; every other change (a `lean` change, a test-case schema, an older stamp) runs the start check here.
 
 **How.**
 
@@ -215,6 +230,10 @@ When every task is done, the consent list is answered and the archive checks pas
 change is ready to archive, name `apply-report.md` (the manual checks for QA and what was not verified
 automatically) and give the command `/opsx:archive`. Do not archive the change yourself: the developer archives
 it.
+
+On a change stamped 0.7.0 or later, unless `openspec/test-commands.md` holds `none`, the ready message also proposes
+the test commands you used that the file lacks (a missing file, section or line); write them only after the
+developer confirms (`openspec/protocols/testing.md` §8).
 
 ## 10. The project tool list
 
