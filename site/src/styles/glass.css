@@ -143,7 +143,15 @@ header.header {
 .right-sidebar {
 	border-inline-start: 0;
 }
-starlight-menu-button button {
+/* The mobile menu button: a glass disc the height of the header capsules */
+:root {
+	--sl-menu-button-size: 2.875rem;
+}
+.sl-menu-button,
+.sl-menu-button:has(~ :popover-open) {
+	padding: 0.8rem;
+	-webkit-backdrop-filter: blur(var(--blur));
+	backdrop-filter: blur(var(--blur));
 	background: var(--glass-strong);
 	color: var(--fg);
 	border: 1px solid var(--edge);
