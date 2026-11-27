@@ -1,0 +1,6 @@
+# Used by site/Dockerfile, whose build context is the repository root.
+**/node_modules
+site/dist
+site/.astro
+sources
+.git

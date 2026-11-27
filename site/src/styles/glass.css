@@ -1,0 +1,248 @@
+/*
+ * The "Graphite" look: near-black ground, quiet colour fields, glass panes with a light rim.
+ * Starlight's own styles live in cascade layers, so everything here wins without !important.
+ * The site is dark only (src/components/ThemeProvider.astro).
+ */
+:root {
+	--ground: #09090b;
+	--glass: rgba(255, 255, 255, 0.035);
+	--glass-strong: rgba(255, 255, 255, 0.07);
+	--edge: rgba(255, 255, 255, 0.1);
+	--hairline: rgba(255, 255, 255, 0.07);
+	--shine: rgba(255, 255, 255, 0.12);
+	--rim-hi: rgba(255, 255, 255, 0.34);
+	--rim-lo: rgba(255, 255, 255, 0.12);
+	--spot: rgba(255, 255, 255, 0.09);
+	--shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.9);
+	--fg: #ededf0;
+	--muted: #8c8f9a;
+	--accent: #dfe3ff;
+	--accent-soft: rgba(223, 227, 255, 0.1);
+	--on-accent: #0b0b0e;
+	--code: rgba(0, 0, 0, 0.4);
+	--tok-key: #b9b4ff;
+	--tok-str: #9fd6c6;
+	--tok-com: #6d707b;
+	--tok-ok: #7fd9a4;
+	--tok-bad: #f39a94;
+	--blur: 22px;
+
+	/* Starlight's palette, mapped to the tokens above */
+	--sl-color-white: var(--fg);
+	--sl-color-gray-1: #e2e2e6;
+	--sl-color-gray-2: #c3c4cb;
+	--sl-color-gray-3: var(--muted);
+	--sl-color-gray-4: #5c5e68;
+	--sl-color-gray-5: #2b2c32;
+	--sl-color-gray-6: #17181c;
+	--sl-color-black: var(--ground);
+	--sl-color-accent-low: #1d1f2c;
+	--sl-color-accent: #9299c4;
+	--sl-color-accent-high: var(--accent);
+	--sl-color-bg-nav: transparent;
+	--sl-color-bg-sidebar: transparent;
+	--sl-color-bg-inline-code: var(--accent-soft);
+	--sl-color-hairline: var(--hairline);
+	--sl-color-hairline-light: var(--hairline);
+	--sl-color-hairline-shade: transparent;
+
+	--sl-font: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--sl-font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	--sl-nav-height: 4.25rem;
+	--sl-sidebar-width: 17.5rem;
+	--sl-content-width: 50rem;
+	color-scheme: dark;
+}
+@media (min-width: 50rem) {
+	:root {
+		--sl-nav-height: 4.5rem;
+	}
+}
+
+body {
+	background: var(--ground);
+	-webkit-font-smoothing: antialiased;
+}
+/* The colour field the glass sits on */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(50vw 50vw at 6% -4%, rgba(39, 48, 74, 0.75), transparent 70%),
+		radial-gradient(40vw 40vw at 98% 34%, rgba(34, 32, 48, 0.7), transparent 70%),
+		radial-gradient(46vw 46vw at 48% 112%, rgba(24, 38, 43, 0.75), transparent 70%);
+}
+
+/* ---------- Glass primitives ---------- */
+.glass {
+	background: var(--glass);
+	-webkit-backdrop-filter: blur(var(--blur)) saturate(170%);
+	backdrop-filter: blur(var(--blur)) saturate(170%);
+	border: 1px solid var(--edge);
+	box-shadow:
+		inset 0 1px 0 var(--shine),
+		var(--shadow);
+}
+/* A light rim that fades across the diagonal */
+.rim {
+	position: relative;
+}
+.rim::before {
+	content: '';
+	position: absolute;
+	inset: -1px;
+	border-radius: inherit;
+	padding: 1px;
+	pointer-events: none;
+	background: linear-gradient(135deg, var(--rim-hi), transparent 38%, transparent 62%, var(--rim-lo));
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box exclude,
+		linear-gradient(#000 0 0);
+}
+/* A highlight that follows the pointer (Header.astro sets --mx / --my) */
+.spot::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+	background: radial-gradient(180px circle at var(--mx, 50%) var(--my, 50%), var(--spot), transparent 70%);
+}
+.spot:hover::after {
+	opacity: 1;
+}
+
+/* ---------- Starlight frame ---------- */
+header.header {
+	background: transparent;
+	border-bottom: 0;
+	padding-block: 0.7rem;
+}
+.sidebar-pane {
+	scrollbar-width: none;
+}
+@media (min-width: 50rem) {
+	.sidebar-pane {
+		background: transparent;
+		border-inline-end: 0;
+	}
+	.sidebar-content {
+		padding: 0.4rem 0 1.25rem 1.5rem;
+	}
+}
+.right-sidebar {
+	border-inline-start: 0;
+}
+starlight-menu-button button {
+	background: var(--glass-strong);
+	color: var(--fg);
+	border: 1px solid var(--edge);
+	box-shadow: inset 0 1px 0 var(--shine);
+}
+
+/* ---------- Content ---------- */
+.sl-markdown-content {
+	line-height: 1.7;
+}
+h1#_top {
+	font-size: clamp(2rem, 4.4vw, 2.75rem);
+	font-weight: 600;
+	line-height: 1.08;
+	letter-spacing: -0.035em;
+	text-wrap: balance;
+}
+.sl-markdown-content :is(h2, h3, h4):not(:where(.not-content *)) {
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+.sl-markdown-content a:not(:where(.not-content *)) {
+	color: var(--accent);
+	text-underline-offset: 3px;
+	text-decoration-color: rgba(223, 227, 255, 0.35);
+}
+.sl-markdown-content code:not(:where(.not-content *)) {
+	border-radius: 6px;
+	padding: 0.12rem 0.38rem;
+}
+.sl-markdown-content table:not(:where(.not-content *)) {
+	font-size: var(--sl-text-sm);
+}
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+	border-bottom-color: var(--hairline);
+}
+/* Code blocks, asides and cards become glass panes */
+.expressive-code .frame {
+	--ec-brdCol: var(--edge);
+	--ec-codeBg: var(--code);
+	--ec-frm-edBg: var(--code);
+	--ec-frm-trmBg: var(--code);
+	--ec-frm-edTabBarBg: transparent;
+	--ec-frm-trmTtbBg: transparent;
+	--ec-frm-edActTabBg: transparent;
+	--ec-frm-edActTabIndTopCol: transparent;
+	--ec-frm-edTabBarBrdBtmCol: var(--hairline);
+	--ec-frm-trmTtbBrdBtmCol: var(--hairline);
+	--ec-frm-frameBoxShdCssVal: inset 0 1px 0 var(--shine);
+	--ec-brdRad: 14px;
+	border-radius: 14px;
+}
+.starlight-aside {
+	border: 1px solid var(--edge);
+	border-radius: 16px;
+	background: var(--glass);
+	box-shadow: inset 0 1px 0 var(--shine);
+	-webkit-backdrop-filter: blur(var(--blur));
+	backdrop-filter: blur(var(--blur));
+}
+.starlight-aside--note,
+.starlight-aside--tip {
+	--sl-color-asides-text-accent: var(--accent);
+}
+.sl-markdown-content .card,
+.sl-link-card {
+	border: 1px solid var(--edge);
+	border-radius: 18px;
+	background: var(--glass);
+	box-shadow:
+		inset 0 1px 0 var(--shine),
+		var(--shadow);
+	-webkit-backdrop-filter: blur(var(--blur));
+	backdrop-filter: blur(var(--blur));
+	transition: transform 0.2s ease;
+}
+.sl-link-card:hover {
+	transform: translateY(-3px);
+	background: var(--glass-strong);
+	border-color: var(--edge);
+}
+.sl-link-card .title {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+.pagination-links a {
+	border: 1px solid var(--edge);
+	border-radius: 16px;
+	background: var(--glass);
+	box-shadow: inset 0 1px 0 var(--shine);
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+	* {
+		transition: none !important;
+		animation: none !important;
+	}
+}
