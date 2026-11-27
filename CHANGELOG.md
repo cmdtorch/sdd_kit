@@ -5,6 +5,13 @@ MAJOR — a change a project must act on (format of an artifact, a gate that blo
 MINOR — new capability, backwards compatible; PATCH — fixes.
 Before 1.0.0 a breaking change raises MINOR (0.2 → 0.3) and is marked **Breaking**.
 
+## Unreleased
+
+- The documentation site in `site/` stays in step with the kit: `npm test` checks that its Install page names the
+  current release tag and the pinned OpenSpec version, and that every command on its Commands page exists. A
+  `site` workflow builds the site on pull requests and pushes to `main` that change `site/` or `package.json`.
+  No kit file changes; `sdd-kit update` is not needed.
+
 ## 0.8.1 — 2026-11-26
 
 The kit's own specs pass `openspec validate --specs --strict` on OpenSpec 2.2.0: five requirements over 500
