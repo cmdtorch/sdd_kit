@@ -1,0 +1,222 @@
+---
+// The header: three separate glass capsules — the brand, the sections, search and the repository.
+// The sections are the top-level groups of the sidebar; each links to the first page of its group.
+import config from 'virtual:starlight/user-config';
+import Search from 'virtual:starlight/components/Search';
+
+declare const __KIT_VERSION__: string;
+const version = __KIT_VERSION__;
+
+type Entry = (typeof Astro.locals.starlightRoute.sidebar)[number];
+const firstHref = (e: Entry): string | undefined =>
+	e.type === 'link' ? e.href : e.entries.map(firstHref).find(Boolean);
+const hasCurrent = (e: Entry): boolean => (e.type === 'link' ? e.isCurrent : e.entries.some(hasCurrent));
+
+const sections = Astro.locals.starlightRoute.sidebar
+	.filter((e) => e.type === 'group')
+	.map((g) => ({ label: g.label, href: firstHref(g), current: hasCurrent(g) }))
+	.filter((s) => s.href);
+
+const repo = config.social?.find((s) => s.icon === 'github');
+---
+
+<div class="sk-top">
+	<a class="sk-cap sk-brand glass rim spot" href={import.meta.env.BASE_URL}>
+		<span class="sk-mark">
+			<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+				<circle cx="3.5" cy="13.5" r="1.6" fill="var(--muted)"></circle>
+				<circle cx="8" cy="9" r="1.6" fill="var(--muted)"></circle>
+				<path d="M3.5 13.5L8 9l2.4 2.4L15 5" stroke="var(--fg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+		</span>
+		{config.title.en ?? Object.values(config.title)[0]}
+		{version && <span class="sk-ver">v{version}</span>}
+	</a>
+
+	<nav class="sk-cap sk-nav glass rim spot" aria-label="Sections" data-sk-nav>
+		<span class="sk-thumb" data-sk-thumb></span>
+		{sections.map((s) => <a href={s.href} aria-current={s.current ? 'true' : undefined}>{s.label}</a>)}
+	</nav>
+
+	<div class="sk-cap sk-tools glass rim spot">
+		<Search />
+		{repo && <>
+			<span class="sk-sep"></span>
+			<a class="sk-icon" href={repo.href} aria-label={repo.label} rel="me">
+				<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .9a7.1 7.1 0 00-2.25 13.84c.36.06.49-.15.49-.34v-1.2c-1.98.43-2.4-.95-2.4-.95-.32-.82-.79-1.04-.79-1.04-.65-.44.05-.43.05-.43.71.05 1.09.73 1.09.73.63 1.09 1.66.77 2.07.59.06-.46.25-.77.45-.95-1.58-.18-3.24-.79-3.24-3.51 0-.78.28-1.41.73-1.91-.07-.18-.32-.9.07-1.88 0 0 .6-.19 1.95.73a6.8 6.8 0 013.56 0c1.35-.92 1.95-.73 1.95-.73.39.98.14 1.7.07 1.88.45.5.73 1.13.73 1.91 0 2.73-1.66 3.33-3.25 3.5.26.22.48.65.48 1.31v1.95c0 .19.13.41.49.34A7.1 7.1 0 008 .9z"></path></svg>
+			</a>
+		</>}
+	</div>
+</div>
+
+<script>
+	// The glass thumb slides under the hovered section and returns to the current one.
+	for (const nav of document.querySelectorAll<HTMLElement>('[data-sk-nav]')) {
+		const thumb = nav.querySelector<HTMLElement>('[data-sk-thumb]')!;
+		const links = [...nav.querySelectorAll<HTMLElement>('a')];
+		const current = () => nav.querySelector<HTMLElement>('a[aria-current]');
+		const move = (a: HTMLElement | null) => {
+			thumb.style.opacity = a ? '1' : '0';
+			if (!a) return;
+			thumb.style.left = a.offsetLeft + 'px';
+			thumb.style.width = a.offsetWidth + 'px';
+		};
+		for (const a of links) {
+			a.addEventListener('mouseenter', () => move(a));
+			a.addEventListener('focus', () => move(a));
+		}
+		nav.addEventListener('mouseleave', () => move(current()));
+		nav.addEventListener('focusout', () => move(current()));
+		addEventListener('resize', () => move(current()));
+		document.fonts?.ready.then(() => move(current()));
+		// Place it without the slide on the first paint.
+		thumb.style.transition = 'none';
+		move(current());
+		requestAnimationFrame(() => (thumb.style.transition = ''));
+	}
+
+	// Light that follows the pointer across a glass capsule.
+	for (const el of document.querySelectorAll<HTMLElement>('.spot')) {
+		el.addEventListener('pointermove', (e) => {
+			const r = el.getBoundingClientRect();
+			el.style.setProperty('--mx', e.clientX - r.left + 'px');
+			el.style.setProperty('--my', e.clientY - r.top + 'px');
+		});
+	}
+</script>
+
+<style>
+	.sk-top {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		height: 100%;
+	}
+	.sk-cap {
+		display: flex;
+		align-items: center;
+		height: 2.875rem;
+		border-radius: 999px;
+		min-width: 0;
+	}
+	.sk-brand {
+		gap: 0.6rem;
+		padding: 0 0.9rem 0 0.45rem;
+		color: var(--fg);
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.sk-mark {
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		background: var(--glass-strong);
+		border: 1px solid var(--edge);
+		box-shadow: inset 0 1px 0 var(--shine);
+	}
+	.sk-ver {
+		font: 500 0.6875rem/1 var(--sl-font-mono);
+		color: var(--muted);
+		padding: 0.25rem 0.45rem;
+		border-radius: 999px;
+		border: 1px solid var(--hairline);
+	}
+	.sk-nav {
+		display: none;
+		padding: 0 0.3rem;
+	}
+	.sk-nav a {
+		position: relative;
+		z-index: 1;
+		padding: 0.5rem 0.875rem;
+		border-radius: 999px;
+		color: var(--muted);
+		font-size: 0.875rem;
+		text-decoration: none;
+		white-space: nowrap;
+		transition: color 0.2s ease;
+	}
+	.sk-nav a:hover,
+	.sk-nav a[aria-current] {
+		color: var(--fg);
+	}
+	.sk-thumb {
+		position: absolute;
+		top: 0.3rem;
+		left: 0.3rem;
+		width: 0;
+		height: 2.25rem;
+		border-radius: 999px;
+		background: var(--glass-strong);
+		border: 1px solid var(--edge);
+		box-shadow:
+			inset 0 1px 0 var(--shine),
+			0 6px 18px -8px rgba(0, 0, 0, 0.6);
+		transition:
+			left 0.38s cubic-bezier(0.3, 1.3, 0.5, 1),
+			width 0.38s cubic-bezier(0.3, 1.3, 0.5, 1),
+			opacity 0.2s ease;
+	}
+	.sk-tools {
+		margin-inline-start: auto;
+		gap: 0.35rem;
+		padding: 0 0.4rem 0 0.75rem;
+		color: var(--muted);
+	}
+	.sk-sep {
+		width: 1px;
+		height: 1.125rem;
+		background: var(--hairline);
+	}
+	.sk-icon {
+		width: 2.125rem;
+		height: 2.125rem;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+	}
+	.sk-icon:hover {
+		color: var(--fg);
+		background: var(--accent-soft);
+	}
+	/* Starlight's search button, restyled to sit inside the capsule */
+	.sk-tools :global(site-search button[data-open-modal]) {
+		height: 2.125rem;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--muted);
+		font-size: 0.875rem;
+		max-width: none;
+	}
+	.sk-tools :global(site-search button[data-open-modal]:hover) {
+		color: var(--fg);
+	}
+	.sk-tools :global(site-search button[data-open-modal] > kbd) {
+		border-radius: 999px;
+		border: 1px solid var(--hairline);
+		background: transparent;
+		margin-inline-start: 0.5rem;
+		padding-inline: 0.45rem;
+	}
+	@media (max-width: 49.99rem) {
+		.sk-ver,
+		.sk-sep,
+		.sk-icon {
+			display: none;
+		}
+		.sk-tools {
+			padding: 0 0.75rem;
+		}
+	}
+	@media (min-width: 62rem) {
+		.sk-nav {
+			display: flex;
+		}
+	}
+</style>

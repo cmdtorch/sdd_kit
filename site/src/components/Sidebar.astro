@@ -1,0 +1,258 @@
+---
+// The sidebar: one glass pane. Groups fold, the pages of a group hang on a hairline and the current
+// page is a glowing dot on it. Below sits the mini-map of the change the page walks through; it
+// appears only on a page with a <Flow> and stays in step with it (see src/components/flow-events.ts).
+import MobileMenuFooter from 'virtual:starlight/components/MobileMenuFooter';
+import { groupIcon } from './sidebar-icons';
+
+type Entry = (typeof Astro.locals.starlightRoute.sidebar)[number];
+type Link = Extract<Entry, { type: 'link' }>;
+const links = (e: Entry): Link[] => (e.type === 'link' ? [e] : e.entries.flatMap(links));
+
+const { sidebar } = Astro.locals.starlightRoute;
+---
+
+<div class="sk-side glass rim">
+	{sidebar.map((entry) => entry.type === 'link' ? (
+		<a class="sk-solo" href={entry.href} aria-current={entry.isCurrent ? 'page' : undefined}>{entry.label}</a>
+	) : (
+		<details
+			class:list={['sk-grp', { 'has-current': links(entry).some((l) => l.isCurrent) }]}
+			open={links(entry).some((l) => l.isCurrent) || !entry.collapsed}
+		>
+			<summary>
+				<span class="sk-gi" set:html={groupIcon(entry.label)} />
+				{entry.label}
+				<svg class="sk-chev" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+					<path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+				</svg>
+			</summary>
+			<ul>
+				{links(entry).map((l) => <li>
+					<a href={l.href} aria-current={l.isCurrent ? 'page' : undefined}>{l.label}</a>
+				</li>)}
+			</ul>
+		</details>
+	))}
+
+	<div class="sk-live" data-sk-live hidden>
+		<div class="sk-live-cap"><span class="sk-pulse"></span>Change on this page</div>
+		<div class="sk-live-name" data-sk-live-name></div>
+		<div class="sk-segs" data-sk-segs></div>
+		<div class="sk-live-st" data-sk-live-st></div>
+	</div>
+</div>
+
+<div class="md:sl-hidden"><MobileMenuFooter /></div>
+
+<script>
+	import { FLOW_GOTO, FLOW_HELLO, FLOW_STATE, type FlowState } from './flow-events';
+
+	const box = document.querySelector<HTMLElement>('[data-sk-live]');
+	if (box) {
+		const name = box.querySelector<HTMLElement>('[data-sk-live-name]')!;
+		const segs = box.querySelector<HTMLElement>('[data-sk-segs]')!;
+		const status = box.querySelector<HTMLElement>('[data-sk-live-st]')!;
+
+		addEventListener(FLOW_STATE, (e) => {
+			const s = (e as CustomEvent<FlowState>).detail;
+			if (segs.childElementCount !== s.labels.length) {
+				segs.replaceChildren(
+					...s.labels.map((label, i) => {
+						const b = document.createElement('button');
+						b.type = 'button';
+						b.setAttribute('aria-label', `Stage ${i + 1}: ${label}`);
+						b.addEventListener('click', () => dispatchEvent(new CustomEvent(FLOW_GOTO, { detail: { index: i } })));
+						return b;
+					})
+				);
+				segs.style.gridTemplateColumns = `repeat(${s.labels.length}, 1fr)`;
+			}
+			[...segs.children].forEach((b, i) => (b.className = i === s.index ? 'now' : i < s.index ? 'on' : ''));
+			name.textContent = s.name;
+			status.textContent = `Stage ${s.index + 1} of ${s.labels.length} · `;
+			const b = document.createElement('b');
+			b.textContent = s.labels[s.index] ?? '';
+			status.append(b);
+			box.hidden = false;
+		});
+		// A flow that mounted before this script answers with its state.
+		dispatchEvent(new CustomEvent(FLOW_HELLO));
+	}
+</script>
+
+<style>
+	.sk-side {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.75rem;
+		border-radius: 24px;
+	}
+	ul {
+		list-style: none;
+		margin: 0.2rem 0 0.55rem 1.125rem;
+		padding: 0 0 0 0.75rem;
+		border-inline-start: 1px solid var(--hairline);
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+	}
+	summary {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		padding: 0.375rem;
+		border-radius: 12px;
+		cursor: pointer;
+		user-select: none;
+		color: var(--fg);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		letter-spacing: -0.005em;
+	}
+	summary::-webkit-details-marker {
+		display: none;
+	}
+	summary:hover {
+		background: var(--accent-soft);
+	}
+	.sk-gi {
+		width: 1.625rem;
+		height: 1.625rem;
+		border-radius: 9px;
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+		background: var(--glass-strong);
+		border: 1px solid var(--hairline);
+		box-shadow: inset 0 1px 0 var(--shine);
+	}
+	.has-current .sk-gi {
+		color: var(--fg);
+		border-color: var(--edge);
+	}
+	.sk-chev {
+		margin-inline-start: auto;
+		color: var(--muted);
+		transition: transform 0.2s ease;
+	}
+	details:not([open]) .sk-chev {
+		transform: rotate(-90deg);
+	}
+	li a,
+	.sk-solo {
+		position: relative;
+		display: block;
+		padding: 0.3rem 0.625rem;
+		border-radius: 9px;
+		color: var(--muted);
+		font-size: 0.84rem;
+		line-height: 1.45;
+		text-decoration: none;
+	}
+	li a:hover,
+	.sk-solo:hover {
+		color: var(--fg);
+		background: var(--accent-soft);
+	}
+	li a[aria-current],
+	.sk-solo[aria-current] {
+		color: var(--fg);
+		font-weight: 500;
+		background: var(--glass-strong);
+		box-shadow: inset 0 1px 0 var(--shine);
+	}
+	li a[aria-current]::before {
+		content: '';
+		position: absolute;
+		inset-inline-start: calc(-0.75rem - 4px);
+		top: 50%;
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		transform: translateY(-50%);
+		background: var(--accent);
+		box-shadow:
+			0 0 0 4px var(--accent-soft),
+			0 0 12px var(--accent);
+	}
+
+	.sk-live {
+		margin-top: 0.5rem;
+		padding: 0.75rem;
+		border-radius: 16px;
+		background: var(--code);
+		border: 1px solid var(--hairline);
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.sk-live[hidden] {
+		display: none;
+	}
+	.sk-live-cap {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.65rem;
+		font-weight: 600;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+	.sk-pulse {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--tok-ok);
+		box-shadow: 0 0 0 3px rgba(127, 217, 164, 0.15);
+		animation: sk-pulse 2s ease-in-out infinite;
+	}
+	@keyframes sk-pulse {
+		50% {
+			opacity: 0.35;
+		}
+	}
+	.sk-live-name {
+		font: 500 0.78rem/1.2 var(--sl-font-mono);
+		color: var(--fg);
+	}
+	.sk-segs {
+		display: grid;
+		gap: 3px;
+	}
+	.sk-segs :global(button) {
+		height: 14px;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: pointer;
+	}
+	.sk-segs :global(button)::before {
+		content: '';
+		display: block;
+		height: 4px;
+		border-radius: 2px;
+		background: var(--hairline);
+		transition:
+			background 0.25s ease,
+			box-shadow 0.25s ease;
+	}
+	.sk-segs :global(button.on)::before {
+		background: var(--muted);
+	}
+	.sk-segs :global(button.now)::before {
+		background: var(--accent);
+		box-shadow: 0 0 10px var(--accent);
+	}
+	.sk-live-st {
+		font-size: 0.78rem;
+		color: var(--muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.sk-live-st :global(b) {
+		color: var(--fg);
+		font-weight: 500;
+	}
+</style>

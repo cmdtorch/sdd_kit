@@ -1,0 +1,27 @@
+---
+title: Questions before code
+description: sdd-kit puts a checked, spec-driven process around OpenSpec and Claude Code.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Teams that hand a vague client request straight to an AI agent get code that does what the agent guessed.
+That means bugs for manual QA and rework. **sdd-kit** puts a checked process around OpenSpec and Claude Code:
+the agent asks before it plans, every statement has a source, and every scenario has a test that proves it.
+
+<CardGrid>
+	<LinkCard title="See one change end to end" description="A one-line brief followed from the first question to the archive. Click through the stages." href="/walkthrough/promo-code/" />
+	<LinkCard title="What sdd-kit adds" description="Four things on top of OpenSpec, and what each one is for." href="/start/what-it-adds/" />
+	<LinkCard title="Install" description="Once per repository by the team lead, a few minutes per developer." href="/start/install/" />
+	<LinkCard title="Your first change" description="The commands you type and the moments the agent waits for you." href="/start/first-change/" />
+</CardGrid>
+
+## The flow in one line
+
+```text
+questions → proposal → specs → design → verification plan → tasks
+  → apply (TDD) → test review → full suite → archive
+```
+
+You answer questions at the start and archive at the end. Between them the agent plans and implements by itself
+and stops only for decisions that belong to you.

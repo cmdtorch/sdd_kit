@@ -1,0 +1,32 @@
+---
+title: One vague sentence, followed all the way to the archive
+description: A promo code at checkout, from a one-line brief to an archived, tested change.
+---
+
+import Flow from '../../../components/Flow.tsx';
+import { promoCode } from '../../../data/flows/promo-code.ts';
+
+A client asks for a promo code at checkout and says nothing else. Click through the stages to see what the
+agent does, what it needs from you, and which file each stage leaves behind.
+
+<Flow client:load flow={promoCode} />
+
+:::note[Sample content]
+The artifacts above are shortened and written by hand in the kit's formats. They are not the output of a real
+run.
+:::
+
+## What to notice
+
+- **You act at three stages**: the brief, the answers and the archive. The rest runs without you.
+- **The questions are the point.** "Can a code be combined with a sale price?" is exactly the kind of gap a
+  one-line brief leaves, and the kind of bug manual QA would file later.
+- **Each stage leaves a file.** The answers feed the proposal, the proposal feeds the specs, a scenario gets a
+  level, and a test carries the scenario's marker. Nothing is passed along in chat only.
+- **Backend and frontend share the specs.** Once the scenarios exist, neither side waits for the other to
+  explain what the feature does.
+
+## Practice: forward a question, don't guess it
+
+Every question is written so you can paste it to whoever knows the answer. If the product owner decides how
+discounts stack, send them Q3 as it is and bring the reply back into `clarifications.md`.
