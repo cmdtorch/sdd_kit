@@ -1,0 +1,31 @@
+# Builds the documentation site in site/ (not installed into projects).
+name: site
+
+on:
+  pull_request:
+    paths: ['site/**', 'package.json']
+  push:
+    branches: [main]
+    paths: ['site/**', 'package.json']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build the documentation site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: site
+      - name: Build
+        run: npm run build
+        working-directory: site

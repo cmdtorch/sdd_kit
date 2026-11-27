@@ -57,7 +57,8 @@ node installer/sdd-kit.mjs install --target /path/to/scratch-repo
 
 1. Move `## Unreleased` in `CHANGELOG.md` to `## <version> — <date>`.
 2. Set the same version in `package.json` and `kit/openspec/tooling/kit.json`, and in the install commands of
-   `README.md` and `docs/guide/install.md` (`npm test` checks that they agree).
+   `README.md`, `docs/guide/install.md` and the site's Install page `site/src/content/docs/start/install.md`
+   (`npm test` checks that they agree).
 3. Commit, then tag and push: `git tag -a v<version> -m "sdd-kit <version>" && git push origin main v<version>`.
    The release workflow runs the tests and publishes a GitHub release with the changelog section as notes.
 
